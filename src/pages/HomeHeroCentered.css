@@ -1,0 +1,96 @@
+/* ===================================================================
+   Home hero — compact centered layout: pill eyebrow, two-line headline with
+   a flowing gradient accent, short subline, pill CTAs, then the workflow.
+   Loaded after HomePolish/HomeRefinement so it wins the cascade.
+   =================================================================== */
+.home-page section.hh.hero-std{
+  display:block; height:auto; min-height:0;
+  padding:clamp(28px,3.4vw,52px) 0 clamp(40px,4.5vw,72px);
+  background:linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 55%, #F7F9FC 100%);
+}
+/* ambient glows that drift slowly behind the copy */
+.home-page section.hh::before, .home-page section.hh::after{
+  content:""; display:block; position:absolute; z-index:-1; border-radius:50%; pointer-events:none; filter:blur(70px);
+  width:clamp(280px,38vw,560px); height:clamp(280px,38vw,560px); inset:auto; background:none;
+}
+.home-page section.hh::before{ top:-14%; left:6%; background:radial-gradient(circle, rgb(var(--orange-rgb) / .20), transparent 68%); animation:hh-drift-a 16s ease-in-out infinite alternate; }
+.home-page section.hh::after{ top:2%; right:4%; bottom:auto; background:radial-gradient(circle, rgba(255,170,90,.20), transparent 68%); animation:hh-drift-b 19s ease-in-out infinite alternate; }
+@keyframes hh-drift-a{ to{ transform:translate(9vw,10%) scale(1.15); } }
+@keyframes hh-drift-b{ to{ transform:translate(-8vw,14%) scale(1.1); } }
+
+.home-page section.hh .hh-wrap{
+  display:flex; flex-direction:column; align-items:center; gap:clamp(28px,3.4vw,48px); text-align:center;
+}
+.home-page section.hh .hh-copy{ display:flex; flex-direction:column; align-items:center; width:100%; max-width:1240px; }
+
+/* entrance sequence */
+@keyframes hh-rise{ from{ opacity:0; transform:translateY(22px); filter:blur(6px); } to{ opacity:1; transform:none; filter:none; } }
+.home-page section.hh .hh-copy > *{ animation:hh-rise .85s cubic-bezier(.22,1,.36,1) both; }
+.home-page section.hh .hh-copy > :nth-child(2){ animation-delay:.1s; }
+.home-page section.hh .hh-copy > :nth-child(3){ animation-delay:.24s; }
+.home-page section.hh .hh-copy > :nth-child(4){ animation-delay:.38s; }
+.home-page section.hh .hh-copy > :nth-child(5){ animation-delay:.52s; }
+.home-page section.hh .hh-visual{ animation:hh-rise 1s cubic-bezier(.22,1,.36,1) .65s both; }
+
+/* eyebrow pill */
+.home-page section.hh .hh-kicker{
+  display:inline-flex; align-items:center; gap:10px; margin:0 0 20px; padding:8px 16px;
+  border:1px solid #eadfce; border-radius:999px; background:rgba(255,255,255,.92);
+  box-shadow:0 8px 22px -14px rgba(16,35,63,.35);
+  font:700 11.5px/1 var(--font-body); letter-spacing:.14em; text-transform:uppercase; color:var(--orange-2);
+}
+.home-page section.hh .hh-kicker::before{ width:8px; height:8px; border-radius:50%; background:var(--orange); animation:hh-ping 2.2s ease-out infinite; }
+@keyframes hh-ping{ 0%{ box-shadow:0 0 0 0 rgb(var(--orange-rgb) / .5); } 80%,100%{ box-shadow:0 0 0 9px rgb(var(--orange-rgb) / 0); } }
+
+/* headline */
+.home-page section.hh .hh-copy h1{
+  max-width:none; margin:0; color:#10233f;
+  font:800 clamp(32px,4.2vw,62px)/1.06 var(--font-head); letter-spacing:-.04em; text-wrap:balance;
+}
+.home-page section.hh .hh-copy h1 em{
+  display:inline-block; font-style:normal; padding-bottom:.06em;
+  /* Start and end colours match, so the 200%-wide tile repeats with no seam while it drifts. */
+  background-image:linear-gradient(90deg, var(--orange-2) 0%, var(--orange) 25%, #ff9a3c 50%, var(--orange) 75%, var(--orange-2) 100%);
+  background-size:200% 100%; background-repeat:repeat-x;
+  -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
+  animation:hh-gradient-flow 7s linear infinite;
+}
+@keyframes hh-gradient-flow{ to{ background-position:200% 0; } }
+
+/* subline */
+.home-page section.hh .hh-copy .hh-sub{
+  max-width:44em; margin:18px 0 0; color:#5b6a7d;
+  font:300 clamp(16px,1.35vw,19px)/1.6 var(--font-body);
+}
+
+.home-page section.hh .hh-actions{ justify-content:center; gap:14px; margin-top:28px; }
+
+/* trust row */
+.home-page section.hh .hh-copy .hh-trust{
+  justify-content:center; gap:8px 26px; margin-top:24px; padding-top:0; border-top:0;
+  font:600 12.5px/1.35 var(--font-body); color:#50637b;
+}
+
+/* workflow sits below, centered */
+.home-page section.hh .hh-visual{ width:100%; max-width:1120px; margin-inline:auto; text-align:left; }
+
+@media (max-width:900px){
+  .home-page section.hh .hh-copy h1{ font-size:clamp(30px,6.4vw,50px); }
+}
+@media (max-width:650px){
+  .home-page section.hh.hero-std{ padding:30px 0 44px; }
+  .home-page section.hh .hh-kicker{ margin-bottom:18px; padding:8px 13px; font-size:10px; letter-spacing:.1em; }
+  .home-page section.hh .hh-copy h1{ font-size:clamp(30px,9.2vw,40px); line-height:1.08; }
+  .home-page section.hh .hh-copy .hh-sub{ margin-top:14px; font-size:16px; }
+  .home-page section.hh .hh-actions{ display:grid; grid-template-columns:1fr; width:100%; margin-top:22px; }
+  .home-page section.hh .hh-actions .ui-btn{ width:100%; }
+  .home-page section.hh .hh-copy .hh-trust{ flex-direction:row; flex-wrap:wrap; align-items:center; gap:6px 16px; margin-top:20px; font-size:11.5px; }
+}
+@media (prefers-reduced-motion:reduce){
+  .home-page section.hh::before, .home-page section.hh::after,
+  .home-page section.hh .hh-copy > *, .home-page section.hh .hh-visual,
+  .home-page section.hh .hh-copy h1 em, .home-page section.hh .hh-kicker::before{ animation:none; }
+}
+
+/* hero glows fade out before the section edge so the walkthrough below joins without a seam */
+.home-page section.hh::before, .home-page section.hh::after{ -webkit-mask-image:linear-gradient(180deg,#000 45%,transparent 92%); mask-image:linear-gradient(180deg,#000 45%,transparent 92%); }

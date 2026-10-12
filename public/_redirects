@@ -1,0 +1,22 @@
+# Old WordPress article URLs -> new Resources pages (see docs/redirect-map.csv)
+/data-enrichment-improves-kempston-controls-website-traffic/  /resources/case-studies/kempston-controls  301
+/why-product-data-cleansing-is-a-game-changer-for-ecommerce-stores/  /resources/blog/product-data-cleansing-game-changer  301
+/unlocking-ecommerce-success-how-to-implement-a-platform-that-converts/  /resources/blog/implement-ecommerce-platform-that-converts  301
+/stay-ahead-in-2025-how-data-normalization-boosts-ecommerce-efficiency-for-industrial-distributors-and-retailers/  /resources/blog/data-normalization-2025  301
+/the-screwman-tightens-its-business-presence-with-a-new-e-store/  /resources/case-studies/the-screwman  301
+/elevating-your-e-commerce-strategy-with-product-attribute-development/  /resources/blog/product-attribute-development  301
+/rose-scientific-canada-from-static-site-to-dynamic-ecommerce-powerhouse/  /resources/case-studies/rose-scientific-canada  301
+/how-product-content-enrichment-will-drive-your-sales-growth-in-2025/  /resources/blog/how-product-content-enrichment-will-drive-your-sales-growth-in-2025  301
+/unlock-e-commerce-success-how-taxonomy-hierarchy-can-skyrocket-your-sales/  /resources/blog/unlock-e-commerce-success-how-taxonomy-hierarchy-can-skyrocket-your-sales  301
+/toolfair-harrogate-2025-15th-16th-may/  /resources/events/toolfair-harrogate-2025  301
+/irx-2025/  /resources/events/irx-2025  301
+/chemuk-2025/  /resources/events/chemuk-2025  301
+/what-is-product-data-enrichment-and-why-its-essential-for-your-business/  /resources/blog/what-is-product-data-enrichment-and-why-its-essential-for-your-business  301
+/what-is-product-information-management-pim-for-ecommerce/  /resources/blog/what-is-product-information-management-pim-for-ecommerce  301
+/8-ways-a-product-information-management-pim-system-will-save-you-time/  /resources/blog/8-ways-a-product-information-management-pim-system-will-save-you-time  301
+/5-essential-strategies-to-keep-visitors-on-your-website-and-ecommerce/  /resources/blog/5-essential-strategies-to-keep-visitors-on-your-website-and-ecommerce  301
+/outsourcing-ecommerce-content/  /resources/blog/outsourcing-ecommerce-content  301
+/transform-your-ecommerce-strategy-with-altiusnxt-technologies-product-data-enrichment-services/  /resources/blog/transform-your-ecommerce-strategy-with-altiusnxt-technologies-product-data-enrichment-services  301
+/challenges-of-ecommerce-catalog-management/  /resources/blog/challenges-of-ecommerce-catalog-management  301
+
+/*  /index.html  200

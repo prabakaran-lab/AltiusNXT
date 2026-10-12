@@ -1,0 +1,54 @@
+/* About Us — purpose / vision / mission */
+.ap{ --ap-ease:cubic-bezier(.22,1,.36,1); background:linear-gradient(180deg,#f6f2ec 0%,#faf7f2 100%); color:var(--navy); padding-block:clamp(56px,8vw,120px); }
+.ap-wrap{ max-width:1440px; margin:0 auto; padding-inline:var(--page-edge,clamp(20px,4vw,56px)); display:grid; grid-template-columns:minmax(0,42fr) minmax(0,58fr); gap:clamp(36px,5.5vw,84px); align-items:start; }
+.ap-wrap > *{ min-width:0; }
+
+.ap-r{ opacity:0; transform:translateY(14px); transition:opacity .7s var(--ap-ease) var(--d,0ms), transform .7s var(--ap-ease) var(--d,0ms); }
+.ap.on .ap-r{ opacity:1; transform:none; }
+
+.ap-media{ margin:0; position:sticky; top:104px; border-radius:20px; overflow:hidden; aspect-ratio:4 / 5; background:#e9e4dc; }
+.ap-media img{ width:100%; height:100%; object-fit:cover; object-position:46% center; display:block; }
+.ap-media figcaption{ position:absolute; left:16px; bottom:16px; right:16px; max-width:320px; padding:12px 16px; border-radius:12px; background:rgba(255,255,255,.94); display:grid; gap:3px; }
+.ap-media figcaption b{ font:700 11px var(--font-body); letter-spacing:.1em; text-transform:uppercase; color:var(--orange-2); }
+.ap-media figcaption span{ font-size:13px; color:var(--navy); }
+
+.ap-eyebrow{ margin:0 0 16px; font:700 11.5px var(--font-body); letter-spacing:.14em; text-transform:uppercase; color:var(--orange-2); }
+.ap h2{ margin:0; font-family:var(--font-head); font-weight:800; font-size:clamp(30px,3.4vw,48px); line-height:1.08; letter-spacing:-.03em; }
+.ap-intro{ margin:24px 0 0; max-width:40em; font-size:clamp(15px,1.25vw,17px); line-height:1.7; color:#4d576b; }
+.ap-statement{ margin:28px 0 0; padding-left:18px; border-left:3px solid var(--orange); font:600 clamp(16px,1.4vw,19px)/1.45 var(--font-head); color:var(--navy); max-width:32em; }
+
+.ap-block{ position:relative; display:grid; grid-template-columns:56px minmax(0,1fr); gap:6px 16px; margin-top:44px; padding-top:40px; }
+.ap-block::before{ content:""; position:absolute; top:0; left:0; right:0; height:1px; background:#ddd4c6; transform-origin:left; transform:scaleX(0); transition:transform .9s var(--ap-ease) calc(var(--d,0ms) + 120ms); }
+.ap.on .ap-block::before{ transform:none; }
+.ap-num{ font:800 14px var(--font-head); color:var(--orange-2); letter-spacing:.04em; padding-top:6px; }
+.ap-label{ margin:0 0 10px; font:700 11px var(--font-body); letter-spacing:.14em; text-transform:uppercase; color:var(--orange-2); }
+.ap-block h3{ margin:0 0 14px; font:800 clamp(21px,2.1vw,29px)/1.18 var(--font-head); letter-spacing:-.02em; max-width:22em; }
+.ap-block p:not(.ap-label){ margin:0 0 12px; max-width:40em; font-size:clamp(14.5px,1.15vw,16px); line-height:1.7; color:#4d576b; }
+.ap-block p:last-child{ margin-bottom:0; }
+
+.ap-serve{ margin-top:40px; padding-top:20px; border-top:1px solid #ddd4c6; display:flex; flex-wrap:wrap; align-items:center; gap:10px 20px; }
+.ap-serve > span{ font:700 11px var(--font-body); letter-spacing:.14em; text-transform:uppercase; color:var(--steel); }
+.ap-serve ul{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
+.ap-serve li{ font-size:13px; font-weight:600; padding:6px 13px; border-radius:999px; background:#fff; border:1px solid #e3dacb; }
+
+@media (max-width:1000px){
+  .ap-wrap{ grid-template-columns:1fr; gap:36px; }
+  .ap-media{ position:relative; top:auto; aspect-ratio:16 / 10; }
+  .ap-media img{ object-position:50% 40%; }
+}
+@media (max-width:760px){
+  .ap{ padding-block:60px; }
+  .ap h2{ font-size:clamp(28px,8vw,32px); }
+  .ap-eyebrow{ font-size:10.5px; }
+  .ap-intro{ font-size:14.5px; margin-top:18px; }
+  .ap-statement{ font-size:16px; margin-top:22px; }
+  .ap-block{ grid-template-columns:1fr; margin-top:32px; padding-top:28px; }
+  .ap-num{ padding-top:0; }
+  .ap-block h3{ font-size:21px; }
+  .ap-block p:not(.ap-label){ font-size:14.5px; }
+  .ap-media figcaption{ left:12px; bottom:12px; padding:10px 12px; }
+  .ap-label{ font-size:10.5px; }
+}
+@media (prefers-reduced-motion:reduce){
+  .ap-r, .ap-block::before{ transition:none; opacity:1; transform:none; }
+}

@@ -1,0 +1,60 @@
+/* ===================================================================
+   Home page design system: one grid, one section rhythm, one type scale, alternating backgrounds.
+   Loaded last so it wins over each section's own stylesheet.
+   Sections (top to bottom) alternate white / light grey automatically.
+   =================================================================== */
+.home-page{
+  --hs-white:#ffffff;
+  --hs-paper:#F7F9FC;
+  --hs-pad:clamp(64px,7vw,104px);
+  --hs-head-gap:clamp(32px,3.6vw,52px);
+  --hs-sub:#4a5a72;
+  width:100%;
+  overflow-x:clip;
+}
+
+/* ---- 1 · one container for every section (same grid lines as the header, hero and footer) ---- */
+.home-page :is(.sl-wrap,.wt-wrap,.dcx-wrap,.ht-wrap,.ba-wrap,.wf-wrap,.ind-wrap,.wh-wrap,.hw-wrap,.ar-wrap,.rc-wrap,.tb-wrap,.ch-wrap,.hfaq-inner,.hq-wrap){
+  width:100%; max-width:var(--page-max); margin-inline:auto; padding-inline:var(--page-edge);
+}
+
+/* ---- 2 · alternating section backgrounds + one vertical rhythm ---- */
+.home-page > section:not(.hh){ padding-block:var(--hs-pad); scroll-margin-top:84px; }
+.home-page > section:not(.hh):nth-of-type(odd){ background:var(--hs-white); background-image:none; }
+.home-page > section:not(.hh):nth-of-type(even){ background:var(--hs-paper); background-image:none; }
+.home-page > section.wt{ padding-top:clamp(24px,3vw,40px); }
+/* the card-style sections keep their own surface; only the page background changes */
+.home-page > section.ch{ padding-block:var(--hs-pad); }
+.home-page > section.hfaq{ padding-block:var(--hs-pad); }
+
+/* ---- 3 · section heads: same eyebrow, heading, subline and spacing everywhere ---- */
+.home-page :is(.dcx-head,.ba-head,.wf-head,.ind-head,.wh-head,.hw-head,.rc-head,.tb-head){ text-align:center; max-width:820px; margin:0 auto var(--hs-head-gap); }
+.home-page :is(.dcx-pill,.wh-pill,.ar-pill,.ba-eyebrow,.wf-eyebrow,.ind-eyebrow,.hw-eyebrow,.rc-eyebrow,.tb-eyebrow,.ht-eyebrow,.ch-eyebrow,.home-eyebrow,.hq-eyebrow){
+  display:inline-flex; align-items:center; gap:10px; margin:0; padding:0; background:none; border:0; border-radius:0; box-shadow:none;
+  font:600 11.5px/1 var(--font-body); letter-spacing:.16em; text-transform:uppercase; color:var(--orange-2);
+}
+.home-page :is(.dcx-pill,.wh-pill,.ba-eyebrow,.wf-eyebrow,.ind-eyebrow,.hw-eyebrow,.rc-eyebrow,.tb-eyebrow)::before,
+.home-page :is(.dcx-pill,.wh-pill,.ba-eyebrow,.wf-eyebrow,.ind-eyebrow,.hw-eyebrow,.rc-eyebrow,.tb-eyebrow)::after{ content:""; width:20px; height:2px; background:var(--orange); }
+.home-page :is(.ar-pill,.ht-eyebrow)::before{ content:""; width:22px; height:2px; background:var(--orange); }
+.home-page :is(.dcx-head,.ba-head,.wf-head,.ind-head,.wh-head,.hw-head,.rc-head,.tb-head,.ar-copy,.ht-head) h2{
+  margin-top:14px; font-size:var(--t-h2,clamp(30px,3.3vw,44px)); line-height:1.1; letter-spacing:-.028em; font-weight:800; text-wrap:balance;
+}
+.home-page :is(.dcx-sub,.ba-sub,.wf-sub,.ind-sub,.wh-sub,.hw-sub,.ar-sub,.rc-sub,.tb-sub){ margin:14px auto 0; font:400 clamp(15.5px,1.3vw,17px)/1.65 var(--font-body); color:var(--hs-sub); max-width:720px; text-wrap:balance; }
+.home-page :is(.ar-sub){ margin-left:0; }
+.home-page :is(.dcx-head,.ba-head,.wf-head,.ind-head,.wh-head,.hw-head,.rc-head,.tb-head) h2 em,
+.home-page :is(.ar-copy,.tb-copy,.ht-head) h2 em{ color:var(--orange); font-style:normal; }
+
+/* ---- 4 · consistent surfaces ---- */
+.home-page :is(.ba-stage,.wf-card,.ind-panel,.ar-card,.tb-card,.rc-result,.hw-vis){ border-radius:20px; }
+.home-page :is(.wf-card,.ind-panel,.ar-card,.tb-card,.rc-result,.ba-stage){ border:1px solid #e1e8f1; }
+.home-page > section:nth-of-type(even) :is(.wf-card,.ind-panel,.ar-card,.rc-result,.ba-stage){ background:#fff; }
+
+/* cards sitting on a white section get a soft grey surface instead of white-on-white */
+.home-page > section:nth-of-type(odd) :is(.rc-item){ background:#fff; }
+
+@media (max-width:719px){
+  .home-page{ --hs-pad:56px; --hs-head-gap:28px; }
+}
+
+/* left-aligned heads (content hub, FAQ) get the same eyebrow accent line */
+.home-page :is(.ch-eyebrow,.home-eyebrow,.hq-eyebrow)::before{ content:""; width:22px; height:2px; background:var(--orange); }

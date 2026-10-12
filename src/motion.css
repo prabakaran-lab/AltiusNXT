@@ -1,0 +1,13 @@
+/* Entrance motion (see components/Motion.jsx). Only applied when JS tags an element, so content is never hidden without it. */
+@keyframes mx-route{ from{ opacity:0; filter:blur(8px); transform:translateY(10px); } to{ opacity:1; filter:none; transform:none; } }
+#main.mx-route{ animation:mx-route .6s cubic-bezier(.22,1,.36,1) both; }
+
+#root [data-mx]{
+  opacity:0; transform:translate3d(0,18px,0); filter:blur(7px);
+  transition:opacity .7s cubic-bezier(.22,1,.36,1) var(--mx-d,0ms), transform .8s cubic-bezier(.22,1,.36,1) var(--mx-d,0ms), filter .7s ease var(--mx-d,0ms);
+  will-change:opacity,transform,filter;
+}
+#root [data-mx="head"]{ transform:translate3d(0,22px,0); filter:blur(9px); }
+#root [data-mx="eyebrow"]{ transform:translate3d(-14px,0,0); filter:blur(4px); }
+#root [data-mx].mx-in{ opacity:1; transform:none; filter:blur(0); }
+@media (prefers-reduced-motion:reduce){ #root [data-mx]{ opacity:1; transform:none; filter:none; transition:none; } #main.mx-route{ animation:none; } }

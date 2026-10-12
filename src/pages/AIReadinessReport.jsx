@@ -1,0 +1,264 @@
+import { useEffect, useRef, useState } from 'react'
+import { Bot, Check, CircleAlert, FileText, MessagesSquare, SearchX, X } from 'lucide-react'
+import { TESYS } from '../components/sampleProduct.js'
+import { useSearchParams } from 'react-router-dom'
+import { quickScan, submitLead } from '../services/api.js'
+import LeadFormModal from '../components/LeadFormModal.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
+import { FaqSection, HowSection, LayersSection, LevelsSection, NextSection, Num, ReceiveSection, useReveal } from './ReportSections.jsx'
+import './AIReadinessReport.css'
+
+/* The four numbers tell the story in order: you give one page, we ask six questions, on four engines, and find five gaps. */
+const STORY = [
+  { n: 1, k: 'You give us', d: 'product page is all we need', Ico: FileText },
+  { n: 6, k: 'We ask', d: 'buyer-style queries run for you', Ico: MessagesSquare },
+  { n: 4, k: 'On', d: 'AI engines: ChatGPT, Claude, Gemini and Perplexity', Ico: Bot },
+  { n: 5, k: 'We find', d: 'gaps that stop AI recommending you', Ico: SearchX },
+]
+const ENGINES = ['ChatGPT', 'Claude', 'Gemini', 'Perplexity']
+
+export default function AIReadinessReport() {
+  const [searchParams] = useSearchParams()
+  const [url, setUrl] = useState(searchParams.get('url') || '')
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const [result, setResult] = useState(null)
+
+  const [showLeadForm, setShowLeadForm] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [leadError, setLeadError] = useState('')
+  const [confirmation, setConfirmation] = useState(null)
+  const [progress, setProgress] = useState(null)
+  const root = useRef(null)
+  const resultRef = useRef(null)
+  useReveal(root)
+
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [result])
+
+  const runScan = async (targetUrl) => {
+    setScanning(true)
+    setScanError('')
+    setResult(null)
+    try {
+      const data = await quickScan(targetUrl)
+      setResult(data)
+    } catch (err) {
+      setScanError(err.message)
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  const handleScan = (e) => {
+    e.preventDefault()
+    runScan(url)
+  }
+
+  useEffect(() => {
+    const initial = searchParams.get('url')
+    if (initial) runScan(initial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleLeadSubmit = async (form) => {
+    setSubmitting(true)
+    setLeadError('')
+    try {
+      const data = await submitLead(
+        { ...form, url, quickScan: result, origin: window.location.origin },
+        {
+          onProgress: (p) => {
+            setShowLeadForm(false)
+            setProgress(p)
+          },
+        },
+      )
+      setConfirmation({ firstName: form.firstName, email: form.email, pdfBase64: data.pdfBase64, emailStatus: data.emailStatus })
+    } catch (err) {
+      setLeadError(err.message)
+      setShowLeadForm(true)
+    } finally {
+      setSubmitting(false)
+      setProgress(null)
+    }
+  }
+
+  const formatElapsed = (ms) => {
+    const s = Math.round((ms || 0) / 1000)
+    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`
+  }
+
+  return (
+    <div ref={root} className="arr-page">
+      <section className="arr-hero" id="arr-top" aria-labelledby="arr-title">
+        <div className="arr-glow" aria-hidden="true" />
+        <div className="arr-wrap arr-herogrid">
+          <div className="arr-copy">
+            <p className="arr-eyebrow">Free · One product page · No obligation</p>
+            <h1 id="arr-title">Get your free <em>AI Readiness Report.</em></h1>
+            <p className="arr-lead">Paste one product page below. We’ll check it against the same five gaps that keep AI shopping assistants from recommending you.</p>
+            <form className="url-form" onSubmit={handleScan}>
+              <label htmlFor="scan-url" className="visually-hidden">Product page URL</label>
+              <input
+                id="scan-url"
+                name="url"
+                type="url"
+                placeholder="Paste one product page URL"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+              />
+              <button className="btn btn-primary" type="submit" disabled={scanning}>
+                {scanning ? 'Scanning…' : 'Get my free report'}
+              </button>
+            </form>
+            <p className="field-hint" style={{ marginTop: 8 }}>
+              Must be a single product page, not your homepage or a category listing with multiple products on it.
+            </p>
+            {scanError && <p className="form-error" style={{ marginTop: 14 }}>{scanError}</p>}
+            <p className="arr-more">Want the detailed Find, Understand, Recommend score? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A">Email us for the detailed audit</a>.</p>
+          </div>
+
+          <div className="arr-chat" role="img" aria-label="Illustration of an AI answer that leaves a distributor out">
+            <div className="q"><span>Which distributor can supply a 1&quot; crimped wire end brush near me?</span></div>
+            <p className="ans">AI assistant recommends:</p>
+            <div className="row r1"><i>1</i>Large national marketplace</div>
+            <div className="row r2"><i>2</i>Big-box retailer</div>
+            <div className="row gap r3"><i>?</i>Your company is not mentioned</div>
+            <p className="note">Illustration only. Your report shows what the AI engines actually say about your products.</p>
+          </div>
+        </div>
+
+        <div className="arr-wrap">
+          <p className="arr-storyhead rv">How one product page becomes your report</p>
+          <ol className="arr-stats rv">
+            {STORY.map(({ n, k, d, Ico }, i) => (
+              <li key={d} style={{ '--k': i }}>
+                <span className="as-ico"><Ico size={20} strokeWidth={2.2} /></span>
+                <small>{k}</small>
+                <b><Num to={n} delay={i * 1100 + 300} /></b>
+                <span className="as-d">{d}</span>
+                <div className="as-vis" aria-hidden="true">
+                  {i === 0 && <span className="v-page"><i /><i /><i /><u>yourstore.com/…</u></span>}
+                  {i === 1 && [0, 1, 2, 3, 4, 5].map((q) => <span key={q} className="v-q" style={{ '--q': q }}>Q{q + 1}</span>)}
+                  {i === 2 && ENGINES.map((e, q) => <span key={e} className="v-eng" style={{ '--q': q }}>{e}</span>)}
+                  {i === 3 && [0, 1, 2, 3, 4].map((q) => <span key={q} className="v-gap" style={{ '--q': q }}>✕</span>)}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {result && (
+        <section className="section bg-white" style={{ paddingTop: 0 }} ref={resultRef}>
+          <div className="wrap">
+            <div className="scan-result">
+              <div className="scan-score" style={{ borderColor: result.score < 50 ? 'var(--orange)' : 'var(--green)' }}>
+                <span className="scan-score-num">{result.score}</span>
+                <span className="scan-score-label">AI readiness score</span>
+              </div>
+              <div className="scan-summary">
+                <h3>{result.headline}</h3>
+                <p style={{ marginBottom: 12 }}>{result.productName}</p>
+                <ul className="scan-gaps">
+                  {(result.topGaps || []).map((gap, i) => (
+                    <li key={i}>{gap}</li>
+                  ))}
+                </ul>
+                {progress ? (
+                  <div className="report-progress" role="status" aria-live="polite">
+                    <span className="report-progress-spinner" aria-hidden="true" />
+                    <div>
+                      <strong>Building your report — {progress.stage}…</strong>
+                      <span>
+                        We query ChatGPT, Claude, Gemini and Perplexity live and benchmark real sellers, so this takes 3–6 minutes.
+                        Keep this tab open. Elapsed: {formatElapsed(progress.elapsedMs)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="btn btn-primary" type="button" onClick={() => setShowLeadForm(true)} disabled={submitting}>
+                    Get my AI Readiness Report
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {showLeadForm && (
+        <LeadFormModal
+          onClose={() => setShowLeadForm(false)}
+          onSubmit={handleLeadSubmit}
+          submitting={submitting}
+          error={leadError}
+        />
+      )}
+
+      {confirmation && (
+        <ConfirmModal
+          onClose={() => setConfirmation(null)}
+          firstName={confirmation.firstName}
+          email={confirmation.email}
+          pdfBase64={confirmation.pdfBase64}
+          emailStatus={confirmation.emailStatus}
+        />
+      )}
+
+      <ReceiveSection />
+      <HowSection />
+      <LevelsSection />
+      <LayersSection />
+      <NextSection />
+      <FaqSection />
+
+      <section className="arr-final" aria-labelledby="arr-final-t">
+        <div className="arr-wrap">
+          <div className="arr-finalcard rv">
+            <div className="af-copy">
+            <p className="arr-eyebrow">Ready to check your product data?</p>
+            <h2 id="arr-final-t">See how AI-ready your <em>product content really is.</em></h2>
+            <p>Start with one product page and discover where your data is complete, where AI may struggle to verify it, and what enrichment could improve.</p>
+            <form className="url-form" onSubmit={handleScan}>
+              <label htmlFor="scan-url-2" className="visually-hidden">Product page URL</label>
+              <input
+                id="scan-url-2"
+                name="url"
+                type="url"
+                placeholder="Paste one product page URL"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+              />
+              <button className="btn btn-primary" type="submit" disabled={scanning}>
+                {scanning ? 'Scanning…' : 'Get my free report'}
+              </button>
+            </form>
+            <p className="arr-fine">One product page. Actionable findings. No obligation.</p>
+            </div>
+
+            <div className="af-scan" aria-hidden="true">
+              <div className="af-bar"><i /><i /><i /><span>yourstore.com / product-page</span></div>
+              <div className="af-body">
+                <div className="af-pic"><img src={TESYS.images.front} alt="" /></div>
+                <div className="af-lines"><b /><b /><b /></div>
+                <span className="af-beam" />
+              </div>
+              <ul className="af-checks">
+                <li className="ok" style={{ '--k': 0 }}><Check size={13} strokeWidth={3.4} />Part number found</li>
+                <li className="bad" style={{ '--k': 1 }}><X size={13} strokeWidth={3.4} />Specification table missing</li>
+                <li className="mid" style={{ '--k': 2 }}><CircleAlert size={13} strokeWidth={3} />Structured data incomplete</li>
+                <li className="ok" style={{ '--k': 3 }}><Check size={13} strokeWidth={3.4} />Datasheet linked</li>
+              </ul>
+              <span className="af-tag">AI readiness scan</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}

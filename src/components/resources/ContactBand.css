@@ -1,0 +1,58 @@
+/* ---- contact band (CTA + form) ---- */
+.rs-contact{
+  position:relative; overflow:hidden; padding:clamp(56px,7vw,112px) 0; scroll-margin-top:72px; background-color:var(--navy);
+  background-image:
+    radial-gradient(640px 420px at 100% 0%, rgba(255,106,26,.22), transparent 65%),
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size:auto, 56px 56px, 56px 56px;
+}
+.rs-contact .wrap{ position:relative; }
+.rs-cta{ display:grid; grid-template-columns:minmax(0,5fr) minmax(0,6fr); gap:clamp(36px,6vw,104px); align-items:start; }
+
+.rs-cta-copy{ color:#fff; }
+.rs-cta-eyebrow{ display:flex; align-items:center; gap:12px; margin:0 0 18px; font:600 12px var(--font-mono); letter-spacing:.16em; text-transform:uppercase; color:var(--orange); }
+.rs-cta-eyebrow::before{ content:""; width:32px; height:2px; background:var(--orange); }
+.rs-cta h2{ color:#fff; font-size:clamp(30px,3.5vw,48px); line-height:1.06; letter-spacing:-.035em; text-wrap:balance; }
+.rs-cta h2 .nowrap{ white-space:nowrap; }
+.rs-cta-lead{ margin-top:20px; max-width:30em; font-size:18px; line-height:1.65; color:rgba(255,255,255,.76); }
+.rs-cta-label{ margin:40px 0 14px; font:600 12px var(--font-mono); letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.55); }
+.rs-cta-services{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:10px; }
+.rs-cta-services li{ padding:8px 14px; border:1px solid rgba(255,255,255,.25); border-radius:3px; font-size:14px; font-weight:600; color:#fff; }
+.rs-cta-contacts{ list-style:none; margin:36px 0 0; padding:28px 0 0; border-top:1px solid rgba(255,255,255,.18); display:grid; gap:18px; }
+.rs-cta-contacts li{ display:flex; align-items:center; gap:16px; }
+.rs-cta-ico{ flex:none; display:grid; place-items:center; width:42px; height:42px; border-radius:3px; background:rgba(255,106,26,.16); color:var(--orange); }
+.rs-cta-contacts small{ display:block; font:500 11px var(--font-mono); letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.5); }
+.rs-cta-contacts a{ font:700 18px var(--font-head); letter-spacing:-.01em; color:#fff; }
+.rs-cta-contacts a:hover{ color:var(--orange); }
+.rs-cta-contacts a:focus-visible{ outline:3px solid var(--orange); outline-offset:3px; }
+
+/* form card */
+.rs-cta-form{ display:flex; flex-direction:column; gap:20px; padding:clamp(26px,3.4vw,44px); border-radius:6px; background:#fff; box-shadow:0 50px 90px -34px rgba(0,0,0,.65); }
+.rs-cta-form-head h3{ font-size:clamp(22px,2vw,28px); letter-spacing:-.025em; }
+.rs-cta-form-head p{ margin-top:8px; font-size:15px; color:var(--steel); }
+.rs-form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.rs-field{ display:flex; flex-direction:column; gap:8px; }
+.rs-field label{ font:700 14px var(--font-body); color:var(--navy); }
+.rs-field label b{ color:var(--orange-2); }
+.rs-field input, .rs-field textarea{
+  width:100%; padding:0 16px; height:52px; border:1.5px solid #d3dae6; border-radius:6px;
+  font:inherit; font-size:16px; color:var(--ink); background:#f7f9fc; transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.rs-field textarea{ height:auto; min-height:128px; padding:14px 16px; resize:vertical; line-height:1.55; }
+.rs-field input:hover, .rs-field textarea:hover{ border-color:var(--steel-2); }
+.rs-field input:focus, .rs-field textarea:focus{ outline:0; border-color:var(--orange); background:#fff; box-shadow:0 0 0 4px rgba(255,106,26,.16); }
+.rs-field [aria-invalid="true"]{ border-color:#c0392b; background:#fff7f6; }
+.rs-field-err{ font-size:13px; font-weight:600; color:#c0392b; }
+.rs-cta-submit{ display:flex; flex-wrap:wrap; align-items:center; gap:14px 22px; padding-top:4px; }
+.rs-cta-submit .btn{ min-height:54px; padding-inline:30px; font-size:16px; }
+.rs-cta-submit p{ display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--steel); }
+.rs-cta-submit p svg{ color:var(--green); flex:none; }
+.rs-form-ok{ padding:12px 16px; border-radius:6px; background:var(--green-bg); font-size:14px; font-weight:600; color:var(--green); }
+
+@media (max-width:1023px){
+  .rs-cta{ grid-template-columns:1fr; }
+}
+@media (max-width:640px){
+  .rs-form-grid{ grid-template-columns:1fr; gap:18px; }
+  .rs-cta-submit .btn{ width:100%; }
+}

@@ -1,0 +1,28 @@
+.aev{ background:#fff; padding-block:clamp(56px,7vw,100px); }
+.aev-wrap{ max-width:1440px; margin:0 auto; padding-inline:var(--page-edge,clamp(20px,4vw,56px)); }
+.aev-head{ max-width:700px; }
+.aev-eyebrow{ margin:0 0 14px; font:700 11px var(--font-body); letter-spacing:.14em; text-transform:uppercase; color:var(--orange-2); }
+.aev-head h2 span{ color:var(--orange); }
+.aev-lede{ margin:16px 0 0; font-size:15px; line-height:1.7; color:#4d576b; }
+.aev-grid{ margin-top:clamp(26px,3.5vw,42px); display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); grid-auto-rows:clamp(150px,17vw,250px); gap:14px; }
+.aev-grid figure{ position:relative; margin:0; overflow:hidden; border-radius:18px; background:#eef2f7; border:1px solid #e3e9f2; opacity:0; transform:translateY(16px); transition:opacity .7s cubic-bezier(.22,1,.36,1) calc(var(--i) * 90ms), transform .7s cubic-bezier(.22,1,.36,1) calc(var(--i) * 90ms); }
+.aev.on .aev-grid figure{ opacity:1; transform:none; }
+.aev-grid img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .8s cubic-bezier(.22,1,.36,1); }
+.aev-grid figure:hover img{ transform:scale(1.04); }
+.aev-grid figcaption{ position:absolute; left:12px; bottom:12px; padding:6px 11px; border-radius:99px; background:rgba(11,31,58,.78); backdrop-filter:blur(6px); color:#fff; font:600 11.5px/1 var(--font-body); }
+.aev-a{ grid-column:span 3; grid-row:span 2; } .aev-b{ grid-column:span 3; } .aev-c{ grid-column:span 3; }
+.aev-d, .aev-e{ display:none; }
+@media (min-width:1000px){ .aev-a{ grid-column:span 3; } .aev-b{ grid-column:span 3; } .aev-c{ grid-column:span 3; } }
+@media (max-width:760px){
+  .aev-grid{ grid-template-columns:minmax(0,1fr); grid-auto-rows:210px; gap:10px; }
+  .aev-a, .aev-b, .aev-c{ grid-column:auto; grid-row:auto; } .aev-a{ grid-row:span 1; }
+  .aev-grid figure{ border-radius:14px; }
+}
+@media (prefers-reduced-motion:reduce){ .aev-grid figure{ opacity:1; transform:none; transition:none; } }
+
+/* three equal 4:3 tiles = the photos' own ratio, so nobody's face is cropped */
+.aev-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:auto; }
+.aev-grid figure{ aspect-ratio:4 / 3; }
+.aev-a, .aev-b, .aev-c{ grid-column:auto; grid-row:auto; }
+.aev-b img{ object-position:55% 20%; } .aev-c img{ object-position:40% 25%; } .aev-a img{ object-position:50% 40%; }
+@media (max-width:900px){ .aev-grid{ grid-template-columns:minmax(0,1fr); } .aev-grid figure{ aspect-ratio:4 / 3; } }

@@ -1,0 +1,159 @@
+/* Homepage rhythm and shared presentation tokens. Component motion remains intact. */
+.home-page{
+  --home-max:var(--page-max);
+  --home-edge:var(--page-edge);
+  --home-ink:#0b1f3a;
+  --home-muted:#48566b;
+  --home-line:#e8e1d7;
+  --home-warm:#f7f5f1;
+  --home-peach:#fff8f2;
+  --home-radius:18px;
+  --home-shadow:0 12px 30px -25px rgba(11,31,58,.28);
+  --home-major:clamp(72px,7vw,108px);
+  --home-compact:clamp(64px,5.4vw,86px);
+  --font-mono:var(--font-body);
+  width:100%;
+}
+.home-page :is(.hh-wrap,.ts-wrap,.so-wrap,.hproblem-inner,.rb-wrap,.wbs-wrap,.cap-wrap,.air-wrap,.pf-wrap,.ch-wrap,.hfaq-inner,.dc-wrap){
+  max-width:var(--home-max);
+  margin-inline:auto;
+  padding-inline:var(--home-edge);
+}
+.home-page section h2{font-size:clamp(31px,3vw,42px);line-height:1.12;letter-spacing:-.025em}
+.home-page :is(.so-lede,.rb-lede,.wbs-lede,.cap-lede,.air-lede,.pf-sub,.ch-lede,.dc-lede){font-size:15px;line-height:1.62}
+.home-page :is(.so-eyebrow,.rb-eyebrow,.air-eyebrow,.ch-eyebrow,.dc-eyebrow,.pf-kicker,.home-eyebrow){font:700 11px/1.35 var(--font-body);letter-spacing:.11em;text-transform:uppercase;color:var(--orange-2)}
+.home-page :is(.btn,.wbs-cta,.cap-cta,.dc-btn){min-height:48px;padding:0 25px;border-radius:999px;font-family:var(--font-body);font-size:14px;font-weight:600;box-shadow:none}
+.home-page :is(.so-card,.cap-card,.ch-card,.dc-card){border-radius:var(--home-radius);box-shadow:var(--home-shadow)}
+.home-page :is(.so-card,.cap-card,.ch-card,.dc-card):hover{box-shadow:0 16px 32px -25px rgba(11,31,58,.32)}
+
+
+/* 01–04: compact orientation, with both products at equal weight. */
+.home-page .hh h1{font-size:clamp(42px,4.15vw,58px);line-height:1.02}
+.home-page .hh{min-height:0}
+.home-page .ts-wrap{padding-block:12px;gap:10px 22px}
+.home-page .ts-wrap li{font-size:12px}
+.home-page .ts-badge{height:34px}
+.home-page .ts-badge img{height:28px}
+.home-page .so{background:var(--home-warm);padding-block:var(--home-compact)}
+.home-page .so-head{margin-bottom:32px;max-width:680px}
+.home-page .so-head h2{max-width:680px}
+.home-page .so-grid{gap:20px}
+.home-page .so-card{padding:26px;min-width:0}
+.home-page .so-card h3{font-size:clamp(22px,2vw,27px)}
+.home-page .so-copy{font-size:14px;margin-bottom:18px;min-height:3.1em}
+.home-page .so-vis{margin-bottom:18px}
+.home-page .so-flow{margin-bottom:18px}
+
+
+/* 05–07: one transformation, then a distinct workbench and approval story. */
+.home-page .rb{background:var(--home-peach);padding-block:var(--home-major)}
+.home-page .rb-wrap{column-gap:clamp(32px,4vw,56px)}
+.home-page .rb-benefit{font-size:15px}
+.home-page .wbs{background:#fff;padding-block:var(--home-major)}
+.home-page .wbs-wrap{gap:38px}
+.home-page .wbs-main{grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(28px,4vw,60px)}
+.home-page .wbs-title{margin-top:20px}
+.home-page .wbs-sub{font-size:16px;margin-top:20px}
+.home-page .wbs-lede{margin-top:14px}
+.home-page .wbs-cta{margin-top:24px}
+.home-page .wbs-stage{padding:3% 1%}
+.wbs-governance{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.95fr);gap:18px 36px;align-items:start;padding:27px 30px;border:1px solid var(--home-line);border-radius:var(--home-radius);background:#fbfaf8}
+.wbs-review-intro h3{font:700 clamp(20px,2vw,26px)/1.22 var(--font-head);color:var(--home-ink);margin:10px 0 0}
+.wbs-review-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wbs-review-steps li{display:flex;flex-direction:column;gap:7px;padding:16px;border:1px solid var(--home-line);border-radius:12px;background:#fff}
+.wbs-review-steps span{color:var(--orange-2);font:700 11px var(--font-body)}
+.wbs-review-steps strong{font:700 14px/1.3 var(--font-head);color:var(--home-ink)}
+.wbs-review-steps small{font:400 12px/1.45 var(--font-body);color:var(--home-muted)}
+.wbs-review-note{grid-column:2;margin:0;color:var(--home-muted);font-size:12px;line-height:1.5}
+.home-page .cap{background:var(--home-warm);padding-block:var(--home-major)}
+.home-page .cap-wrap{grid-template-columns:minmax(0,32fr) minmax(0,68fr);gap:clamp(28px,4vw,60px)}
+.home-page .cap-title{margin-top:20px}
+.home-page .cap-lede{margin-top:20px}
+.home-page .cap-cta{margin-top:26px}
+.home-page .cap-card{transform:none}
+.home-page .cap-media{aspect-ratio:4/2.7}
+.home-page .cap-body{padding:20px}
+.home-page .cap-body h3{font-size:17px}
+.home-page .cap-tags{display:none}
+
+/* AI Readiness keeps its dark introduction, then tighter diagnostic chapters. */
+.home-page .air-s1{padding-block:var(--home-major)}
+.home-page .air-s1-grid{gap:clamp(28px,4vw,56px)}
+.home-page .air-s2{padding-block:var(--home-major)}
+.home-page .air-s2-head{margin-bottom:38px}
+.home-page .air-s2-grid{gap:clamp(28px,4vw,50px)}
+.home-page .air-track ol{gap:12px}
+.home-page .air-mod article{padding:17px 20px}
+.home-page .air-mod h3{font-size:18px}
+.home-page .air-mod-copy{font-size:13.5px;margin-bottom:10px}
+.home-page .air-mod-checks li{font-size:11.5px}
+.home-page .air-s3{background:var(--home-peach);padding-block:var(--home-major)}
+.home-page .air-s3-head{margin-bottom:36px}
+.home-page .air-compare{gap:16px;grid-template-columns:minmax(0,1fr) 128px minmax(0,1fr)}
+.home-page .air-pg{padding:17px;gap:9px}
+.home-page .air-layers{margin-top:32px}
+.home-page .air-report{margin-top:46px;gap:30px}
+.home-page .air-docs li{flex-basis:142px}
+.home-page .air-doc-thumb{aspect-ratio:3/3.3}
+
+/* Existing stack, proof, FAQ and a balanced final product choice. */
+.home-page .pf-section{background:#fff;padding-block:var(--home-major)}
+.home-page .pf-wrap{gap:clamp(28px,4vw,56px)}
+.home-page .pf-stage{margin-bottom:20px}
+.home-page .pf-lede{font-size:17px}
+.home-page .pf-steps{gap:9px}
+.home-page .ch{background:var(--home-warm);padding-block:var(--home-major)}
+.home-page .ch-head{margin-bottom:34px;gap:30px}
+.home-page .ch-grid{gap:18px}
+.home-page .ch-body{padding:22px}
+.home-page .ch-body h3{font-size:18px}
+.home-page .ch-excerpt{font-size:14px;margin-bottom:15px}
+.home-page .ch-card.stories .ch-media img{width:160%;max-width:none;object-fit:cover;object-position:left center}
+.home-page .dc{background:var(--home-warm);padding-block:var(--home-compact)}
+.home-page .dc-head{margin-bottom:28px}
+.home-page .dc-grid{gap:20px}
+.home-page .dc-card{padding:25px}
+.home-page .dc-card h3{font-size:25px}
+.home-page .dc-desc{font-size:13.5px}
+.home-page .dcv{height:160px}
+
+.hfaq{background:#fff;padding-block:var(--home-compact)}
+.hfaq-inner{display:grid;grid-template-columns:minmax(0,.37fr) minmax(0,.63fr);gap:clamp(40px,6vw,90px);align-items:start}
+.hfaq-intro h2{margin:12px 0 16px}
+.hfaq-intro>p:last-child{font-size:15px;line-height:1.6;max-width:390px}
+.hfaq-list{border-top:1px solid var(--home-line)}
+.hfaq-list details{border-bottom:1px solid var(--home-line)}
+.hfaq-list summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 0;cursor:pointer;list-style:none;color:var(--home-ink);font:700 15px/1.4 var(--font-head)}
+.hfaq-list summary::-webkit-details-marker{display:none}
+.hfaq-list summary span{display:grid;place-items:center;width:24px;height:24px;flex:none;color:var(--orange-2);font:400 22px var(--font-body);transition:transform .2s}
+.hfaq-list details[open] summary span{transform:rotate(45deg)}
+.hfaq-list details>p{padding:0 34px 20px 0;font-size:14px;line-height:1.65;max-width:680px}
+.hfaq-list summary:focus-visible{outline:3px solid var(--orange);outline-offset:3px}
+
+@media (max-width:1100px){
+  .hfaq-inner{grid-template-columns:1fr}
+  .home-page .rb-wrap,.home-page .cap-wrap,.home-page .pf-wrap{gap:32px}
+  .wbs-governance{grid-template-columns:1fr}
+  .wbs-review-note{grid-column:1}
+}
+@media (max-width:760px){
+  .home-page{--home-major:68px;--home-compact:62px}
+  .home-page section h2{font-size:clamp(29px,8vw,34px)}
+  .home-page .hh h1{font-size:clamp(38px,10vw,42px)}
+  .home-page .ts-wrap{padding-block:15px}
+  .home-page .so-card{padding:22px}
+  .home-page .so-copy{min-height:0}
+  .home-page .wbs-main,.home-page .cap-wrap{grid-template-columns:1fr}
+  .home-page .wbs-stage{padding:0}
+  .wbs-governance{padding:22px}
+  .wbs-review-steps{grid-template-columns:1fr}
+  .wbs-review-steps li{padding:13px 15px}
+  .home-page .cap-media{aspect-ratio:4/2.8}
+  .home-page .air-compare{grid-template-columns:1fr}
+  .home-page .air-docs li{flex-basis:150px}
+  .home-page .ch-card.stories .ch-media img{width:150%}
+  .hfaq-list summary{font-size:14px}
+}
+@media (prefers-reduced-motion:reduce){
+  .hfaq-list summary span{transition:none}
+}

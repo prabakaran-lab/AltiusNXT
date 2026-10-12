@@ -1,0 +1,82 @@
+/* ===================================================================
+   Global button system. One size, one shape, one hover animation, three colour variants.
+   Loaded last (imported at the end of App.jsx) so it overrides every page-level button style.
+   Sizes: default 48px, small 40px.  Variants: primary (orange), outline (white), navy, on-dark (outline-light).
+   =================================================================== */
+:root{
+  --btn-h:48px; --btn-h-sm:40px; --btn-r:12px; --btn-px:26px; --btn-px-sm:18px;
+  --btn-ease:cubic-bezier(.22,1,.36,1);
+}
+
+/* ---- shared geometry + type ---- */
+body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ar-go,.ah-btn,.atn-btn):not(.ui-btn--text){
+  position:relative; overflow:hidden; isolation:isolate;
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  min-height:var(--btn-h); height:auto; padding:0 var(--btn-px); margin-top:0;
+  border-radius:var(--btn-r); border:1.5px solid transparent;
+  font:600 14.5px/1 var(--font-body); letter-spacing:-.003em; text-decoration:none; white-space:nowrap; text-align:center;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:transform .3s var(--btn-ease), box-shadow .3s var(--btn-ease), background-color .25s ease, color .25s ease, border-color .25s ease;
+}
+body :is(a,button):is(.btn-sm,.ui-btn--sm){ min-height:var(--btn-h-sm); padding:0 var(--btn-px-sm); font-size:13.5px; }
+body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ar-go,.ah-btn,.atn-btn):not(.ui-btn--text) svg{ flex:none; width:18px; height:18px; stroke-width:2.2; transition:transform .3s var(--btn-ease); }
+body :is(a,button):is(.btn-sm,.ui-btn--sm) svg{ width:16px; height:16px; }
+body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ah-btn,.atn-btn):not(.ui-btn--text):hover{ transform:translateY(-2px); }
+body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ah-btn,.atn-btn):not(.ui-btn--text):active{ transform:translateY(0) scale(.985); }
+body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ah-btn,.atn-btn):not(.ui-btn--text):hover svg:last-child:not(:first-child){ transform:translateX(4px); }
+body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ah-btn,.atn-btn):not(.ui-btn--text):focus-visible{ outline:3px solid rgba(255,106,26,.55); outline-offset:3px; }
+body :is(a,button):is(.btn,.ui-btn):disabled,body :is(a,button):is(.btn,.ui-btn)[aria-disabled="true"]{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+
+/* ---- primary: orange, with the same light sweep on hover everywhere ---- */
+body :is(a,button):is(.btn-primary,.ui-btn--primary,.hq-mail,.ar-go.ready,.ah-btn.primary,.atn-btn),
+body .header-cta.btn-primary{
+  background:linear-gradient(135deg,var(--orange-2) 0%,var(--orange) 100%); color:#fff; border-color:transparent;
+  box-shadow:0 12px 24px -12px rgb(var(--orange-rgb) / .75), inset 0 1px 0 rgba(255,255,255,.28);
+}
+body :is(a,button):is(.btn-primary,.ui-btn--primary,.hq-mail,.ah-btn.primary,.atn-btn):not(:disabled):hover{
+  background:linear-gradient(135deg,var(--orange-2) 0%,var(--orange) 100%);
+  box-shadow:0 20px 32px -14px rgb(var(--orange-rgb) / .85), inset 0 1px 0 rgba(255,255,255,.34);
+}
+body :is(a,button):is(.btn-primary,.ui-btn--primary,.hq-mail,.ah-btn.primary,.atn-btn)::after{
+  content:""; position:absolute; top:0; bottom:0; left:-70%; width:45%; z-index:-1; pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent); transform:skewX(-20deg); opacity:0;
+}
+body :is(a,button):is(.btn-primary,.ui-btn--primary,.hq-mail,.ah-btn.primary,.atn-btn):hover::after{ opacity:1; animation:btn-sweep .75s var(--btn-ease) both; }
+@keyframes btn-sweep{ from{ left:-70%; } to{ left:130%; } }
+
+/* ---- outline: white surface, navy text ---- */
+body :is(a,button):is(.btn-outline,.ui-btn--outline,.ah-btn:not(.primary)){
+  background:#fff; color:var(--navy); border-color:#c3cedd; box-shadow:0 1px 2px rgba(11,31,58,.05);
+}
+body :is(a,button):is(.btn-outline,.ui-btn--outline,.ah-btn:not(.primary)):not(:disabled):hover{
+  background:#fff; color:var(--navy); border-color:var(--navy); box-shadow:0 14px 24px -16px rgba(11,31,58,.5);
+}
+body :is(a,button):is(.btn-outline,.ui-btn--outline,.ah-btn:not(.primary)) svg:first-child:not(:last-child){ color:var(--orange-2); }
+
+/* ---- navy ---- */
+body :is(a,button):is(.btn-navy,.ui-btn--secondary){ background:var(--navy); color:#fff; box-shadow:0 12px 22px -14px rgba(11,31,58,.7); }
+body :is(a,button):is(.btn-navy,.ui-btn--secondary):not(:disabled):hover{ background:var(--navy-3,#17335f); box-shadow:0 18px 30px -14px rgba(11,31,58,.75); }
+
+/* ---- on dark surfaces ---- */
+body :is(a,button):is(.btn-outline-light,.fc-sec){ background:transparent; color:#fff; border-color:rgba(255,255,255,.4); box-shadow:none; }
+body :is(a,button):is(.btn-outline-light,.fc-sec):hover{ background:rgba(255,255,255,.12); border-color:#fff; color:#fff; box-shadow:0 14px 24px -16px rgba(0,0,0,.6); }
+
+/* ---- the demo "Run report" button inside the animated card keeps the same look but never lifts ---- */
+body .ar-go{ width:100%; background:#cfd8e6; color:#fff; box-shadow:none; }
+body .ar-go.ready{ box-shadow:0 12px 24px -12px rgb(var(--orange-rgb) / .75), inset 0 1px 0 rgba(255,255,255,.28); }
+body .ar-go.press{ transform:scale(.97); }
+
+/* ---- header button: identical size, only a touch more compact in the bar ---- */
+body .nav .header-cta{ margin-left:12px; }
+
+/* ---- groups ---- */
+.hh-actions,.ft-cta-act,.rb-actions,.air-actions,.fc-btns,.hw-cta{ align-items:center; }
+@media (max-width:560px){
+  body .hh-actions :is(a,button).ui-btn,body .ft-cta-act :is(a,button).btn,body .hw-cta :is(a,button).ui-btn{ width:100%; }
+}
+@media (prefers-reduced-motion:reduce){
+  body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ar-go,.ah-btn,.atn-btn){ transition:none; }
+  body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ah-btn,.atn-btn):hover,
+  body :is(a,button):is(.btn,.ui-btn,.btn-outline-light,.fc-sec,.hq-mail,.ah-btn,.atn-btn):hover svg{ transform:none; }
+  body :is(a,button):is(.btn-primary,.ui-btn--primary,.hq-mail,.ah-btn.primary,.atn-btn):hover::after{ animation:none; opacity:0; }
+}

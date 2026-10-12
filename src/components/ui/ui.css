@@ -1,0 +1,60 @@
+/* ===================================================================
+   UI system: icons, buttons, icon buttons. Loaded wherever <Icon/> is used.
+   Legacy button classes are normalised here so every CTA shares height, shape, spacing and motion.
+   =================================================================== */
+svg.ui-icon{ display:inline-block; flex:none; vertical-align:middle; transition:transform .25s ease, color .25s ease; }
+
+/* Right-arrow nudge on hover/focus for any link or button that contains an arrow */
+:is(a, button):hover > .ui-icon-arrow-right,
+:is(a, button):focus-visible > .ui-icon-arrow-right{ transform:translateX(3px); }
+:is(a, button):hover > .ui-icon-arrow-up-right{ transform:translate(2px,-2px); }
+:is(a, button):disabled > .ui-icon{ transform:none; }
+
+/* ---- standard button ---- */
+.ui-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 24px; border-radius:999px;
+  border:1.5px solid transparent; font:600 15px/1 var(--font-body); text-decoration:none; white-space:nowrap; cursor:pointer;
+  transition:background-color .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+}
+.ui-btn:hover{ transform:translateY(-1px); }
+.ui-btn:active{ transform:none; }
+.ui-btn--sm{ min-height:40px; padding:0 18px; font-size:14px; }
+.ui-btn--primary{ background:var(--orange); color:#fff; box-shadow:0 10px 24px -10px rgba(255,106,26,.6); }
+.ui-btn--primary:hover{ background:var(--orange-2); box-shadow:0 14px 28px -12px rgba(255,106,26,.7); }
+.ui-btn--secondary{ background:var(--navy); color:#fff; }
+.ui-btn--secondary:hover{ background:var(--navy-3,#16345c); }
+.ui-btn--outline{ background:#fff; color:var(--navy); border-color:#cfd6e2; }
+.ui-btn--outline:hover{ border-color:var(--navy); }
+.ui-btn--text{ min-height:0; padding:4px 0; border-radius:4px; background:transparent; color:var(--orange-2); }
+.ui-btn--text:hover{ color:var(--navy); transform:none; }
+.ui-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+
+/* ---- icon button ---- */
+.ui-ibtn{
+  display:inline-grid; place-items:center; width:44px; height:44px; padding:0; border-radius:12px; cursor:pointer;
+  border:1.5px solid #cfd6e2; background:#fff; color:var(--navy);
+  transition:background-color .25s ease, color .25s ease, border-color .25s ease, transform .25s ease;
+}
+.ui-ibtn:hover:not(:disabled){ border-color:var(--orange); color:var(--orange-2); }
+.ui-ibtn:disabled{ opacity:.4; cursor:default; }
+.ui-ibtn--primary{ background:var(--orange); border-color:var(--orange); color:#fff; }
+.ui-ibtn--primary:hover:not(:disabled){ background:var(--orange-2); color:#fff; }
+
+/* ---- shared focus ring ---- */
+.ui-btn:focus-visible, .ui-ibtn:focus-visible,
+.btn:focus-visible, .wy-btn:focus-visible, .wy-chip:focus-visible, .wy-link:focus-visible, .dc-btn:focus-visible,
+.ah-btn:focus-visible, .ag-btn:focus-visible, .sf-cta:focus-visible, .pi-cta:focus-visible, .im-cta:focus-visible,
+.rb-link:focus-visible, .tl:focus-visible, .pbl-link:focus-visible{ outline:2px solid var(--orange); outline-offset:3px; }
+
+/* ---- normalise legacy CTA classes: same height, shape, alignment and icon gap ---- */
+:root :is(.btn, .wy-btn, .dc-btn, .ah-btn, .ag-btn, .sf-cta, .pi-cta){
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; height:auto; padding-block:0; line-height:1; border-radius:999px;
+}
+:root .btn-sm{ min-height:40px; }
+:root :is(.wy-link, .tl, .rb-link, .im-cta, .pbl-link, .sf-link2, .ft-cta-link){ display:inline-flex; align-items:center; gap:6px; }
+:root .wy-chip{ display:inline-flex; align-items:center; gap:6px; }
+
+@media (prefers-reduced-motion:reduce){
+  .ui-icon, .ui-btn, .ui-ibtn{ transition:none; }
+  :is(a, button):hover > .ui-icon-arrow-right, :is(a, button):hover > .ui-icon-arrow-up-right, .ui-btn:hover{ transform:none; }
+}
