@@ -8,7 +8,7 @@ import './TrustBand.css'
 /* Four gates every value passes before it is published. Sample value only. */
 const GATES = [
   { t: 'AI suggests', d: 'CatalogWiz AI extracts the value and cites its source.', chip: 'Voltage rating · 690 V ac' },
-  { t: 'A specialist verifies', d: 'A data specialist checks it against the manufacturer document.', chip: 'Datasheet p.2 · matches' },
+  { t: 'Human verification', d: 'A data specialist checks it against the manufacturer document.', chip: 'Datasheet p.2 · matches' },
   { t: 'Quality gate', d: 'Attributes, taxonomy and SEO are checked before release.', chip: '17 of 17 checks passed' },
   { t: 'You approve', d: 'Nothing is published until you sign off.', chip: 'Approved' },
 ]
