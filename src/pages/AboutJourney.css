@@ -104,3 +104,70 @@
   .aj *, .aj *::before, .aj *::after{ transition:none !important; animation:none !important; }
   .aj-r, .aj-seg{ opacity:1; transform:none; }
 }
+
+/* right-hand scene: line art that draws itself, then keeps moving */
+.aj-scene{ position:absolute; top:clamp(20px,2.6vw,36px); right:clamp(24px,3.5vw,56px); width:min(46%,540px); height:calc(100% - 84px - clamp(20px,2.6vw,36px)); pointer-events:none; overflow:visible; fill:none; stroke:var(--navy); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+.aj-scene .hi{ stroke:var(--orange); }
+.aj-scene .thick{ stroke-width:5; }
+.aj-scene .soft{ stroke:#e2d6c3; }
+.aj-scene .dash{ stroke-dasharray:4 9; }
+.aj-scene .dotfill{ fill:var(--orange); stroke:none; }
+.aj-scene .dotfill.big{ r:4.5; }
+.aj-scene .navyfill{ fill:var(--navy); stroke:none; }
+.aj-scene .sunfill{ fill:rgba(255,106,26,.14); }
+.aj-scene .node{ fill:#fff; }
+.aj-scene .orb{ fill:var(--orange); stroke:none; filter:drop-shadow(0 10px 18px rgba(255,106,26,.55)); }
+.aj-scene .sparkle{ fill:#fff; stroke:none; transform-box:fill-box; transform-origin:center; animation:aj-twinkle 1.8s ease-in-out infinite; }
+.aj-scene .star{ fill:var(--orange); stroke:none; opacity:0; transform-box:fill-box; transform-origin:center; animation:aj-pop .6s cubic-bezier(.3,1.5,.5,1) 1.9s forwards; }
+.aj-scene .fill{ fill:rgba(255,106,26,.2); stroke:var(--orange); }
+.aj-scene .whitestroke{ stroke:#fff; stroke-width:3; }
+.aj-scene .skel{ fill:#e8dfd0; stroke:none; }
+.aj-scene .shine{ fill:#fff; stroke:none; opacity:.55; }
+.aj-scene .jit{ fill:#e8dfd0; stroke:var(--navy); stroke-width:1.6; animation:aj-jit 1.6s ease-in-out infinite alternate; animation-delay:calc(var(--j,0) * -.3s); }
+.aj-scene .area{ fill:url(#ajArea); stroke:none; transform-box:fill-box; transform-origin:0 100%; transform:scaleX(0); animation:aj-wipe 1.4s cubic-bezier(.45,0,.2,1) .5s forwards; }
+.aj-scene .hbar{ fill:var(--orange); stroke:none; transform-box:fill-box; transform-origin:0 50%; transform:scaleX(0); animation:aj-hgrow .7s ease forwards; animation-delay:calc(var(--i,0) * 110ms); }
+.aj-scene .prog{ stroke:var(--orange); stroke-width:10; stroke-dasharray:100; stroke-dashoffset:100; transform:rotate(-90deg); transform-origin:200px 130px; animation:aj-ring 1.7s cubic-bezier(.3,0,.2,1) forwards; }
+.aj-scene .burst path{ stroke-width:3; opacity:0; animation:aj-burst .7s ease-out 1.8s forwards; }
+.aj-scene .stamp{ opacity:0; transform-box:fill-box; transform-origin:center; animation:aj-stamp .5s cubic-bezier(.3,1.6,.5,1) 2.4s forwards; }
+.aj-scene text{ stroke:none; fill:var(--navy); font-family:var(--font-body); }
+.aj-scene .cap{ font-size:11px; font-weight:700; letter-spacing:.12em; fill:#6b7a90; opacity:0; animation:aj-fade .6s ease forwards; animation-delay:calc(var(--i,0) * 110ms + 300ms); }
+.aj-scene .cap.lg{ font-size:12px; fill:var(--navy); opacity:1; animation:none; }
+.aj-scene .num{ font:800 58px/1 var(--font-head); fill:var(--orange); letter-spacing:-.04em; }
+.aj-scene .num.sm{ font-size:22px; fill:var(--navy); }
+.aj-scene .d{ stroke-dasharray:1; stroke-dashoffset:1; animation:aj-draw 1s cubic-bezier(.45,0,.2,1) forwards; animation-delay:calc(var(--i,0) * 110ms); }
+.aj-scene .pop, .aj-scene .bar{ opacity:0; transform-box:fill-box; transform-origin:center; animation:aj-pop .55s cubic-bezier(.3,1.5,.5,1) forwards; animation-delay:calc(var(--i,0) * 110ms); }
+.aj-scene .bar{ fill:rgba(255,106,26,.16); transform-origin:50% 100%; animation-name:aj-grow; }
+.aj-scene .win{ fill:var(--orange); stroke:none; opacity:0; animation:aj-win 3.2s ease-in-out infinite; animation-delay:calc(var(--i,0) * 260ms + 1s); }
+.aj-scene .ping{ stroke:var(--orange); stroke-width:2; transform-box:fill-box; transform-origin:center; opacity:0; animation:aj-ping 2.4s ease-out 1.2s infinite; }
+.aj-scene .ping.late{ animation-delay:2.4s; }
+.aj-scene .spin{ transform-box:fill-box; transform-origin:center; animation:aj-spin 9s linear infinite; }
+.aj-scene .spin.slow{ animation-duration:16s; } .aj-scene .spin.slowest{ animation-duration:40s; }
+.aj-scene .badge{ opacity:1; }
+@keyframes aj-draw{ to{ stroke-dashoffset:0; } }
+@keyframes aj-pop{ from{ opacity:0; transform:scale(.4); } to{ opacity:1; transform:scale(1); } }
+@keyframes aj-grow{ from{ opacity:0; transform:scaleY(0); } to{ opacity:1; transform:scaleY(1); } }
+@keyframes aj-hgrow{ to{ transform:scaleX(1); } }
+@keyframes aj-wipe{ to{ transform:scaleX(1); } }
+@keyframes aj-ring{ to{ stroke-dashoffset:0; } }
+@keyframes aj-burst{ 0%{ opacity:0; transform:scale(.85); transform-origin:200px 130px; } 40%{ opacity:1; } 100%{ opacity:0; transform:scale(1.15); transform-origin:200px 130px; } }
+@keyframes aj-stamp{ 0%{ opacity:0; transform:scale(2.4) rotate(-14deg); } 100%{ opacity:1; transform:none; } }
+@keyframes aj-fade{ to{ opacity:1; } }
+@keyframes aj-win{ 0%,100%{ opacity:0; } 35%,65%{ opacity:.9; } }
+@keyframes aj-ping{ 0%{ opacity:.7; transform:scale(.7); } 100%{ opacity:0; transform:scale(2.3); } }
+@keyframes aj-spin{ to{ transform:rotate(360deg); } }
+@keyframes aj-twinkle{ 0%,100%{ transform:scale(1) rotate(0); } 50%{ transform:scale(1.18) rotate(18deg); } }
+@keyframes aj-jit{ from{ transform:translate(0,0); } to{ transform:translate(5px,-4px); } }
+@media (max-width:1100px){ .aj-scene{ display:none; } }
+@media (prefers-reduced-motion:reduce){
+  .aj-scene *{ animation:none !important; }
+  .aj-scene .d{ stroke-dashoffset:0; } .aj-scene .pop, .aj-scene .bar, .aj-scene .cap, .aj-scene .star, .aj-scene .stamp{ opacity:1; }
+  .aj-scene .area, .aj-scene .hbar{ transform:none; } .aj-scene .prog{ stroke-dashoffset:0; }
+}
+
+.aj-detail{ margin:10px 0 0; max-width:34em; font:400 15px/1.65 var(--font-body); color:#4a5a72; }
+.aj-stat{ margin:16px 0 0; display:inline-flex; align-items:center; gap:12px; padding:10px 18px 10px 14px; border-radius:14px; background:#fff; border:1px solid #eadfcc; }
+.aj-stat b{ font:800 22px/1 var(--font-head); letter-spacing:-.02em; color:var(--orange-2); }
+.aj-stat span{ font:600 12px/1.2 var(--font-body); letter-spacing:.06em; text-transform:uppercase; color:#6b7a90; }
+
+.aj-scene text.orbtxt{ fill:#fff; font:800 11.5px/1 var(--font-head); letter-spacing:-.01em; }
+.aj-scene text.orbtxt.big{ font-size:20px; }

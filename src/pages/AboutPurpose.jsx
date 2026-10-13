@@ -26,8 +26,8 @@ export default function AboutPurpose() {
         <figure className="ap-media ap-r" style={{ '--d': '0ms' }}>
           <img
             src={purposeImg}
-            width="1586" height="992" loading="lazy"
-            alt="AltiusNxt product-data specialists reviewing structured industrial product information on screen"
+            width="1254" height="1254" loading="lazy"
+            alt="Two AltiusNxt product data specialists reviewing a product catalog page on a monitor"
           />
           <figcaption>
             <b>Product-data expertise</b>
@@ -39,8 +39,9 @@ export default function AboutPurpose() {
           <p className="ap-eyebrow ap-r" style={{ '--d': '120ms' }}>Our purpose</p>
           <h2 id="ap-title" className="ap-r" style={{ '--d': '180ms' }}>Better product data.<br />Stronger digital commerce.</h2>
           <p className="ap-intro ap-r" style={{ '--d': '260ms' }}>
-            AltiusNxt helps manufacturers and distributors turn complex, fragmented product information into accurate,
-            structured and AI-ready content — making products easier to manage, publish, discover and buy across digital channels.
+            Through product data enrichment, cleansing and catalog management, AltiusNxt helps manufacturers and
+            distributors turn fragmented supplier information into accurate, AI-ready content, so products are easier to
+            find, compare and buy on every channel.
           </p>
           <p className="ap-statement ap-r" style={{ '--d': '340ms' }}>Help technical products become easier to understand, discover and buy.</p>
 
@@ -50,9 +51,9 @@ export default function AboutPurpose() {
               <p className="ap-label">Our vision</p>
               <h3>Make trusted product information accessible everywhere buyers look.</h3>
               <p>
-                We envision a future where manufacturers and distributors can make complete, accurate and structured product
-                information available across ecommerce platforms, marketplaces, product information management (PIM) systems and
-                AI-driven discovery experiences — without product-data complexity slowing growth.
+                A world where every product a manufacturer or distributor sells has complete, accurate information everywhere
+                buyers look: online stores, marketplaces, PIM systems, AI search and the AI shopping agents now arriving with
+                Google's Universal Commerce Protocol (UCP).
               </p>
             </div>
           </article>

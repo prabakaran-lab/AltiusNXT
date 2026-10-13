@@ -77,6 +77,8 @@ export default function AboutGlobal() {
         <div className="ag-map-col">
           <div className="ag-map" dangerouslySetInnerHTML={{ __html: MAP_SVG }} />
 
+          <p className="ag-clients">Clients in: USA, Canada, UK, Ireland, Netherland, Belgium, France, Germany, Lithuania, Malta, UAE, South Africa, Kenya, Singapore, Australia and New Zealand.</p>
+
           <div className={`ag-final${step >= 4 ? ' on' : ''}`}>
             <p><b>Connected delivery network</b><span>Offices in USA &amp; India · Clients in 15+ countries</span></p>
             <ul>{PILLARS.map((t, i) => <li key={t} style={{ '--i': i }}>{t}</li>)}</ul>

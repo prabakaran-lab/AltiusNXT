@@ -8,12 +8,12 @@ const ITEMS = [
   {
     n: '01', label: 'Quality management', logo: tuv9001, alt: 'TÜV Austria ISO 9001:2015 certification mark',
     title: 'ISO 9001:2015', sub: 'Quality Management System',
-    text: 'Demonstrates a structured commitment to consistent quality, documented processes and continual improvement.',
+    text: 'Every project follows documented, audited quality processes, so results are consistent.',
   },
   {
     n: '02', label: 'Information security', logo: tuv27001, alt: 'TÜV Austria ISO/IEC 27001:2022 certification mark',
     title: 'ISO/IEC 27001:2022', sub: 'Information Security Management',
-    text: 'Supports disciplined controls for protecting information, managing risk and maintaining secure operational practices.',
+    text: 'Your supplier files, pricing and product data are protected by audited security controls.',
   },
   {
     n: '03', label: 'Industry recognition', logo: b2beaBadge, alt: 'B2B Ecommerce Association member badge', wide: true,
@@ -45,7 +45,7 @@ export default function AboutTrust() {
           <p className="at-eyebrow at-r" style={{ '--d': '0ms' }}>Trust &amp; recognition</p>
           <h2 id="at-title" className="at-r" style={{ '--d': '80ms' }}>Certified for quality.<br /><span>Recognized for industry expertise.</span></h2>
           <p className="at-lede at-r" style={{ '--d': '170ms' }}>
-            Our quality, information-security and digital-commerce practices are supported by recognized certifications and industry associations.
+            TÜV Austria certifies us for quality (ISO 9001) and information security (ISO/IEC 27001). That means audited processes for every project and secure handling of your supplier files and product data.
           </p>
           <ul className="at-pillars at-r" style={{ '--d': '250ms' }}>
             <li>Quality</li><li>Security</li><li>B2B commerce</li>
