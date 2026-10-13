@@ -19,6 +19,7 @@ import blogDataNormalization from '../assets/resources/blog-data-normalization.p
 import blogAttributeDevelopment from '../assets/resources/blog-attribute-development.webp'
 import UiIcon from '../components/ui/Icon.jsx'
 import wpBlogs from '../data/wpBlogs.json'
+import { subscribeToNewsletter } from '../services/newsletter.js'
 
 const ITEMS = [
   { featured: 1, type: 'blog', date: 'May 28, 2025', sort: '2025-05-28', img: blogDataCleansing, title: 'Why Product Data Cleansing is a Game Changer for eCommerce Stores', excerpt: 'In the fast-paced world of eCommerce, your product data is either working for you or against you.', meta: '5 min read', to: '/resources/blog/product-data-cleansing-game-changer', url: 'https://altiusnxt.com/why-product-data-cleansing-is-a-game-changer-for-ecommerce-stores/' },
@@ -98,6 +99,7 @@ export default function Resources() {
   const [sort, setSort] = useState('latest')
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [email, setEmail] = useState('')
+  const [nl, setNl] = useState({ state: 'idle', msg: '' }) // newsletter form: idle | sending | done | error
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -147,10 +149,24 @@ export default function Resources() {
     ? { '@context': 'https://schema.org', '@type': 'Event', name: i.title, description: i.excerpt, url: i.url, location: { '@type': 'Place', name: i.meta }, organizer: { '@type': 'Organization', name: 'AltiusNxt' } }
     : { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: i.title, description: i.excerpt, datePublished: i.sort, url: i.url, author: { '@type': 'Organization', name: 'AltiusNxt' } })), [visible])
 
-  const subscribe = (e) => {
+  // A real signup (POST /api/subscribe): the visitor stays on the page and sees the result, with no email program opening.
+  const subscribe = async (e) => {
     e.preventDefault()
-    if (!email.trim()) return
-    window.location.href = `mailto:sales@altiusnxt.com?subject=${encodeURIComponent('Subscribe to AltiusNxt insights')}&body=${encodeURIComponent(`Please add ${email} to the AltiusNxt insights list.`)}`
+    const address = email.trim()
+    if (!address || nl.state === 'sending') return
+    setNl({ state: 'sending', msg: '' })
+    try {
+      const r = await subscribeToNewsletter(address, 'resources', e.currentTarget.elements.website?.value || '')
+      setNl({
+        state: 'done',
+        msg: r.status === 'already'
+          ? 'You are already on the list. Thank you!'
+          : r.needsConfirmation ? 'Thank you! Please check your inbox and confirm your email address.' : 'Thank you for subscribing!',
+      })
+      setEmail('')
+    } catch (err) {
+      setNl({ state: 'error', msg: err.message })
+    }
   }
 
   return (
@@ -320,11 +336,15 @@ export default function Resources() {
               <div className="res-newsletter-row">
                 <label className="res-newsletter-input">
                   <Icon name="mail" size={16} />
-                  <input type="email" placeholder="Enter your email address" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <input type="email" placeholder="Enter your email address" value={email} onChange={(e) => { setEmail(e.target.value); if (nl.state !== 'sending') setNl({ state: 'idle', msg: '' }) }} required aria-label="Email address" />
                 </label>
-                <button type="submit" className="btn btn-primary">Subscribe <Icon name="arrow" size={15} /></button>
+                {/* hidden trap field: people never see or fill it, bots do */}
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="res-newsletter-trap" />
+                <button type="submit" className="btn btn-primary" disabled={nl.state === 'sending'}>{nl.state === 'sending' ? 'Subscribing…' : <>Subscribe <Icon name="arrow" size={15} /></>}</button>
               </div>
-              <span className="res-newsletter-note">No spam. Unsubscribe anytime.</span>
+              {nl.msg
+                ? <span className={`res-newsletter-msg ${nl.state}`} role={nl.state === 'error' ? 'alert' : 'status'}>{nl.msg}</span>
+                : <span className="res-newsletter-note">No spam. Unsubscribe anytime. See our <Link to="/privacy-policy">Privacy Policy</Link>.</span>}
             </form>
           </div>
         </div>
