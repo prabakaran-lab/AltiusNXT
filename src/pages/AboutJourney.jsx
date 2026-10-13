@@ -10,11 +10,11 @@ const MILESTONES = [
   { year: '2007', title: 'Company founded', text: 'AltiusNxt founded by Mr. Vellayan.', tag: 'Foundation', icon: 'flag', art: 'plain' },
   { year: '2010', title: 'Team expansion', text: 'Expanded to a 50-member team.', tag: 'Team growth', icon: 'team', art: 'plain' },
   { year: '2012', title: 'Scaling up', text: 'Grew to 100+ employees.', tag: 'Scale', icon: 'scale', art: 'plain' },
-  { year: '2014', title: 'Client milestone', text: 'Enabled a client to reach a $1 billion revenue milestone.', tag: 'Customer success', icon: 'star', art: 'plain' },
-  { year: '2017', title: 'PIM & ecommerce', text: 'Expanded PIM and eCommerce platform partnerships.', tag: 'Digital commerce', icon: 'cart', art: 'grid' },
-  { year: '2020', title: 'Global presence', text: 'Established global presence across the Americas, Europe, EMEA and APAC.', tag: 'Global expansion', icon: 'globe', art: 'globe' },
-  { year: '2025', title: 'Certifications', text: 'Achieved TÜV AUSTRIA certifications for quality and data security.', tag: 'Trust & certification', icon: 'shield', art: 'seal' },
-  { year: '2026', title: 'Catalogwiz AI', text: 'Launch of AI-Enabled Workbench (Catalogwiz).', tag: 'AI-enabled product data', icon: 'flow', art: 'dots' },
+  { year: '2014', title: '100th client', text: 'AltiusNxt welcomed its 100th client.', tag: 'Customer success', icon: 'star', art: 'plain' },
+  { year: '2017', title: 'PIM & eCommerce', text: 'First PIM and eCommerce builds.', tag: 'Digital commerce', icon: 'cart', art: 'grid' },
+  { year: '2020', title: 'Clients worldwide', text: 'Clients across Europe and Asia-Pacific.', tag: 'Global expansion', icon: 'globe', art: 'globe' },
+  { year: '2025', title: 'ISO certified', text: 'ISO 9001 and ISO 27001 certified.', tag: 'Trust & certification', icon: 'shield', art: 'seal' },
+  { year: '2026', title: 'CatalogWiz AI', text: 'CatalogWiz AI launched.', tag: 'AI-enabled product data', icon: 'flow', art: 'dots' },
 ]
 
 const ICONS = { flag: 'flag', team: 'users', scale: 'chart', star: 'star', cart: 'cart', globe: 'globe', shield: 'shield', flow: 'workflow' }
@@ -82,7 +82,7 @@ export default function AboutJourney() {
       <div className="aj-wrap">
         <header className="aj-head">
           <p className="aj-eyebrow aj-r" style={{ '--d': '0ms' }}>Our journey</p>
-          <h2 id="aj-title" className="aj-r" style={{ '--d': '80ms' }}>From a small team to a <span>global leader.</span></h2>
+          <h2 id="aj-title" className="aj-r" style={{ '--d': '80ms' }}>From a small team to a <span>trusted global partner.</span></h2>
           <p className="aj-intro aj-r" style={{ '--d': '170ms' }}>
             Our journey has been shaped by product-data expertise, customer trust, digital commerce and a continuous focus on
             helping manufacturers and distributors manage complex product information better.

@@ -143,10 +143,10 @@ export const caseStudies = [
         lead('Lack of Integration', 'The absence of integration with other business systems hampered operational efficiency.'),
       ]),
       p('These challenges ultimately impacted sales and customer satisfaction, prompting the need for a robust online solution.'),
-      h2("The Solution: Altiusnxt's E-Commerce Transformation"),
+      h2("The Solution: Altiusnxt's eCommerce Transformation"),
       p('AltiusNxt approached Rose Scientific Ltd. challenges with a strategic plan:'),
       ol([
-        lead('E-Commerce Platform Selection', 'After evaluating various platforms, AltiusNxt chose Magento for its user-friendly interface and scalability, ensuring it could grow alongside Rose Scientific Ltd.'),
+        lead('eCommerce Platform Selection', 'After evaluating various platforms, AltiusNxt chose Magento for its user-friendly interface and scalability, ensuring it could grow alongside Rose Scientific Ltd.'),
         lead('Customization and Design', 'The team customized the platform to align with Rose Scientific branding while enhancing functionality for improved user engagement.'),
         lead('Product Data Enrichment', 'AltiusNxt undertook a comprehensive product data enrichment process that included:', [
           'Data enrichment and normalization',
@@ -282,12 +282,12 @@ export const blogs = [
     image: blogAttribute,
     slug: 'product-attribute-development',
     type: 'blog',
-    title: 'Elevating Your E-Commerce Strategy with Product Attribute Development',
+    title: 'Elevating Your eCommerce Strategy with Product Attribute Development',
     subtitle: TAGLINE,
     summary: 'In the competitive world of e-commerce, Product Attribute Development is the backbone of a successful online store.',
     sections: [
       p('In the competitive world of e-commerce, Product Attribute Development is the backbone of a successful online store. Think of them as the specifications of an electrical product like a circuit breaker or a machining tool like a drill bit—critical details that help customers make informed decisions. At AltiusNxt, we specialize in refining these "specifications" to optimize your product data and revolutionize your e-commerce strategy. Our expertise ensures that your products are presented with clear, precise, and sustainable attributes, making it easier for customers to compare, evaluate, and purchase.'),
-      h2('Why Product Attributes Matter in E-Commerce'),
+      h2('Why Product Attributes Matter in eCommerce'),
       h3('1. Enhanced Product Discoverability'),
       p('Structured attributes improve searchability and filtering, ensuring customers find the exact match for their requirements. For example, an industrial distributor searching for a circuit breaker with certification can instantly locate the right product if attributes are properly categorized.'),
       h3('2. Improved User Experience'),
@@ -358,7 +358,7 @@ export const blogs = [
     image: blogNormalization,
     slug: 'data-normalization-2025',
     type: 'blog',
-    title: 'Stay Ahead in 2025: How Data Normalization Boosts eCommerce Efficiency for Industrial Distributors and Retailers.',
+    title: 'How Data Normalization Boosts eCommerce Efficiency for Industrial Distributors and Retailers',
     subtitle: TAGLINE,
     summary: 'Are you ready to take your eCommerce operations to the next level in 2025? As an industrial distributor or retailer in niche sectors such as plumbing, safety and PPE, MRO, HVACR, electrical, and electronics, you are uniquely positioned to leverage data-driven strategies for growth.',
     sections: [

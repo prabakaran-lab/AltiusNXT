@@ -53,7 +53,7 @@ export function Num({ to, delay = 0 }) {
 const PAGES = [
   ['Summary', 'The headline finding and three key numbers'],
   ['AI search results', 'Six buyer queries on four AI engines, and who got named'],
-  ['Five gaps on the product page', 'Part number, specifications, structured data, access, documents'],
+  ['The five gaps', 'What is missing on your page, ranked by impact.'],
   ['Current and enriched page', 'Side-by-side mock-up, before and after'],
   ['Commercial impact', 'Price comparison and an illustrative cost of doing nothing'],
   ['Recommended next steps', 'A walkthrough or a complimentary three-product assessment'],
@@ -103,7 +103,7 @@ export function ReceiveSection() {
 const HOW = [
   { t: 'Paste one product page', d: 'Choose a product you want AI to recommend. We only read the public page.', Ico: Link2 },
   { t: 'We test it live', d: 'We ask ChatGPT, Claude, Gemini and Perplexity the same buyer questions and record every answer as evidence.', Ico: ScanSearch },
-  { t: 'You get your report', d: 'A plain-language report with the gaps, the fixes in priority order and a before and after example.', Ico: FileText },
+  { t: 'You get your expert-approved report', d: 'A product data expert verifies and approves every report before it reaches you: the gaps, the fixes in priority order and a before and after example.', Ico: FileText },
 ]
 
 export function HowSection() {
@@ -144,7 +144,7 @@ export function LevelsSection() {
         <div className="lv-grid">
           <article className="lv-card rv">
             <span className="rp-chip">Free</span>
-            <h3>AI Readiness Report</h3>
+            <h3>Free AI Readiness Report (expert-verified)</h3>
             <p>Six pages on what AI engines say about one product page, and what to change.</p>
             <ul>
               <li><Check size={15} strokeWidth={3} />Six buyer queries on four AI engines</li>
@@ -155,7 +155,7 @@ export function LevelsSection() {
           </article>
           <article className="lv-card hot rv" style={{ '--d': 2 }}>
             <span className="rp-chip">By email request</span>
-            <h3>Detailed audit report</h3>
+            <h3>Detailed AI Visibility Audit (on request)</h3>
             <p>The scoring behind your report: how well AI can find, understand and recommend your product.</p>
             <ul>
               <li><Check size={15} strokeWidth={3} />15-point scorecard across Find, Understand and Recommend</li>
@@ -322,7 +322,7 @@ export function NextSection() {
   )
 }
 
-const FAQ = [
+export const AI_READINESS_FAQ = [
   ['Which page should I submit?', 'A single product page for one product, such as a page for one drill, one glove or one part number. A homepage or a category listing with many products can’t be checked.'],
   ['Which AI assistants do you test?', 'ChatGPT, Claude, Gemini and Perplexity. We run six buyer-style queries with live web search, then ask each engine to review your page. Answers are kept as evidence.'],
   ['Is the report really free?', 'Yes. One product page, actionable findings, no obligation. Any enrichment work would be scoped and quoted separately, only if you ask for it.'],
@@ -330,7 +330,8 @@ const FAQ = [
   ['Do I need to share my revenue?', 'No. The commercial impact page uses a clearly labeled illustrative figure. We replace it with your real number only if you choose to share it on a call.'],
   ['Do you need access to my website?', 'No. We use your live public product page, the manufacturer’s catalog and public seller listings.'],
   ['Will I get the same answers if I ask AI myself?', 'Maybe not. AI answers vary between runs and engines, so the report is a snapshot. We keep the full transcripts and can re-run any query live with you.'],
-  ['Is a person involved?', 'Yes. An AltiusNxt product specialist completes each assessment, so the findings are checked and not just generated.'],
+  ['Is a person involved?', 'Yes. AI runs the tests, and a product data expert verifies and approves every report before we send it to you.'],
+  ["Does the report cover UCP?", "Yes. We flag the product details AI shopping agents using Google's Universal Commerce Protocol (UCP) need, such as identifiers, attributes, price and stock."],
 ]
 
 export function FaqSection() {
@@ -343,7 +344,7 @@ export function FaqSection() {
           <p>Short answers on what we test, what you receive and what it costs.</p>
         </header>
         <div className="rp-faqs">
-          {FAQ.map(([q, a], i) => (
+          {AI_READINESS_FAQ.map(([q, a], i) => (
             <details key={q} className="rv" style={{ '--d': Math.min(i, 4) }} open={i === 0}><summary>{q}</summary><p>{a}</p></details>
           ))}
         </div>

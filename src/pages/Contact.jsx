@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Check, Clock, Mail, MapPin, Phone, Send } from 'lucide-react'
 import { sendContact } from '../services/api.js'
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import './Contact.css'
 
 const TOPICS = ['Talk to a Product Data Expert', 'Free AI Readiness Report', 'CatalogWiz demo', 'Partnership or integration', 'Careers', 'Something else']
@@ -40,6 +41,12 @@ export default function Contact() {
 
   return (
     <div className={`ct${seen ? ' seen' : ''}`} ref={ref}>
+      <PageSeo
+        title="Contact AltiusNxt | Talk to a Product Data Expert"
+        description="Talk to a product data expert about product data enrichment, catalog management and CatalogWiz. Offices in the USA and India."
+        keywords={['contact AltiusNxt', 'product data expert', 'product data enrichment services', 'catalog management services', 'CatalogWiz demo']}
+        structuredData={[breadcrumb('/contact', 'Contact')]}
+      />
       <section className="ct-hero">
         <div className="ct-wrap">
           <p className="ct-eyebrow">Contact</p>

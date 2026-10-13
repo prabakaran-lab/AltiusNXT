@@ -38,7 +38,7 @@ const T_TYPE = 2.4, T_MISS = 3.4, T_START = 6.6, T_ROW = 0.6, T_END = 22.5
 const T_SRC = 3.9, T_UP = 5.0
 const SRCI = [{ n: 'Datasheet.pdf', I: FileText }, { n: 'Supplier.xlsx', I: FileSpreadsheet }, { n: 'Product page', I: Globe }]
 /* per-category AI-match score: [before, after] */
-const SCORES = { electrical: [18, 98], bearings: [24, 96], tools: [31, 97], medical: [15, 95], janitorial: [27, 98], gloves: [21, 96], office: [34, 99], welding: [12, 94], fire: [19, 97] }
+const SCORES = { electrical: [29, 100], bearings: [24, 96], tools: [31, 97], medical: [15, 95], janitorial: [27, 98], gloves: [21, 96], office: [34, 99], welding: [12, 94], fire: [19, 97] }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
 function stateAt(c, t) {
@@ -113,7 +113,7 @@ export default function DataContrast() {
         <header className="dcx-head">
           <p className="dcx-pill">Better data · Better discovery</p>
           <h2 id="dcx-title">Product data enrichment that gets your products <em>found in AI search.</em></h2>
-          <p className="dcx-sub">Watch an AI buyer search twice: once on an incomplete listing, once after CatalogWiz AI enriches every attribute and human experts verify it.</p>
+          <p className="dcx-sub">Watch an AI buyer search twice: once on an incomplete listing, and once after CatalogWiz AI enriches every attribute and our experts verify it.</p>
         </header>
 
         <div className="dcx-tabs" role="tablist" aria-label="Product categories">

@@ -3,7 +3,8 @@ import { Mail, Plus } from 'lucide-react'
 import './HomeFaq.css'
 
 const QUESTIONS = [
-  ['Do we need to replace our PIM or ERP?', 'No. CatalogWiz improves and governs your product data before it flows into the systems and channels you already use. It plugs into your existing PIM, ERP and commerce platform, and it also works without one.'],
+  ['Do we need to replace our PIM or ERP?', 'No. CatalogWiz enriches and cleans your product data, then sends it into the platform you already use: your PIM, ERP or eCommerce store. No PIM? It works without one.'],
+  ['Is my product data ready for UCP?', "UCP (Universal Commerce Protocol) is Google's open standard that lets AI shopping agents find, compare and buy products for a buyer. Agents rely on complete, consistent attributes, prices and stock. CatalogWiz fills those gaps and a data specialist human-verifies every value, so your catalog is UCP-ready."],
   ['Can CatalogWiz handle complex industrial products?', 'Yes. The workflows are built for technical products: specifications, identifiers, taxonomy, attributes, images, datasheets and validation, for industrial and other technical catalogs.'],
   ['How is the enriched data checked?', 'Every AI suggestion is reviewed by a product data specialist against the manufacturer documentation. A record only moves to approval after that review, and nothing is published until you sign off. Corrections go back with comments.'],
   ['Can we publish to our existing commerce platform?', 'Yes. Approved records can be delivered to storefronts, marketplaces, PIM / MDM systems and APIs. Share your platforms with a Product Data Expert and they will confirm the right integration route.'],

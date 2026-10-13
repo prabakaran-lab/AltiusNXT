@@ -95,7 +95,7 @@ function VisEcom() {
 }
 
 const CARDS = [
-  { id: 'mfr', tag: 'Manufacturers', title: 'Clean, consistent data for every channel.', pts: ['One governed product record', 'Syndicate to distributors and marketplaces', 'Fewer data-quality complaints from partners'], to: '/how-it-works#catalogwiz', cta: 'See how it works', vis: () => <VisMaker /> },
+  { id: 'mfr', tag: 'Manufacturers', title: 'Clean, consistent data for every channel.', pts: ['One master record for every product', 'Share the same data with distributors and marketplaces', 'Fewer data-quality complaints from partners'], to: '/how-it-works#catalogwiz', cta: 'See how it works', vis: () => <VisMaker /> },
   { id: 'dist', tag: 'Distributors', title: 'Thousands of supplier SKUs, enriched fast.', pts: ['Normalise messy supplier files', 'Fill missing attributes from datasheets', 'Human-verified before it goes live'], to: '/how-it-works#catalogwiz', cta: 'See the workflow', vis: (go) => <VisDistributor go={go} /> },
   { id: 'ecom', tag: 'Ecommerce teams', title: 'Product pages that rank and convert.', pts: ['Structured titles, specs and SEO', 'Ready for AI search and buyer questions', 'Publish to Shopify, WooCommerce, Magento'], to: '/ai-readiness-report', cta: 'Get a free AI Readiness Report', vis: () => <VisEcom /> },
 ]

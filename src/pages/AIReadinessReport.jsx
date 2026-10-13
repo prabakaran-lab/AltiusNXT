@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bot, Check, CircleAlert, FileText, MessagesSquare, SearchX, X } from 'lucide-react'
+import { Bot, Check, CircleAlert, FileText, MessagesSquare, Scale, Search, SearchX, ShoppingCart, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
 import { useSearchParams } from 'react-router-dom'
 import { quickScan, submitLead } from '../services/api.js'
 import LeadFormModal from '../components/LeadFormModal.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
-import { FaqSection, HowSection, LayersSection, LevelsSection, NextSection, Num, ReceiveSection, useReveal } from './ReportSections.jsx'
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
+import { AI_READINESS_FAQ, FaqSection, HowSection, LayersSection, LevelsSection, NextSection, Num, ReceiveSection, useReveal } from './ReportSections.jsx'
 import './AIReadinessReport.css'
 
 /* The four numbers tell the story in order: you give one page, we ask six questions, on four engines, and find five gaps. */
@@ -14,6 +15,11 @@ const STORY = [
   { n: 6, k: 'We ask', d: 'buyer-style queries run for you', Ico: MessagesSquare },
   { n: 4, k: 'On', d: 'AI engines: ChatGPT, Claude, Gemini and Perplexity', Ico: Bot },
   { n: 5, k: 'We find', d: 'gaps that stop AI recommending you', Ico: SearchX },
+]
+const WHY_STEPS = [
+  { t: 'Find', d: 'The agent looks for products that match what the buyer asked for. If it cannot read your page, you are not in the results.', Ico: Search },
+  { t: 'Compare', d: 'It compares specs, part numbers, price and stock side by side. Missing or inconsistent details drop you out.', Ico: Scale },
+  { t: 'Check out', d: 'It buys from the page it trusts most. The report shows what to fix so that page is yours.', Ico: ShoppingCart },
 ]
 const ENGINES = ['ChatGPT', 'Claude', 'Gemini', 'Perplexity']
 
@@ -92,13 +98,22 @@ export default function AIReadinessReport() {
 
   return (
     <div ref={root} className="arr-page">
+      <PageSeo
+        title="Free AI Readiness Report | Check Your AI Search Visibility"
+        description="Is ChatGPT recommending your products? Get a free, expert-verified AI Readiness Report for one product page, with a 6-page fix plan by email."
+        keywords={['AI search visibility', 'AI readiness report', 'product visibility in ChatGPT', 'generative engine optimization eCommerce', 'AI shopping assistant optimization', 'GEO audit']}
+        structuredData={[
+          breadcrumb('/ai-readiness-report', 'Free AI Readiness Report'),
+          { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: AI_READINESS_FAQ.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) },
+        ]}
+      />
       <section className="arr-hero" id="arr-top" aria-labelledby="arr-title">
         <div className="arr-glow" aria-hidden="true" />
         <div className="arr-wrap arr-herogrid">
           <div className="arr-copy">
-            <p className="arr-eyebrow">Free · One product page · No obligation</p>
-            <h1 id="arr-title">Get your free <em>AI Readiness Report.</em></h1>
-            <p className="arr-lead">Paste one product page below. We’ll check it against the same five gaps that keep AI shopping assistants from recommending you.</p>
+            <p className="arr-eyebrow">Free AI Readiness Report · Expert-verified and approved · One product page</p>
+            <h1 id="arr-title">AI is answering your buyers. <em>Is it naming you?</em></h1>
+            <p className="arr-lead">Get your free AI Readiness Report. Paste one product page and we test it on ChatGPT, Claude, Gemini and Perplexity. A product data expert verifies and approves every report, so you see the real gaps stopping AI search from recommending your product.</p>
             <form className="url-form" onSubmit={handleScan}>
               <label htmlFor="scan-url" className="visually-hidden">Product page URL</label>
               <input
@@ -118,7 +133,7 @@ export default function AIReadinessReport() {
               Must be a single product page, not your homepage or a category listing with multiple products on it.
             </p>
             {scanError && <p className="form-error" style={{ marginTop: 14 }}>{scanError}</p>}
-            <p className="arr-more">Want the detailed Find, Understand, Recommend score? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A">Email us for the detailed audit</a>.</p>
+            <p className="arr-more">Want the full scorecard, showing how well AI can find, understand and recommend your product? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A">Email us for the detailed audit</a>.</p>
           </div>
 
           <div className="arr-chat" role="img" aria-label="Illustration of an AI answer that leaves a distributor out">
@@ -212,6 +227,29 @@ export default function AIReadinessReport() {
       <ReceiveSection />
       <HowSection />
       <LevelsSection />
+      <section className="rp-sec rp-why" aria-labelledby="rp-why">
+        <div className="rp-wrap">
+          <div className="rp-why-head">
+            <span className="rp-eb">Why this matters now</span>
+            <h2 id="rp-why">AI is moving from recommending <em>to buying.</em></h2>
+            <p>With Google's Universal Commerce Protocol (UCP), AI shopping agents can find, compare and check out products for your buyers. If AI cannot read your product page today, it will not choose it tomorrow. Your free, expert-verified AI Readiness Report shows where you stand.</p>
+          </div>
+          <ol className="rp-why-steps" aria-label="How an AI shopping agent buys">
+            {WHY_STEPS.map(({ t, d, Ico }, i) => (
+              <li key={t}>
+                <span className="n">{i + 1}</span>
+                <span className="ico"><Ico size={22} strokeWidth={2} /></span>
+                <b>{t}</b>
+                <p>{d}</p>
+              </li>
+            ))}
+          </ol>
+          <div className="rp-why-cta">
+            <a className="btn btn-primary" href="#arr-top">Get my free report</a>
+            <small>Free. One product page. Expert-verified.</small>
+          </div>
+        </div>
+      </section>
       <LayersSection />
       <NextSection />
       <FaqSection />

@@ -10,8 +10,10 @@ const CARDS = [
   { key: 'blog', icon: 'doc', label: 'Blog' },
 ]
 
+const KEYWORDS = ['product data enrichment guide', 'product data case studies', 'eCommerce product data', 'PIM data onboarding']
+
 export default function ResourcesOverviewPage() {
-  useDocumentMeta('Resources', 'Events, case studies and blog posts from AltiusNxt on product data, attributes and eCommerce.')
+  useDocumentMeta('Product Data Guides, Case Studies & Events', 'Events, case studies and blog posts from AltiusNxt on product data enrichment, attributes and eCommerce.', KEYWORDS)
   return (
     <>
       <section className="rs-hero" aria-labelledby="rs-over-title">

@@ -15,7 +15,7 @@ const NAV = [
     links: [
       { label: 'CatalogWiz', to: '/catalogwiz' },
       { label: 'AI Readiness Report', to: '/ai-readiness-report' },
-      { label: 'Product Schema Builder', to: '/product-schema-builder' },
+      { label: 'Product Schema Markup', to: '/product-schema-markup' },
       { label: 'Category Attribute Guide', to: '/category-attributes' },
       { label: 'Try CatalogWiz on a sample', to: '/catalogwiz#try' },
     ],

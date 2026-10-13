@@ -98,9 +98,9 @@ export default function EnrichDemo({ children }) {
     <div className={`rd${seen ? ' seen' : ''}`} id="try">
       <section className="rd-hero">
         <div className="rd-wrap">
-          <span className="rd-pill"><Sparkles size={13} />03 · Your turn · Try it free</span>
-          <h2>Pick a product, or paste your own. <em>Watch CatalogWiz enrich it.</em></h2>
-          <p className="rd-lead">See how incomplete product attributes turn into clean, structured, buyer-ready values, with units normalised and missing specifications filled in.</p>
+          <span className="rd-pill"><Sparkles size={13} />Your turn · Try it free</span>
+          <h2>See your own product, <em>enriched.</em></h2>
+          <p className="rd-lead">Paste a product page link, or pick a sample below to see the before and after in seconds.</p>
           <form className="rd-form" onSubmit={submit}>
             <label className="rd-input"><Search size={16} /><input type="url" inputMode="url" placeholder="Paste any product page URL" value={url} onChange={(e) => setUrl(e.target.value)} aria-label="Product page URL" /></label>
             <button type="submit" className="btn btn-primary" disabled={!url.trim()}>Check my page <ArrowRight size={16} /></button>

@@ -1,6 +1,14 @@
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
+
 export default function Terms() {
   return (
     <>
+      <PageSeo
+        title="Terms of Use | AltiusNxt"
+        description="The terms for using the AltiusNxt website, CatalogWiz and the free AI Readiness Report."
+        keywords={['AltiusNxt terms of use', 'website terms', 'terms and conditions']}
+        structuredData={[breadcrumb('/terms', 'Terms of Use')]}
+      />
       <section className="hero3" style={{ paddingBottom: 48 }}>
         <div className="wrap">
           <h1 style={{ maxWidth: 720 }}>Terms of Use</h1>

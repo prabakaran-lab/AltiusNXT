@@ -15,11 +15,12 @@ const OUTPUTS = [
   { label: 'Storefront', icon: Store },
   { label: 'Marketplaces', icon: ShoppingBag },
   { label: 'AI assistants', icon: Bot },
+  { label: 'AI shopping agents (UCP)', icon: Bot },
 ]
 const ROWS = [['Current rating', '73 A'], ['AC voltage rating', '690 V ac'], ['Interrupting rating', '65 kA'], ['Mounting type', 'DIN Rail'], ['Series', 'TeSys Deca']]
 
 const SRC_Y = [70, 160, 250, 340]
-const OUT_Y = [105, 205, 305]
+const OUT_Y = [75, 165, 255, 345]
 const srcPath = (y) => `M250 ${y} C 296 ${y}, 288 205, 326 205`
 const outPath = (y) => `M780 205 C 852 205, 858 ${y}, 930 ${y}`
 const FEEDBACK = 'M1045 330 V 352 C 1045 400, 1010 410, 950 410 H 460 C 396 410, 370 392, 370 254'
@@ -66,12 +67,12 @@ export default function WhereFits() {
       <div className="wh-wrap">
         <header className="wh-head">
           <p className="wh-pill">Where CatalogWiz fits</p>
-          <h2 id="wh-title">Your PIM stores the data. <em>CatalogWiz does the work.</em></h2>
-          <p className="wh-sub">CatalogWiz AI continuously reads, enriches and gap-fills your product data, and product data specialists verify it. It plugs into any PIM or ERP, and works without one too.</p>
+          <h2 id="wh-title">Your platform stores the data. <em>CatalogWiz does the work.</em></h2>
+          <p className="wh-sub">Keep your PIM, ERP or eCommerce platform. CatalogWiz enriches your product data, our experts verify it, and the clean data flows straight back into the system you already use. No PIM? It works without one too.</p>
         </header>
 
         {/* desktop diagram */}
-        <div className="wh-stage" role="img" aria-label="Supplier feeds, spec sheets, images and manufacturer sites flow into CatalogWiz AI, which enriches your PIM. The PIM publishes to storefronts, marketplaces and AI assistants, and signals flow back.">
+        <div className="wh-stage" role="img" aria-label="Supplier feeds, spec sheets, images and manufacturer sites flow into CatalogWiz AI, which enriches your PIM. The PIM publishes to storefronts, marketplaces, AI assistants and AI shopping agents using UCP, and results feed back in.">
           <svg className="wh-svg" viewBox="0 0 1200 440" aria-hidden="true">
             <defs>
               {SRC_Y.map((y, i) => <path key={`s${i}`} id={`wh-s${i}`} d={srcPath(y)} />)}
@@ -102,14 +103,14 @@ export default function WhereFits() {
 
           <div className="wh-hub" style={{ left: pct(370, 1200), top: pct(205, 440) }}><span /><span /><span /><Sparkles size={26} /></div>
           <div className="wh-hub-l" style={{ left: pct(370, 1200), top: pct(124, 440) }}>CatalogWiz AI<small>+ human review</small></div>
-          <div className="wh-sync" style={{ left: pct(457, 1200), top: pct(178, 440) }}>Two-way sync</div>
+          <div className="wh-sync" style={{ left: pct(457, 1200), top: pct(178, 440) }}>Updates both ways</div>
 
           <div className="wh-pim-wrap" style={{ left: pct(500, 1200), top: pct(205, 440) }}><PimCard /></div>
 
           {OUTPUTS.map(({ label, icon: Ico }, i) => (
             <div key={label} className="wh-node out" style={{ left: pct(930, 1200), top: pct(OUT_Y[i], 440), '--i': i }}><span className="ico"><Ico size={14} /></span>{label}<i /></div>
           ))}
-          <div className="wh-back" style={{ left: pct(705, 1200), top: pct(410, 440) }}>Signals flow back</div>
+          <div className="wh-back" style={{ left: pct(705, 1200), top: pct(410, 440) }}>Results feed back in</div>
         </div>
 
         {/* phones / tablets: simple vertical flow */}

@@ -26,7 +26,7 @@ const PILLARS = [
   { n: 'Will AI recommend you?', w: '40%', s: 40, to: 90, cells: ['p', 'h', 'h', 'f', 'f'] },
 ]
 const CAUSES = ['No specification table', 'No manufacturer part number', 'Broken structured data']
-const STEPS = ['Paste one product page URL', 'We test which AI crawlers can read it', 'We ask ChatGPT, Claude, Gemini and Perplexity', 'We benchmark price and audit 15 checks', 'You get a six-page report by email']
+const STEPS = ['Paste one product page URL', 'We test which AI crawlers can read it', 'We ask ChatGPT, Claude, Gemini and Perplexity', 'We benchmark price and audit 15 checks', 'An expert approves your six-page report by email']
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1)
@@ -84,11 +84,11 @@ export default function ReadinessDemo() {
         <div className="ar-copy">
           <p className="ar-pill">Free AI Readiness Report</p>
           <h2 id="ar-title">Paste one product page. <em>See how AI sees it.</em></h2>
-          <p className="ar-sub">We run the same playbook an analyst runs by hand: crawler access, live buyer questions on four AI engines, a competitor price benchmark and a 15-point page audit, then email you a six-page report with a fix plan.</p>
+          <p className="ar-sub">Paste the link to one product page. We check whether AI tools can read it, ask ChatGPT, Claude, Gemini and Perplexity the questions your buyers ask, compare your price, and run 15 quick checks (grouped into the 5 gaps that matter most). A product data expert verifies and approves your six-page AI Readiness Report, then we email it to you with what to fix first.</p>
           <ol className="ar-steps">
             {STEPS.map((s, i) => <li key={s} className={i < step ? 'done' : i === step ? 'cur' : ''}><span>{i < step ? <Check size={11} strokeWidth={3.6} /> : i + 1}</span>{s}</li>)}
           </ol>
-          <div className="ar-cta"><Button to="/ai-readiness-report">Get my free report</Button><small>No credit card. Takes about a minute.</small></div>
+          <div className="ar-cta"><Button to="/ai-readiness-report">Get my free report</Button><small>No credit card. Takes a minute to submit. Your report arrives by email after expert review.</small></div>
         </div>
 
         <div className="ar-card" role="img" aria-label="Animated example of the AI Readiness Report: crawler access test, buyer questions on four AI engines, price benchmark, a 15-point scorecard, and a score that improves after fixes.">

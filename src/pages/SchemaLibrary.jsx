@@ -67,8 +67,8 @@ export default function SchemaLibrary() {
     <section className="sl2" id="library" aria-labelledby="sl2-t">
       <div className="sl2-wrap">
         <header className="sl2-head">
-          <h2 id="sl2-t">Example schemas for selected categories</h2>
-          <p>We build comprehensive product data schemas across all industry categories. The highlighted categories serve as selected examples, showcasing the quality, depth, and precision of our work.</p>
+          <h2 id="sl2-t">Product schema examples by category</h2>
+          <p>We build product schemas for every B2B category. Pick a highlighted category to see a full example.</p>
           <ul className="cat-chips" aria-label="All industry categories">
             {ALL_CATEGORIES.map((c) => <li key={c.name} className={c.id ? 'on' : ''}>{c.name}</li>)}
           </ul>
@@ -82,7 +82,7 @@ export default function SchemaLibrary() {
               return (
                 <button type="button" role="listitem" key={cat.name} className={i === sel ? 'on' : ''} aria-current={i === sel} onClick={() => { setSel(i); setView('t') }}>
                   <b>{cat.name}</b>
-                  <span>{x.rows.length} attributes<i />{x.rows.filter((r) => r.missing).length} to watch</span>
+                  <span>{x.rows.length} attributes<i />{x.rows.filter((r) => r.missing).length} often missed</span>
                   <u>Selected product: {x.ref}</u>
                   <em>{i === sel ? 'Viewing below' : 'View the schema'}{i === sel ? <ChevronDown size={13} /> : <ArrowRight size={13} />}</em>
                 </button>
@@ -91,8 +91,8 @@ export default function SchemaLibrary() {
           </div>
 
           <article className="sl2-det" aria-live="polite">
-            <h3>{n.name} schema <small>{n.rows.length} attributes · {n.rows.filter((r) => r.missing).length} to watch</small></h3>
-            <p className="sl2-ref">Full schema of a real product: {n.ref}</p>
+            <h3>{n.name} product schema <small>{n.rows.length} attributes · {n.rows.filter((r) => r.missing).length} often missed</small></h3>
+            <p className="sl2-ref">Full schema for a sample product: {n.ref}</p>
             <div className="sl2-row">
               <div className="sl2-tabs" role="group" aria-label="View">
                 <button type="button" aria-pressed={view === 't'} onClick={() => setView('t')}><Table2 size={14} />Spec table</button>
@@ -109,7 +109,7 @@ export default function SchemaLibrary() {
                   <li key={r.label} className={`${r.missing ? 'miss' : ''}${r.raw.length > 58 ? ' wide' : ''}`}>
                     <span className="l">{r.label}</span>
                     <span className="v">{r.raw.split(' · ').join(' · ')}</span>
-                    {r.missing && <em><CircleAlert size={11} />Easy to skip</em>}
+                    {r.missing && <em><CircleAlert size={11} />Often missed</em>}
                   </li>
                 ))}
               </ul>

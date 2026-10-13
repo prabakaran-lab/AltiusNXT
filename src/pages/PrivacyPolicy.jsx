@@ -1,6 +1,14 @@
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
+
 export default function PrivacyPolicy() {
   return (
     <>
+      <PageSeo
+        title="Privacy Policy | AltiusNxt"
+        description="How AltiusNxt collects, uses and protects your personal information when you use our website, CatalogWiz and the AI Readiness Report."
+        keywords={['AltiusNxt privacy policy', 'data protection', 'personal information']}
+        structuredData={[breadcrumb('/privacy-policy', 'Privacy Policy')]}
+      />
       <section className="hero3" style={{ paddingBottom: 48 }}>
         <div className="wrap">
           <h1 style={{ maxWidth: 720 }}>Privacy Policy</h1>

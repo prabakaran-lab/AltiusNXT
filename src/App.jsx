@@ -50,8 +50,9 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/ai-page-check" element={<Navigate to="/catalogwiz#try" replace />} />
           <Route path="/ai-readability" element={<Navigate to="/catalogwiz#try" replace />} />
-          <Route path="/product-schema-builder" element={<SchemaStudio />} />
-          <Route path="/schema-studio" element={<Navigate to="/product-schema-builder" replace />} />
+          <Route path="/product-schema-markup" element={<SchemaStudio />} />
+          <Route path="/product-schema-builder" element={<Navigate to="/product-schema-markup" replace />} />
+          <Route path="/schema-studio" element={<Navigate to="/product-schema-markup" replace />} />
           <Route path="/category-attributes" element={<AttributeLibrary />} />
           <Route path="/attribute-library" element={<Navigate to="/category-attributes" replace />} />
         </Routes>

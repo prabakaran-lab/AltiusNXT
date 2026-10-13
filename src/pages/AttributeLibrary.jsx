@@ -3,6 +3,7 @@ import { ArrowRight, Check, CircleAlert, Layers, ListChecks, Play } from 'lucide
 import { ALL_CATEGORIES, CATEGORIES } from './attributeLibraryData.js'
 import { TESYS } from '../components/sampleProduct.js'
 import { SAMPLES } from '../components/catalogSamples.js'
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import './AttributeLibrary.css'
 
 const IMG = { electronic: TESYS.images.front, industrial: SAMPLES.bearings.img, tools: SAMPLES.tools.img, medical: SAMPLES.medical.img, janitorial: SAMPLES.janitorial.img, ppe: SAMPLES.gloves.img, office: SAMPLES.office.img, welding: SAMPLES.welding.img, fire: SAMPLES.fire.img }
@@ -97,6 +98,12 @@ export default function AttributeLibrary() {
 
   return (
     <div className={`al${seen ? ' seen' : ''}`}>
+      <PageSeo
+        title="B2B Category Attribute Library | AltiusNxt"
+        description="Browse attribute schemas for 9 B2B product categories, with sample products and the attributes buyers and AI search look for."
+        keywords={['category attributes', 'product attribute library', 'B2B product attributes', 'product data schema', 'attribute normalization']}
+        structuredData={[breadcrumb('/category-attributes', 'Category Attributes')]}
+      />
       <section className="al-hero">
         <div className="al-wrap">
           <span className="al-pill">Free reference</span>
@@ -119,8 +126,8 @@ export default function AttributeLibrary() {
             </header>
             <div className="al-body">
               <div className="al-sch">
-                <h2><Layers size={14} />{c.name} schema <small>{c.attrs.length} attributes · {c.miss.length} to watch</small></h2>
-                <p className="al-ref">Full schema of a real product: {c.ref}</p>
+                <h2><Layers size={14} />{c.name} schema <small>{c.attrs.length} attributes · {c.miss.length} often missed</small></h2>
+                <p className="al-ref">Full schema for a sample product: {c.ref}</p>
                 <ul key={c.id}>
                   {c.attrs.map(([l, v], i) => {
                     const on = calm || i < shown
@@ -130,7 +137,7 @@ export default function AttributeLibrary() {
                       <li key={l} className={`${on ? 'on' : ''}${i === scanIdx ? ' scan' : ''}${miss && flag ? ' miss' : ''}${v.length > 58 ? ' wide' : ''}`}>
                         <span className="l">{l}</span>
                         <span className="v">{v}</span>
-                        {miss && <em className={flag ? 'on' : ''}><CircleAlert size={11} />Easy to skip</em>}
+                        {miss && <em className={flag ? 'on' : ''}><CircleAlert size={11} />Often missed</em>}
                       </li>
                     )
                   })}
@@ -154,7 +161,7 @@ export default function AttributeLibrary() {
                 </div>
                 <div className={`sum${done || calm ? ' on' : ''}`}>
                   <div><b>{c.attrs.length}</b><span>attributes</span></div>
-                  <div><b>{c.miss.length}</b><span>to watch</span></div>
+                  <div><b>{c.miss.length}</b><span>often missed</span></div>
                   <div><b>{c.spell.vars.length} → 1</b><span>spellings</span></div>
                 </div>
               </aside>
@@ -166,7 +173,7 @@ export default function AttributeLibrary() {
       <section className="al-lib">
         <div className="al-wrap">
           <header className="al-head">
-            <h2>Example schemas for selected categories</h2>
+            <h2>Product schema examples by category</h2>
             <p>We build comprehensive product data schemas across all industry categories. The highlighted categories serve as selected examples, showcasing the quality, depth, and precision of our work.</p>
             <ul className="cat-chips" aria-label="All industry categories">
               {ALL_CATEGORIES.map((c) => <li key={c.name} className={c.id ? 'on' : ''}>{c.name}</li>)}
@@ -179,7 +186,7 @@ export default function AttributeLibrary() {
                 <li key={cat.name} style={{ '--i': i }}>
                     <button type="button" className={`al-card${id === x.id ? ' on' : ''}`} onClick={() => pick(x.id)} aria-pressed={id === x.id}>
                       <b>{cat.name}</b>
-                      <span>{x.attrs.length} attributes<i />{x.miss.length} to watch</span>
+                      <span>{x.attrs.length} attributes<i />{x.miss.length} often missed</span>
                       <u>Selected product: {x.ref}</u>
                       <em>{id === x.id ? 'Playing above' : 'Watch the AI explain it'}{id === x.id ? <Play size={12} /> : <ArrowRight size={13} />}</em>
                     </button>

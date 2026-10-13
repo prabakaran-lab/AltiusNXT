@@ -10,7 +10,7 @@ const C = (id, name, ref, attrs, miss, spell) => ({
 export const VERTICALS = []
 
 export const CATEGORIES = [
-  C('electronic', 'Electronic Supplies & Components', 'Schneider Electric TeSys Deca motor circuit breaker · TELGV3P73', [
+  C('electronic', 'Electronic Components', 'Schneider Electric TeSys Deca motor circuit breaker · TELGV3P73', [
     ['Brand', 'Schneider Electric'], ['Product Type', 'Motor Circuit Breaker'], ['Current Rating', '73 A'], ['Number of Poles', '3'], ['Trip Type', 'Type F'],
     ['AC Voltage Rating', '690 V'], ['Voltage Type', 'AC'], ['Interrupting Rating', '65 kA @ 230/240 V ac'], ['Number of Phase', '3'], ['Terminal Connection', 'Screw Clamp'],
     ['Trip Mechanism', 'Thermal Magnetic'], ['Mounting Type', 'DIN Rail'], ['Length', '136 mm'], ['Width', '55 mm'], ['Height', '132 mm'],

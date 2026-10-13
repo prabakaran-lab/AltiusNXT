@@ -124,3 +124,38 @@
   .ag *, .ag *::before, .ag *::after{ transition:none !important; animation:none !important; }
   .ag-r{ opacity:1; transform:none; }
 }
+
+/* ---- animated client map (inline SVG, classes added in globalMap.js) ----
+   s1 dots + India centre · s2 US office + routes · s3 country pins, labels, pulses · s4 Europe callout */
+.ag-map svg{ display:block; width:100%; height:auto; overflow:visible; }
+.ag-map .m-dots{ opacity:0; transform-box:fill-box; transform-origin:center; transform:scale(.985); transition:opacity 1.1s ease, transform 1.6s var(--ag-ease); }
+.ag:is(.s1,.s2,.s3,.s4) .m-dots{ opacity:1; transform:none; }
+
+.ag-map .m-office{ opacity:0; transform-box:fill-box; transform-origin:center; transform:translateY(-10px) scale(.7); transition:opacity .6s ease, transform .7s var(--ag-ease); }
+.ag:is(.s1,.s2,.s3,.s4) .m-office.m-in{ opacity:1; transform:none; }
+.ag:is(.s2,.s3,.s4) .m-office.m-us{ opacity:1; transform:none; }
+.ag-map .m-office > circle:first-child{ transform-box:fill-box; transform-origin:center; }
+.ag:is(.s1,.s2,.s3,.s4) .m-office.m-in > circle:first-child, .ag:is(.s2,.s3,.s4) .m-office.m-us > circle:first-child{ animation:m-office-ring 2.6s ease-out infinite; }
+@keyframes m-office-ring{ 0%{ transform:scale(.8); opacity:.9; } 100%{ transform:scale(2.6); opacity:0; } }
+
+.ag-map .m-arcs path{ stroke-opacity:0; stroke-width:1.4; transition:stroke-opacity .7s ease; transition-delay:calc(var(--i) * 90ms); animation:m-march 1.4s linear infinite; }
+.ag:is(.s2,.s3,.s4) .m-arcs path{ stroke-opacity:.6; }
+@keyframes m-march{ to{ stroke-dashoffset:-7; } }
+
+.ag-map .m-pin{ opacity:0; transform-box:fill-box; transform-origin:center; transform:scale(0); }
+.ag:is(.s3,.s4) .m-pin{ animation:m-pop .7s var(--ag-ease) forwards; animation-delay:calc(var(--i) * 110ms); }
+@keyframes m-pop{ 0%{ opacity:0; transform:scale(0); } 60%{ opacity:1; transform:scale(1.45); } 100%{ opacity:1; transform:scale(1); } }
+.ag-map .m-pin > circle:first-of-type{ transform-box:fill-box; transform-origin:center; }
+.ag:is(.s3,.s4) .m-pin > circle:first-of-type{ animation:m-glow 2.8s ease-in-out infinite; animation-delay:calc(var(--i) * 190ms + 1.2s); }
+@keyframes m-glow{ 0%,100%{ transform:scale(.8); opacity:.5; } 50%{ transform:scale(1.7); opacity:1; } }
+
+.ag-map .m-lab{ opacity:0; transition:opacity .6s ease .5s; }
+.ag:is(.s3,.s4) .m-lab{ opacity:1; }
+.ag-map .m-eu{ opacity:0; transform-box:fill-box; transform-origin:0 100%; transform:translateY(8px); transition:opacity .7s ease, transform .7s var(--ag-ease); }
+.ag:is(.s4) .m-eu{ opacity:1; transform:none; }
+
+.ag-map .m-pulses{ opacity:0; transition:opacity .6s ease; }
+.ag:is(.s3,.s4) .m-pulses{ opacity:.9; }
+
+.ag-final p span{ color:#fff; }
+@media (prefers-reduced-motion:reduce){ .ag-map .m-pulses{ display:none; } .ag-map .m-pin{ opacity:1; transform:none; } }

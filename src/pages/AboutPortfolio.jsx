@@ -116,7 +116,7 @@ export default function AboutPortfolio() {
       <div className="apf-wrap">
         <div className="apf-proof apf-r" style={{ '--d': '800ms' }}>
           <ul>
-            <li><b>20+</b> years of expertise</li>
+            <li><b>20+</b> years of team expertise</li>
             <li><b>500+</b> global clients</li>
             <li><b>15M+</b> products enriched</li>
           </ul>

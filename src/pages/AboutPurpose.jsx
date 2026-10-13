@@ -61,10 +61,10 @@ export default function AboutPurpose() {
             <span className="ap-num">02</span>
             <div>
               <p className="ap-label">Our mission</p>
-              <h3>Turn complex product data into usable digital assets at scale.</h3>
+              <h3>Turn messy product data into product pages that sell.</h3>
               <p>
-                Our mission is to combine product-data expertise, industry knowledge and intelligent technology to enrich,
-                standardize, validate and prepare technical product information — attributes, taxonomy and specifications — for modern B2B commerce.
+                We combine product data experts with AI that works fast. Together we enrich, clean and organise your product
+                information so buyers, marketplaces and AI search can find it and trust it.
               </p>
               <p>
                 We help manufacturers and distributors reduce manual product-data work, improve content quality and move trusted

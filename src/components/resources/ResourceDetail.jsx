@@ -214,7 +214,7 @@ function useArticleSeo(item) {
 /* `items` is the ordered list for this item's section (the same order the listing page shows). */
 export default function ResourceDetail({ item, items, section }) {
   const article = useMemo(() => (item.html ? sanitizeArticle(item.html) : null), [item])
-  useDocumentMeta((item.seoTitle || item.title).replace(/\s*[|-]\s*AltiusNxt$/i, ''), item.seoDescription || item.summary)
+  useDocumentMeta((item.seoTitle || item.title).replace(/\s*[|-]\s*AltiusNxt$/i, ''), item.seoDescription || item.summary, [item.title, section?.label, 'product data enrichment', 'AltiusNxt'].filter(Boolean))
   useArticleSeo(item)
   const index = items.findIndex((i) => i.id === item.id)
   const toc = article ? article.toc : tocFor(item.sections)

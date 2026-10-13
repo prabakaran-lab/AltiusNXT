@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Braces, Check, Code2, Eye, Search, Sparkles, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
 import SchemaLibrary from './SchemaLibrary.jsx'
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import './SchemaStudio.css'
 
 /* Schema markup explainer. The sample is a real catalog product (Schneider Electric TeSys Deca, TELGV3P73);
@@ -30,22 +31,25 @@ const CODE = [
   { t: '    { "name": "Mounting type", "value": "DIN Rail" }', f: 'spec' },
   { t: '  ],', f: 'spec' },
   { t: '  "offers": {', f: 'price' },
-  { t: '    "@type": "Offer", "priceCurrency": "INR", "price": "500.00",', f: 'price' },
+  { t: '    "@type": "Offer", "priceCurrency": "USD", "price": "500.00",', f: 'price' },
   { t: '    "availability": "https://schema.org/InStock"', f: 'price' },
   { t: '  }', f: 'price' },
   { t: '}' },
   { t: '</script>' },
 ]
+const SEO_KEYWORDS = ['product schema markup', 'product schema examples', 'schema markup for ecommerce', 'product structured data', 'JSON-LD product schema']
+const SEO_DATA = [breadcrumb('/product-schema-markup', 'Product Schema Markup')]
 const FAQ = [
   { q: 'What is product schema markup?', a: 'Product schema markup is structured data (schema.org, usually JSON-LD) added to a product page. It labels the brand, part number, specifications, price and availability so search engines and AI tools read them as facts.' },
   { q: 'Does schema markup help SEO?', a: 'Yes. Google uses structured data to understand a page and can show richer results such as price and availability. It does not guarantee rankings, but it removes guesswork about what your page says.' },
   { q: 'Which properties matter most on an industrial product page?', a: 'name, brand, mpn, gtin, offers and additionalProperty. Identifiers (mpn, gtin) and specifications as separate name and value pairs do most of the work for B2B catalogs.' },
+  { q: 'Does product schema help with UCP and AI shopping agents?', a: 'It helps. UCP (Google\'s Universal Commerce Protocol) lets AI agents compare and buy products. Agents and AI search rely on the same clean details that schema labels: brand, part number, specs, price and stock. Accurate schema needs accurate product data behind it.' },
   { q: 'Why does attribute data quality matter for schema?', a: 'Markup is only as good as the data behind it. If one product says "400A" and another "400 amp", engines and AI cannot compare them. Standardised attributes give you consistent, accurate markup at scale.' },
 ]
 const MISTAKES = [
   { bad: 'Markup says 400 A, the page says 450 A', good: 'Markup always matches what the visitor sees' },
   { bad: '“400”, “400A”, “400 amp” across the catalog', good: 'One format and one unit for every product' },
-  { bad: 'No mpn or gtin, only a title', good: 'Identifiers on every product' },
+  { bad: 'No part number or barcode, only a title', good: 'Part number and barcode on every product' },
   { bad: 'Specs only inside a text paragraph', good: 'Specs as separate name and value pairs' },
 ]
 const LOOP = 11
@@ -59,10 +63,6 @@ export default function SchemaStudio() {
   const [calm] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
 
   useEffect(() => {
-    document.title = 'Product Schema Markup Builder and Attribute Library | AltiusNxt'
-    let m = document.querySelector('meta[name="description"]')
-    if (!m) { m = document.createElement('meta'); m.name = 'description'; document.head.appendChild(m) }
-    m.content = 'Browse product schema attribute libraries for 9 industrial categories, see how JSON-LD product markup works, and download ready-to-use CSV and JSON-LD.'
     const j = document.createElement('script')
     j.type = 'application/ld+json'
     j.text = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) })
@@ -94,11 +94,17 @@ export default function SchemaStudio() {
 
   return (
     <div className="sm">
+      <PageSeo
+        title="Product Schema Markup Examples for Ecommerce | AltiusNxt"
+        description="See real product schema markup examples for 9 B2B categories. Learn which attributes Google and AI need, and download the JSON-LD for each."
+        keywords={SEO_KEYWORDS}
+        structuredData={SEO_DATA}
+      />
       <section className="sm-hero">
         <div className="sm-wrap">
-          <p className="sm-eyebrow">Schema markup, explained</p>
-          <h1>Product schema markup: the attributes search engines and AI <em>need to read your products.</em></h1>
-          <p className="sm-lead"><b>Schema markup (schema.org)</b> is code added to a product web page, usually in JSON-LD format, that labels the data for Google and AI tools. For example <code>brand</code>, <code>mpn</code>, <code>offers</code> and <code>gtin</code>.</p>
+          <p className="sm-eyebrow">Product schema markup, explained</p>
+          <h1>Buyers read your page. <em>AI reads your schema.</em></h1>
+          <p className="sm-lead"><b>Product schema markup</b> is hidden code that labels your brand, part number, price and specs so Google, AI search and AI shopping agents can read them correctly. Browse real product schema examples for 9 B2B categories.</p>
           <div className="sm-act">
             <a className="btn btn-primary" href="#library">Browse the schema library <ArrowRight size={16} /></a>
             <Link className="btn btn-outline" to="/ai-readiness-report">Check my page for free</Link>
@@ -131,7 +137,7 @@ export default function SchemaStudio() {
                   <p className={`brand${cur === 'brand' && withS ? ' hot' : ''}`}>Brand: <b>Schneider Electric</b></p>
                   <p className={`mpn${cur === 'mpn' && withS ? ' hot' : ''}`}>Mfr. Part No.: <b>TELGV3P73</b></p>
                   <ul className={`spec${cur === 'spec' && withS ? ' hot' : ''}`}><li><span>Current rating</span><b>73 A</b></li><li><span>AC voltage rating</span><b>690 V</b></li><li><span>Mounting type</span><b>DIN Rail</b></li></ul>
-                  <p className={`price${cur === 'price' && withS ? ' hot' : ''}`}><b>₹500.00</b><span><i />In stock</span></p>
+                  <p className={`price${cur === 'price' && withS ? ' hot' : ''}`}><b>$500.00</b><span><i />In stock</span></p>
                 </div>
               </div>
             </div>
@@ -150,7 +156,7 @@ export default function SchemaStudio() {
               ) : (
                 <div className="sm-guess">
                   <p>The crawler only sees a block of text and has to guess what each part is.</p>
-                  <div className="blob">Motor Circuit Breaker, 3P, 690 V ac, 65 kA Brand: Schneider Electric Mfr. Part No.: TELGV3P73 Current rating 73 A AC voltage rating 690 V Mounting type DIN Rail ₹500.00 In stock</div>
+                  <div className="blob">Motor Circuit Breaker, 3P, 690 V ac, 65 kA Brand: Schneider Electric Mfr. Part No.: TELGV3P73 Current rating 73 A AC voltage rating 690 V Mounting type DIN Rail $500.00 In stock</div>
                   <ul><li><X size={13} />Is “TELGV3P73” a part number, a SKU or a model name?</li><li><X size={13} />Is “690 V” a rating or a price?</li><li><X size={13} />Is the product in stock, and in what currency?</li></ul>
                 </div>
               )}
@@ -163,7 +169,7 @@ export default function SchemaStudio() {
         <div className="sm-wrap">
           <header className="sm-head">
             <p className="sm-eyebrow">Get it right</p>
-            <h2 id="sm-mist-t">Four common mistakes, and the fix.</h2>
+            <h2 id="sm-mist-t">4 product schema mistakes, and how to fix them.</h2>
           </header>
           <ul className="sm-cmp">
             {MISTAKES.map((m) => (

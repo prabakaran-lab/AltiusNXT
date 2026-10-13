@@ -2,7 +2,7 @@ import { COMPANIES } from '../../pages/AboutPortfolio.jsx'
 import Icon from '../ui/Icon.jsx'
 import './HomeTrust.css'
 
-const STATS = [['20+', 'years of expertise'], ['500+', 'global clients'], ['15M+', 'products enriched']]
+const STATS = [['20+', 'years of team expertise'], ['500+', 'global clients'], ['15M+', 'products enriched']]
 const ROW_A = COMPANIES.slice(0, 11)
 const ROW_B = COMPANIES.slice(11)
 

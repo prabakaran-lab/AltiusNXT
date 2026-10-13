@@ -9,7 +9,7 @@ export default function ResourceListingPage({ sectionKey }) {
   const section = sections[sectionKey]
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
-  useDocumentMeta(section.label, `${section.blurb} AltiusNxt ${section.label.toLowerCase()}.`)
+  useDocumentMeta(section.label, `${section.blurb} AltiusNxt ${section.label.toLowerCase()}.`, [section.label.toLowerCase(), 'product data enrichment', 'catalog management', 'eCommerce product data'])
 
   const term = query.trim().toLowerCase()
   const visible = orderedItems(section).filter((i) => !term || i.title.toLowerCase().includes(term))

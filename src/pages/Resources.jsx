@@ -10,6 +10,8 @@ import caseKempston from '../assets/resources/case-kempston.webp'
 import caseRoseScientific from '../assets/resources/case-rose-scientific.png'
 import eventIrx from '../assets/resources/event-irx.jpg'
 import eventToolfair from '../assets/resources/event-toolfair.jpg'
+import eventB2bWorld from '../assets/resources/event-b2b-ecommerce-world.svg'
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import eventChemuk from '../assets/resources/event-chemuk.jpg'
 import blogDataCleansing from '../assets/resources/blog-data-cleansing.webp'
 import blogEcommercePlatform from '../assets/resources/blog-ecommerce-platform.webp'
@@ -21,9 +23,9 @@ import wpBlogs from '../data/wpBlogs.json'
 const ITEMS = [
   { featured: 1, type: 'blog', date: 'May 28, 2025', sort: '2025-05-28', img: blogDataCleansing, title: 'Why Product Data Cleansing is a Game Changer for eCommerce Stores', excerpt: 'In the fast-paced world of eCommerce, your product data is either working for you or against you.', meta: '5 min read', to: '/resources/blog/product-data-cleansing-game-changer', url: 'https://altiusnxt.com/why-product-data-cleansing-is-a-game-changer-for-ecommerce-stores/' },
   { featured: 2, type: 'blog', date: 'May 22, 2025', sort: '2025-05-22', img: blogEcommercePlatform, title: 'Unlocking eCommerce Success: How to Implement a Platform That Converts', excerpt: 'eCommerce implementation involves more than selecting a platform — it takes careful planning, execution and ongoing optimization.', meta: '8 min read', to: '/resources/blog/implement-ecommerce-platform-that-converts', url: 'https://altiusnxt.com/unlocking-ecommerce-success-how-to-implement-a-platform-that-converts/' },
-  { featured: 3, type: 'blog', date: 'May 19, 2025', sort: '2025-05-19', img: blogDataNormalization, title: 'Stay Ahead in 2025: How Data Normalization Boosts eCommerce Efficiency', excerpt: 'How industrial distributors and retailers can leverage data normalization to enhance eCommerce operations and deliver better customer experiences.', meta: '6 min read', to: '/resources/blog/data-normalization-2025', url: 'https://altiusnxt.com/stay-ahead-in-2025-how-data-normalization-boosts-ecommerce-efficiency-for-industrial-distributors-and-retailers/' },
-  { featured: 4, type: 'blog', date: 'April 7, 2025', sort: '2025-04-07', img: blogAttributeDevelopment, title: 'Elevating Your E-Commerce Strategy with Product Attribute Development', excerpt: 'Product attribute development is the backbone of a successful online store.', meta: '6 min read', to: '/resources/blog/product-attribute-development', url: 'https://altiusnxt.com/elevating-your-e-commerce-strategy-with-product-attribute-development/' },
-  { featured: 5, type: 'event', date: 'November 2026', sort: '2026-11-02', img: eventToolfair, title: 'B2B eCommerce World Americas 2026', excerpt: 'Meet the AltiusNxt team in Indianapolis. Bring your own product data and see CatalogWiz in action.', meta: 'Indianapolis, IN', url: 'https://b2becommerceworld.org/americas', upcoming: true },
+  { featured: 3, type: 'blog', date: 'May 19, 2025', sort: '2025-05-19', img: blogDataNormalization, title: 'How Data Normalization Boosts eCommerce Efficiency', excerpt: 'How industrial distributors and retailers can leverage data normalization to enhance eCommerce operations and deliver better customer experiences.', meta: '6 min read', to: '/resources/blog/data-normalization-2025', url: 'https://altiusnxt.com/stay-ahead-in-2025-how-data-normalization-boosts-ecommerce-efficiency-for-industrial-distributors-and-retailers/' },
+  { featured: 4, type: 'blog', date: 'April 7, 2025', sort: '2025-04-07', img: blogAttributeDevelopment, title: 'Elevating Your eCommerce Strategy with Product Attribute Development', excerpt: 'Product attribute development is the backbone of a successful online store.', meta: '6 min read', to: '/resources/blog/product-attribute-development', url: 'https://altiusnxt.com/elevating-your-e-commerce-strategy-with-product-attribute-development/' },
+  { featured: 5, type: 'event', date: 'Nov 2–3, 2026', sort: '2026-11-02', img: eventB2bWorld, title: 'Meet AltiusNxt at B2B eCommerce World Americas 2026, Indianapolis', excerpt: 'Meet the AltiusNxt team in Indianapolis. Bring your own product data and see CatalogWiz in action.', meta: 'JW Marriott Indianapolis', url: 'https://b2becommerceworld.org/americas', upcoming: true },
   { featured: 6, type: 'case', date: 'March 28, 2025', sort: '2025-03-28', img: caseKempston, title: 'Data Enrichment Improves Kempston Controls Website Traffic', excerpt: 'How a data enrichment initiative boosted website traffic for this long-established distributor of electrical and electronic components.', meta: '7 min read', to: '/resources/case-studies/kempston-controls', url: 'https://altiusnxt.com/data-enrichment-improves-kempston-controls-website-traffic/' },
   { type: 'case', date: 'February 2025', sort: '2025-02-14', img: caseScrewman, title: 'The Screwman Tightens Its Business Presence with a New E-Store', excerpt: 'A nearly four-decade fastener and hand-tools specialist launched a new eCommerce store to expand its business presence.', meta: '6 min read', to: '/resources/case-studies/the-screwman', url: 'https://altiusnxt.com/the-screwman-tightens-its-business-presence-with-a-new-e-store/' },
   { type: 'case', date: 'January 2025', sort: '2025-01-20', img: caseRoseScientific, title: 'Rose Scientific: From Static Site to Dynamic eCommerce Powerhouse', excerpt: 'Transformation from a static website to a dynamic eCommerce platform for this scientific equipment distributor.', meta: '7 min read', to: '/resources/case-studies/rose-scientific-canada', url: 'https://altiusnxt.com/rose-scientific-canada-from-static-site-to-dynamic-ecommerce-powerhouse/' },
@@ -63,7 +65,7 @@ const TABS = [
   { id: 'faqs', label: 'FAQs', icon: 'help' },
 ]
 const TAB_TYPE = { blogs: 'blog', 'case-studies': 'case', events: 'event' }
-const TOPICS = ['Product Data', 'eCommerce', 'CatalogWiz', 'AI Readiness', 'Industrial Commerce']
+const TOPICS = ['Product Data Enrichment', 'PIM', 'eCommerce', 'AI Search', 'UCP & Agentic Commerce', 'Schema Markup', 'Case Studies']
 
 const Icon = ({ name, size = 18 }) => <UiIcon name={name === 'arrow' ? 'arrow-right' : name === 'calendar' ? 'events' : name} size={size} />
 
@@ -153,15 +155,21 @@ export default function Resources() {
 
   return (
     <>
+      <PageSeo
+        title="Product Data Guides, Case Studies & Events | AltiusNxt"
+        description="Guides on product data enrichment, PIM, catalog management and AI search, plus case studies from manufacturers and distributors worldwide."
+        keywords={['product data enrichment guide', 'what is product data enrichment', 'product data cleansing vs enrichment', 'PIM data onboarding', 'product data normalization']}
+        structuredData={[breadcrumb('/resources', 'Resources')]}
+      />
       {/* ---- Hero ---- */}
       <section className="ah ah-res" aria-labelledby="res-title">
         <div className="ah-wrap">
           <div className="ah-copy">
             <p className="ah-eyebrow ah-r" style={{ '--d': '0ms' }}>Resources</p>
-            <h1 id="res-title" className="ah-r" style={{ '--d': '80ms' }}>Insights for <span>smarter product data.</span></h1>
+            <h1 id="res-title" className="ah-r" style={{ '--d': '80ms' }}>Better product data, <span>explained.</span></h1>
             <p className="ah-lede ah-r" style={{ '--d': '170ms' }}>
-              Guides, case studies, events and expert insights to help you enrich, manage and
-              optimize your product information for ecommerce and an AI-ready world.
+              Practical guides on product data enrichment, catalog management, PIM, AI search and UCP, plus case studies
+              from manufacturers and distributors in 15+ countries.
             </p>
             <form className="res-search ah-r" style={{ '--d': '260ms' }} onSubmit={(e) => e.preventDefault()}>
               <span className="res-search-icon"><Icon name="search" /></span>

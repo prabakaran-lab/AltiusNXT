@@ -13,6 +13,7 @@ import ReadinessChecklist from '../components/checklist/ReadinessChecklist.jsx'
 import TrustBand from '../components/security/TrustBand.jsx'
 import ContentHub from '../components/ContentHub.jsx'
 import HomeFaq from '../components/HomeFaq.jsx'
+import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import './HomeRefinement.css'
 import './HomePolish.css'
 import './HomeHeroCentered.css'
@@ -37,6 +38,12 @@ import './HomeSystem.css'
 export default function Home() {
   return (
     <div className="home-page">
+      <PageSeo
+        title="AI Product Data Enrichment Services | AltiusNxt"
+        description="AI-powered product data enrichment, verified by experts. Fill missing attributes, fix errors and get your products found on Google and AI search."
+        keywords={['product data enrichment', 'AI product data enrichment', 'product content enrichment', 'eCommerce catalog enrichment', 'B2B product data', 'UCP-ready product data']}
+        structuredData={[breadcrumb('/', 'AI-Powered Product Data Enrichment')]}
+      />
       <HomeHero />
       <Walkthrough />
       <DataContrast />
