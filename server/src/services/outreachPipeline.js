@@ -4,17 +4,21 @@ import {
   extractProductIdentityFromPage,
   buildOutreachQueries,
   extractCitedSellers,
+  extractListingClaims,
   analyzeOutreachGaps,
   checkSiblingCodeRisk,
 } from './gemini.js'
-import { callOpenAIWithSearch, callClaudeWithSearch } from './liveEngines.js'
+import { callOpenAIWithSearch, callClaudeWithSearch, withTransientRetry } from './liveEngines.js'
 import { askGeminiTextWithSearch } from './gemini.js'
-import { benchmarkCompetitors, extractPriceSignals, extractPriceFromHtml, countSpecCues, normalizeSellerName, isSameSeller, priceToValue as priceToValueShared } from './competitorBenchmark.js'
-import { extractJsonLdObjects } from './scrapeDo.js'
+import { benchmarkCompetitors, extractPriceSignals, extractPriceFromHtml, countSpecCues, normalizeSellerName, isSameSeller, priceToValue as priceToValueShared, toPerUnit, extractUrls, measureSpecDepthFromUrls, prospectNameMatcher, SPEC_RECHECK_BELOW } from './competitorBenchmark.js'
+import { extractJsonLdObjects, isBotChallengeText, BOT_BLOCKED_MESSAGE } from './scrapeDo.js'
 import { runCrossEngineResearch, synthesizeCrossEngineFindings } from './crossEngineResearch.js'
 import { testCrawlerAccess } from './crawlerAccess.js'
 import { computeScorecard } from './scorecard.js'
 import { buildRevenueAtStakeTable } from './revenueAtStake.js'
+import { buildRevenueRisk } from './revenueRisk.js'
+import { inferRegion, regionIsActive, userLocationFor, isForeignCurrencyPrice } from './region.js'
+import { writeOutreachReport } from './reportWriter.js'
 import { hasJsonLd, extractReadableText, fetchPageHtml, isJsBlockedText, checkProductStructuredDataFields, checkTitleTagDuplication, checkBreadcrumbDuplication } from './scrapeDo.js'
 import { extractOcrEnrichedText } from './mistralOcr.js'
 import { isOpenAIConfigured, isAnthropicConfigured, isGeminiConfigured } from '../config.js'
@@ -22,16 +26,22 @@ import { generateOutreachReportPdf } from './reportPdf.js'
 import { sendOutreachReport } from './mailer.js'
 import { lookupBusinessPlace } from './googlePlaces.js'
 import { captureCurrentPageAndHeader, captureEnrichedMockupScreenshot } from './pageScreenshots.js'
+import { findProductImage } from './manufacturerImage.js'
+import { verifySellerPrices } from './priceVerification.js'
 
-const searchPrompt = (query) =>
-  `A customer searches: "${query}". Using current, real information you can find via web search, answer naturally ` +
-  `(2-4 sentences) recommending specific real sellers or suppliers where relevant, with approximate current pricing ` +
-  `if you find it. Plain text only — no markdown formatting.`
+export const searchPrompt = (query, country, region) =>
+  `A customer${country ? ` in ${country}` : ''} searches: "${query}". Using current, real information you can find via web search, answer naturally ` +
+  `(2-4 sentences) recommending specific real sellers or suppliers${country ? ` that sell to buyers in ${country}` : ''} where relevant, with approximate current pricing ` +
+  `if you find it${country ? ' (in local currency)' : ''}. Plain text only — no markdown formatting.` +
+  // Only when the region is known with confidence; otherwise this prompt is unchanged.
+  (regionIsActive(region) ? ` Answer for a buyer in ${region.country}; recommend sellers that serve ${region.country}, with prices in ${region.currencyCode}.` : '')
 
-async function callEngineWithSearch(engine, prompt) {
-  if (engine === 'chatgpt') return callOpenAIWithSearch(prompt)
-  if (engine === 'claude') return callClaudeWithSearch(prompt)
-  if (engine === 'gemini') return askGeminiTextWithSearch(prompt)
+// A transient failure (rate-limit burst, 5xx, overloaded) is retried up to three times before the
+// engine is counted as not having answered; a usage cap is not retried.
+async function callEngineWithSearch(engine, prompt, userLocation) {
+  if (engine === 'chatgpt') return withTransientRetry(() => callOpenAIWithSearch(prompt, { userLocation }))
+  if (engine === 'claude') return withTransientRetry(() => callClaudeWithSearch(prompt, { userLocation }))
+  if (engine === 'gemini') return withTransientRetry(() => askGeminiTextWithSearch(prompt))
   throw new Error(`Unknown engine: ${engine}`)
 }
 
@@ -62,17 +72,24 @@ const ENGINE_LABELS = [
  *  prospect wasn't cited but its own price is known, computes (in code, not via the LLM) where
  *  that price would have ranked among the prices THIS specific answer actually mentioned — the
  *  "at $X, you'd have been 2nd-lowest in this answer" footnote. */
-async function runOneQuery({ query, prospectCompany, prospectDomain, prospectPrice, engines, computeFootnote = true }) {
-  const prompt = searchPrompt(query)
+async function runOneQuery({ query, prospectCompany, prospectDomain, prospectPrice, engines, computeFootnote = true, country = '', region }) {
+  const prompt = searchPrompt(query, country, region)
+  const userLocation = userLocationFor(region)
   const answers = await Promise.all(
     engines.map((engine) =>
-      callEngineWithSearch(engine, prompt).catch((err) => {
+      callEngineWithSearch(engine, prompt, userLocation).catch((err) => {
         console.warn(`[outreach] ${engine} search failed for "${query}": ${err.message}`)
         return ''
       })
     )
   )
-  const { sellers, prospectCited, sellerPrices } = await extractCitedSellers({ texts: answers, prospectCompany, prospectDomain })
+  const { sellers: rawSellers, prospectCited, prospectCitedPrice, sellerPrices } = await extractCitedSellers({ texts: answers, prospectCompany, prospectDomain })
+  // Each business once ("The Big Bearing Store" / "TheBigBearingStore.com"), and never the
+  // prospect itself — its own column already says whether it was cited.
+  const domainStem = normalizeSellerName(String(prospectDomain || '').split('.')[0])
+  const isProspectName = (name) => isSameSeller(name, prospectCompany) || (domainStem.length >= 4 && normalizeSellerName(name).includes(domainStem)) ||
+    prospectNameMatcher({ names: [prospectCompany], domain: prospectDomain })(name)
+  const sellers = rawSellers.filter((s, i) => !isProspectName(s) && rawSellers.findIndex((o) => isSameSeller(o, s)) === i)
 
   // Only meaningful for queries that actually name the product — a category query's answer isn't
   // about this specific item, so "you'd have ranked Nth" wouldn't be a real comparison.
@@ -89,7 +106,11 @@ async function runOneQuery({ query, prospectCompany, prospectDomain, prospectPri
     }
   }
 
-  return { query, sellersCited: sellers, prospectCited, note }
+  // Short per-engine excerpts so the report writer can summarise what each engine actually said.
+  const answerExcerpts = Object.fromEntries(engines.map((engine, i) => [engine, String(answers[i] || '').slice(0, 700)]))
+  // Links the engines gave for the products they named — used to measure competitor spec depth on
+  // the exact product pages rather than guessing at each seller's website.
+  return { query, sellersCited: sellers, prospectCited, citedPrice: prospectCited ? prospectCitedPrice : '', note, answerExcerpts, urls: extractUrls(...answers) }
 }
 
 /**
@@ -102,13 +123,13 @@ async function runOneQuery({ query, prospectCompany, prospectDomain, prospectPri
 // most this many so the report stays a five-gap page like the reference, not a laundry list.
 const MAX_GAPS = 5
 const GAP_PRIORITY = [
-  'page_requires_javascript', 'site_operational_notice', 'manufacturer_code_missing', 'manufacturer_not_stated', 'no_specification_table',
+  'page_requires_javascript', 'robots_txt_blocks_ai_crawlers', 'site_operational_notice', 'manufacturer_code_missing', 'manufacturer_not_stated', 'no_specification_table',
   'spec_depth_below_competitors', 'naming_inconsistency', 'no_product_description', 'structured_data_url_encoded',
   'structured_data_missing_fields', 'no_structured_data', 'structured_data_brand_is_seller', 'unit_of_sale_not_stated',
   'sibling_code_disambiguation_risk', 'title_tag_duplicated', 'breadcrumb_duplicated',
 ]
 
-function computeGapEvidence({ identity, prospectHasCodeOnPage, realManufacturerCode = '', realCodeOnPage = true, prospectSpecCount, prospectHasJsonLd, prospectPrice, pageText, renderedText = '', html = '', benchmark, jsBlocked, siblingCodeRisk, structuredDataFields, titleCheck, breadcrumbCheck }) {
+function computeGapEvidence({ identity, prospectHasCodeOnPage, realManufacturerCode = '', realCodeOnPage = true, prospectSpecCount, prospectHasJsonLd, prospectPrice, pageText, renderedText = '', html = '', benchmark, jsBlocked, siblingCodeRisk, structuredDataFields, titleCheck, breadcrumbCheck, crawlerAccess }) {
   const fired = []
 
   // A store-wide operational notice ("call to order — payments are having technical issues") is
@@ -264,6 +285,12 @@ function computeGapEvidence({ identity, prospectHasCodeOnPage, realManufacturerC
     fired.push({ ruleId: 'breadcrumb_duplicated', evidence: { crumbs: breadcrumbCheck.crumbs } })
   }
 
+  // The site's own robots.txt tells an AI crawler not to fetch this page: measured from robots.txt
+  // itself, and quoted rule by rule.
+  if (crawlerAccess?.robotsBlockedAiAgents?.length) {
+    fired.push({ ruleId: 'robots_txt_blocks_ai_crawlers', evidence: { blockedAgents: crawlerAccess.robotsBlockedAiAgents } })
+  }
+
   const rank = (id) => { const i = GAP_PRIORITY.indexOf(id); return i === -1 ? GAP_PRIORITY.length : i }
   return fired.sort((a, b) => rank(a.ruleId) - rank(b.ruleId)).slice(0, MAX_GAPS)
 }
@@ -313,9 +340,19 @@ async function resolveGivenProductPage(productUrl) {
     throw new Error(REJECT_MESSAGE)
   }
 
-  const { html } = await fetchPageHtml(productUrl)
+  let html
+  try {
+    ;({ html } = await fetchPageHtml(productUrl))
+  } catch (err) {
+    // A refusal (403 / 429 / 503) is the site's bot protection: say so rather than show a bare status code.
+    if (/\b(401|403|429|503)\b/.test(err.message)) throw new Error(BOT_BLOCKED_MESSAGE)
+    throw err
+  }
   const pageText = extractReadableText(html, 6000)
-  const identity = await extractProductIdentityFromPage({ url: productUrl, pageText })
+  if (isBotChallengeText(pageText)) throw new Error(BOT_BLOCKED_MESSAGE)
+  // The page's own schema.org blocks, as written, go to the identity step alongside the text.
+  const jsonLd = JSON.stringify(extractJsonLdObjects(html))
+  const identity = await extractProductIdentityFromPage({ url: productUrl, pageText, jsonLd: jsonLd === '[]' ? '' : jsonLd })
   if (!identity?.productName?.trim() || identity?.isHomepageOrListing) {
     throw new Error(REJECT_MESSAGE)
   }
@@ -329,7 +366,7 @@ async function resolveGivenProductPage(productUrl) {
  * audit, and assembles every field the outreach PDF template needs. Does not render or send — see
  * `runOutreachPipeline` for that.
  */
-export async function buildOutreachReportData({ company, website, productUrl, contactName, contactTitle, contactEmail, location, timezoneLabel, senderName, senderTitle, senderEmail }) {
+export async function buildOutreachReportData({ company, website, productUrl, contactName, contactTitle, contactEmail, location, timezoneLabel, senderName, senderTitle, senderEmail, revenueBracket }) {
   if (!website && !productUrl) throw new Error('buildOutreachReportData needs either website (crawl mode) or productUrl (direct mode)')
 
   const prospectDomain = new URL(website || productUrl).hostname.replace(/^www\./, '')
@@ -377,10 +414,10 @@ export async function buildOutreachReportData({ company, website, productUrl, co
   // menu text falsely inflates the spec-cue count (e.g. "Material Handling" category links match
   // the "material" cue) and would otherwise mask a page that's actually empty of real content.
   const jsBlocked = isJsBlockedText(identity.pageText)
-  const prospectSpecCount = jsBlocked ? 0 : countSpecCues(identity.pageText)
+  let prospectSpecCount = jsBlocked ? 0 : countSpecCues(identity.pageText)
   // The page's own structured price first (JSON-LD / meta) — the text scan is only a fallback,
   // since page text lists the struck-through MSRP before the real price on most store templates.
-  const prospectPrice = extractPriceFromHtml(prospectHtml) || extractPriceSignals(identity.pageText)[0] || null
+  let prospectPrice = extractPriceFromHtml(prospectHtml) || extractPriceSignals(identity.pageText)[0] || null
 
   // The report is about the STORE the page belongs to. When the typed company name doesn't match
   // the site (a tester typing their own employer, a buyer typing a parent company), use the
@@ -410,6 +447,15 @@ export async function buildOutreachReportData({ company, website, productUrl, co
   const placeInfo = await lookupBusinessPlace({ companyName: company, website: website || `https://${prospectDomain}` }).catch(() => null)
   const resolvedLocation = location || placeInfo?.formattedAddress || ''
 
+  // The market this page sells into (country + currency) — buyer queries, cross-engine research
+  // and the competitor benchmark are all scoped to it.
+  // Evidence-weighed inference: a region is acted on only when its confidence is high or medium; below
+  // that no country is assumed and every prompt stays region-free.
+  const region = inferRegion({ url: identity.url, html: prospectHtml, pageText: identity.pageText, placeInfo })
+  console.log(`[outreach] region: ${region.country || 'unknown'} (${region.currencyCode || '?'}) from ${region.source} | confidence ${region.confidence} | signals: ${region.signals.map((x) => x.type).join(', ') || 'none'}`)
+  // A price written with the market's own currency marker (e.g. an "R" or "₹" price) is recognised once the market is known.
+  if (!prospectPrice && regionIsActive(region)) prospectPrice = extractPriceSignals(identity.pageText, { currencyCode: region.currencyCode })[0] || null
+
   const queries = await buildOutreachQueries({
     productName: identity.productName,
     manufacturerBrand: identity.manufacturerBrand,
@@ -417,30 +463,59 @@ export async function buildOutreachReportData({ company, website, productUrl, co
     category: identity.category,
     location: resolvedLocation,
     attributes: identity.attributes,
+    country: region.country,
+    avoidNames: [company, typedCompany, prospectDomain, [...prospectDomain.split('.')].sort((a, b) => b.length - a.length)[0]],
+    region,
   })
+  console.log(`[outreach] buyer queries: ${(queries.named || []).length} named + ${(queries.category || []).length} category`)
 
   const engines = []
   if (isOpenAIConfigured()) engines.push('chatgpt')
   if (isAnthropicConfigured()) engines.push('claude')
   if (isGeminiConfigured()) engines.push('gemini')
 
+  // The checkable claims the listing makes about the product — each is put to the three engines
+  // to verify against the manufacturer's own documentation (see crossEngineResearch.js).
+  const listingClaims = await extractListingClaims({ url: identity.url, pageText: identity.pageText })
+  console.log(`[outreach] ${listingClaims.length} listing claim(s) to verify`)
+
   const [namedResults, categoryResults, crossEngine, pageScreenshots, siblingCodeRisk, crawlerAccess] = await Promise.all([
-    Promise.all((queries.named || []).map((q) => runOneQuery({ query: q, prospectCompany: company, prospectDomain, prospectPrice, engines, computeFootnote: true }))),
-    Promise.all((queries.category || []).map((q) => runOneQuery({ query: q, prospectCompany: company, prospectDomain, prospectPrice, engines, computeFootnote: false }))),
+    Promise.all((queries.named || []).map((q) => runOneQuery({ query: q, prospectCompany: company, prospectDomain, prospectPrice, engines, computeFootnote: true, country: region.country, region }))),
+    Promise.all((queries.category || []).map((q) => runOneQuery({ query: q, prospectCompany: company, prospectDomain, prospectPrice, engines, computeFootnote: false, country: region.country, region }))),
     // The single-prompt cross-engine research step (see crossEngineResearch.js) — replaces the
     // old separate findManufacturerSpecs + page-reaction-audit calls with one open-ended research
     // ask per engine, mirroring what a person manually checking ChatGPT/Claude/Gemini would do.
     runCrossEngineResearch({
       productName: identity.productName,
+      manufacturerBrand: identity.manufacturerBrand,
       knownCodes: [identity.manufacturerCode].filter(Boolean),
+      sellerSku: identity.sellerSku,
+      unitOfSale: identity.unitOfSale,
+      category: identity.category,
       dimensions: identity.attributes?.join(', '),
+      price: prospectPrice?.raw,
       url: identity.url,
+      country: region.country,
+      currencyCode: region.currencyCode,
+      claims: listingClaims,
+      pageText: identity.pageText,
+      region,
     }).catch(() => ({ responses: { chatgpt: null, claude: null, gemini: null } })),
     captureCurrentPageAndHeader(identity.url).catch(() => ({ fullScreenshot: null, headerCrop: null })),
     checkSiblingCodeRisk({ manufacturerBrand: identity.manufacturerBrand, manufacturerCode: identity.manufacturerCode, productName: identity.productName, category: identity.category }).catch(() => ({ hasSiblingRisk: false, siblingCode: '', note: '' })),
     testCrawlerAccess(identity.url).catch(() => null),
   ])
   const { fullScreenshot: currentPageScreenshot, headerCrop } = pageScreenshots
+  // Only engines that actually returned an answer are named and counted: one that failed (a usage limit,
+  // an outage) produced no result, and the report must not say it was tested.
+  const answered = (id) => [...namedResults, ...categoryResults].some((r) => r.answerExcerpts?.[id]) || Boolean(crossEngine.responses?.[id])
+  const respondedEngines = engines.filter(answered)
+  // Competitor pages with a low plain-download count are re-read in a real browser (see
+  // competitorBenchmark.js); the prospect's page gets the same second look, so both are measured the
+  // same way: the higher of the plain-text and the browser-rendered reading.
+  if (prospectSpecCount < SPEC_RECHECK_BELOW && (pageScreenshots.renderedText || '').length >= 200) {
+    prospectSpecCount = Math.max(prospectSpecCount, countSpecCues(pageScreenshots.renderedText))
+  }
 
   const crossEngineFindings = await synthesizeCrossEngineFindings({
     responses: crossEngine.responses,
@@ -450,7 +525,13 @@ export async function buildOutreachReportData({ company, website, productUrl, co
       manufacturerCodeShownOnPage: prospectHasCodeOnPage,
       specCountOnPage: prospectSpecCount,
       hasStructuredData: prospectHasJsonLd,
+      structuredDataBrandIsTheSeller: Boolean(structuredDataFields?.brandIsSeller),
+      pageNeedsJavaScriptToShowContent: jsBlocked,
+      aiCrawlersBlockedByRobotsTxt: (crawlerAccess?.robotsBlockedAiAgents || []).map((b) => b.agent),
     },
+    country: region.country,
+    claims: listingClaims,
+    region,
   })
   // An engine that couldn't fetch the page returns an apology rather than an assessment; quoting
   // that in the report reads as a broken tool, so such quotes are dropped rather than rendered.
@@ -473,6 +554,13 @@ export async function buildOutreachReportData({ company, website, productUrl, co
   // record it so the gaps section can say "no manufacturer named" rather than "MPN missing".
   identity.standardDesignation = crossEngineFindings.isStandardDesignation ? String(crossEngineFindings.standardDesignation || '').trim() : ''
 
+  // Every product page the engines linked while answering — where competitor spec depth is measured.
+  const aiLinkedUrls = [
+    ...namedResults.flatMap((r) => r.urls || []),
+    ...categoryResults.flatMap((r) => r.urls || []),
+    ...extractUrls(crossEngine.responses?.chatgpt, crossEngine.responses?.claude, crossEngine.responses?.gemini),
+  ]
+
   const benchmark = await benchmarkCompetitors({
     manufacturerBrand: identity.manufacturerBrand,
     manufacturerCode: identity.manufacturerCode,
@@ -480,6 +568,8 @@ export async function buildOutreachReportData({ company, website, productUrl, co
     category: identity.category,
     excludeDomain: prospectDomain,
     excludeCompany: company,
+    region,
+    knownUrls: aiLinkedUrls,
   }).catch((err) => {
     console.warn(`[outreach] competitor benchmark failed: ${err.message}`)
     return { sellers: [] }
@@ -487,36 +577,72 @@ export async function buildOutreachReportData({ company, website, productUrl, co
 
   // Merge in sellers the cross-engine research found but benchmarkCompetitors' own search
   // missed — deduped by normalized name so the same seller found by both never double-counts.
-  const prospectKeys = [company, typedCompany, domainStem].map(normalizeSellerName).filter((k) => k.length >= 4)
-  const looksLikeProspect = (name) => {
-    const key = normalizeSellerName(name)
-    return prospectKeys.some((p) => key === p || key.includes(p) || p.includes(key))
-  }
+  // Name variants of the prospect ("Acme Industrial Tools" for "Acme Tools") are the prospect too.
+  const looksLikeProspect = prospectNameMatcher({ names: [company, typedCompany], domain: prospectDomain })
   const isMarketplaceName = (name) => /^(ebay|amazon|alibaba|aliexpress|walmart marketplace|etsy|mercari|craigslist|facebook marketplace)\b/i.test(String(name || '').trim())
   const extraSellers = []
   for (const s of crossEngineFindings.sellers || []) {
     if (!(s?.seller && s?.price) || s.inStock === false || looksLikeProspect(s.seller) || isMarketplaceName(s.seller)) continue
+    // Same market only: skip sellers the research tagged as another country or priced in another currency.
+    if (region.country && (s.inRegion === false || isForeignCurrencyPrice(s.price, region.currencyCode))) continue
     // Same business under a slightly different name ("PGN" / "PGN Bearings") is one seller.
     if (benchmark.sellers.some((b) => isSameSeller(b.seller, s.seller)) || extraSellers.some((e) => isSameSeller(e.seller, s.seller))) continue
     extraSellers.push(s)
   }
+  // Engines often quote a pack price in the price text itself ("$85.74 per 25-pack"), so the unit is
+  // read from that text too. Everything below is on a per-single-item basis.
   const extraSellersPriced = extraSellers
     .map((s) => ({ seller: s.seller, priceValue: priceToValueShared(s.price), price: s.price, unit: '', isProspect: false }))
     .filter((s) => Number.isFinite(s.priceValue) && s.priceValue > 0)
+    .map((s) => {
+      const u = toPerUnit({ price: s.price, priceValue: s.priceValue, unit: s.price })
+      return { ...s, ...u, unit: u.packQty > 1 ? 'each' : '' }
+    })
+  const prospectUnit = prospectPrice ? toPerUnit({ price: prospectPrice.raw, priceValue: prospectPrice.value, unit: identity.unitOfSale }) : null
 
-  const allPriced = [
-    ...(prospectPrice ? [{ seller: company, priceValue: prospectPrice.value, price: prospectPrice.raw, unit: identity.unitOfSale, isProspect: true }] : []),
-    ...benchmark.sellers.map((s) => ({ seller: s.seller, priceValue: s.priceValue, price: s.price, unit: s.unit, isProspect: false })),
-    ...extraSellersPriced,
-  ].sort((a, b) => a.priceValue - b.priceValue)
+  // Every competitor price is checked against the seller's own product page. A seller whose page
+  // shows a different price is left out; one that cannot be checked stays, flagged as unconfirmed.
+  const verification = await verifySellerPrices({
+    sellers: [...benchmark.sellers, ...extraSellersPriced],
+    knownUrls: [...aiLinkedUrls, ...(benchmark.urls || [])],
+    excludeDomain: prospectDomain,
+    productCode: identity.manufacturerCode,
+  }).catch((err) => {
+    console.warn(`[outreach] price verification failed: ${err.message}`)
+    return null
+  })
+  const verificationOf = verification ? new Map(verification.sellers.map((x) => [x.seller, x.verification])) : null
+  const stillListed = (x) => !verificationOf || verificationOf.has(x.seller)
+  const verifiedAs = (x) => verificationOf?.get(x.seller) || 'unconfirmed'
+  if (verification) console.log(`[outreach] price check: ${verification.counts.confirmed} confirmed on the seller's page, ${verification.counts.unconfirmed} unconfirmed, ${verification.counts.dropped} dropped`)
 
-  function perUnitPrice(entry) {
-    const pack = parsePackUnitShared(entry?.unit)
-    if (!pack) return null
-    const currency = String(entry.price || '').replace(/[\d.,]/g, '') || '$'
-    const perItem = entry.priceValue / pack.qty
-    return { raw: `${currency}${perItem.toFixed(2)}`, noun: pack.noun }
-  }
+  const pricedEntries = [
+    ...(prospectPrice ? [{ seller: company, ...prospectUnit, unit: prospectUnit.packQty > 1 ? 'each' : identity.unitOfSale, isProspect: true }] : []),
+    ...benchmark.sellers.filter(stillListed).map((x) => ({ seller: x.seller, priceValue: x.priceValue, price: x.price, unit: x.unit, listedPrice: x.listedPrice, packQty: x.packQty || 1, isProspect: false, supplementary: Boolean(x.supplementary), verification: verifiedAs(x) })),
+    ...extraSellersPriced.filter(stillListed).map((x) => ({ ...x, verification: verifiedAs(x) })),
+  ]
+  // A price far from the group's median is a different item or quantity that slipped through (a
+  // 25-pack at the single-item price, a bundle, a different product) — not a comparable seller.
+  const groupMedian = (() => {
+    const v = pricedEntries.map((p) => p.priceValue).sort((a, b) => a - b)
+    return v.length ? v[Math.floor(v.length / 2)] : 0
+  })()
+  const allPriced = pricedEntries
+    .filter((p) => p.isProspect || pricedEntries.length < 3 || (p.priceValue / groupMedian <= 4 && p.priceValue / groupMedian >= 0.25))
+    .sort((a, b) => a.priceValue - b.priceValue)
+  const convertedPacks = allPriced.filter((p) => p.packQty > 1)
+  const priceUnitNote = convertedPacks.length
+    ? `Prices are shown per single item; pack prices were divided by pack size (${convertedPacks.slice(0, 4).map((p) => `${p.isProspect ? company : p.seller} ${p.listedPrice} ÷ ${p.packQty}`).join('; ')}).`
+    : ''
+
+  // What was actually checked, stated plainly in the report: a price is "confirmed" only if it was seen
+  // on the seller's own product page.
+  const competitorsPriced = allPriced.filter((p) => !p.isProspect)
+  const confirmedCount = competitorsPriced.filter((p) => p.verification === 'confirmed').length
+  const droppedCount = verification?.counts.dropped || 0
+  const priceVerificationNote = competitorsPriced.length
+    ? `${confirmedCount} of ${competitorsPriced.length} competitor prices were confirmed on the seller's own product page${confirmedCount < competitorsPriced.length ? `; the other ${competitorsPriced.length - confirmedCount} are as reported by live AI web search and could not be confirmed on the seller's page` : ''}${droppedCount ? `. ${droppedCount} further seller${droppedCount === 1 ? '' : 's'} found by search ${droppedCount === 1 ? 'was' : 'were'} left out because ${droppedCount === 1 ? 'its' : 'their'} own page showed a different price` : ''}.`
+    : ''
 
   const prospectRank = allPriced.findIndex((p) => p.isProspect) + 1
   // "Unranked" reads as a data gap, not a finding — when there's no price to rank (or nothing to
@@ -527,37 +653,46 @@ export async function buildOutreachReportData({ company, website, productUrl, co
       ? 'price not comparable — no other sellers found'
       : 'price not shown on page'
 
-  // Four conceptual rows, matching the reference: the richest competitor listing, the
-  // manufacturer's own page, the competitor median, and the client. benchmark.sellers is sorted
-  // by PRICE, not spec count, so picking "top cited seller" needs its own sort here.
-  const specDepthRows = [{ label: company, count: prospectSpecCount, highlight: true }]
-  if (benchmark.sellers.length) {
-    const bySpecCount = [...benchmark.sellers].sort((a, b) => b.specCount - a.specCount)
-    specDepthRows.push({ label: bySpecCount[0].seller, count: bySpecCount[0].specCount, highlight: false })
+  // Laid out like the reference reports: the two sellers AI cited with the richest listings
+  // (richest first), then the competitor median, then the client last, highlighted. No
+  // manufacturer row. A seller the AI answers actually named outranks one found only by the
+  // price search; benchmark.sellers is sorted by PRICE, so this needs its own ranking.
+  const citedSellerNames = [...namedResults, ...categoryResults].flatMap((r) => r.sellersCited || [])
+  const wasCitedByAi = (name) => citedSellerNames.some((c) => isSameSeller(c, name))
+  // Only sellers whose page was actually read are compared: a page that would not load says
+  // nothing about its spec depth and must not show as "0 fields". Two sources: the sellers found by
+  // the price search, and the product pages the AI engines linked for the sellers they named.
+  const linkedMeasured = await measureSpecDepthFromUrls({
+    urls: aiLinkedUrls,
+    sellerNames: [...citedSellerNames, ...benchmark.sellers.map((s) => s.seller)],
+    excludeDomain: prospectDomain,
+    limit: 5,
+    productCode: identity.manufacturerCode,
+  }).catch((err) => {
+    console.warn(`[outreach] spec-depth measurement of linked pages failed: ${err.message}`)
+    return []
+  })
+  const measuredCompetitors = benchmark.sellers.filter((s) => !looksLikeProspect(s.seller) && Number.isFinite(s.specCount))
+  for (const m of linkedMeasured) {
+    if (looksLikeProspect(m.seller) || measuredCompetitors.some((c) => isSameSeller(c.seller, m.seller))) continue
+    measuredCompetitors.push({ seller: m.seller, specCount: m.specCount, fromAiLink: true })
   }
-  if (crossEngineFindings.manufacturerSpecs.length) {
-    specDepthRows.push({ label: `${identity.manufacturerBrand || 'Manufacturer'} (manufacturer page)`, count: crossEngineFindings.manufacturerSpecs.length, highlight: false })
-  }
-  if (benchmark.sellers.length > 2) {
-    const median = benchmark.sellers.map((s) => s.specCount).sort((a, b) => a - b)[Math.floor(benchmark.sellers.length / 2)]
+  // Pages the engines linked count as "cited by AI" even when the name they used differs.
+  const specScore = (s) => (wasCitedByAi(s.seller) || s.fromAiLink ? 2 : 0) + (s.specCount > 0 ? 1 : 0)
+  const topCompetitors = [...measuredCompetitors]
+    .sort((a, b) => specScore(b) - specScore(a) || b.specCount - a.specCount)
+    .slice(0, 2)
+    .sort((a, b) => b.specCount - a.specCount)
+  console.log(`[outreach] spec depth read on: ${measuredCompetitors.map((c) => `${c.seller}=${c.specCount}`).join(', ') || 'no competitor page'} | ${company}=${prospectSpecCount}`)
+  const specDepthRows = topCompetitors.map((s) => ({ label: s.seller, count: s.specCount, highlight: false }))
+  if (measuredCompetitors.length > 2) {
+    const median = measuredCompetitors.map((s) => s.specCount).sort((a, b) => a - b)[Math.floor(measuredCompetitors.length / 2)]
     specDepthRows.push({ label: 'Median of other sellers', count: median, highlight: false })
   }
-  specDepthRows.sort((a, b) => b.count - a.count)
+  specDepthRows.push({ label: company, count: prospectSpecCount, highlight: true })
 
-  // Tries to inject the enriched panel directly into the real, live page's own DOM first — same
-  // header, nav, images and layout as the actual page, matching the reference's own before/after.
-  // Falls back to header-crop compositing, then a fully generic layout, if no safe anchor is
-  // found on this particular page (see captureEnrichedMockupScreenshot for the fallback chain).
-  const enrichedMockupScreenshot = await captureEnrichedMockupScreenshot({
-    url: identity.url,
-    productName: identity.productName,
-    manufacturerBrand: identity.manufacturerBrand,
-    manufacturerCode: identity.manufacturerCode,
-    price: prospectPrice?.raw || null,
-    specs: crossEngineFindings.manufacturerSpecs.length ? crossEngineFindings.manufacturerSpecs : [{ label: 'Category', value: identity.category || '—' }],
-    description: `${identity.productName}${identity.manufacturerBrand ? ` from ${identity.manufacturerBrand}` : ''}${identity.category ? ` — ${identity.category}` : ''}.`,
-    headerCrop,
-  }).catch(() => null)
+  // (The enriched-page screenshot is taken after the report writer runs, below — it shows the
+  // writer's corrected page content.)
 
   const namedCitedCount = namedResults.filter((r) => r.prospectCited).length
   const categoryCitedCount = categoryResults.filter((r) => r.prospectCited).length
@@ -574,7 +709,7 @@ export async function buildOutreachReportData({ company, website, productUrl, co
   const firedGaps = computeGapEvidence({
     identity, prospectHasCodeOnPage, realManufacturerCode, realCodeOnPage, prospectSpecCount, prospectHasJsonLd, prospectPrice,
     pageText: identity.pageText, renderedText: pageScreenshots.renderedText || '', html: prospectHtml, benchmark, jsBlocked, siblingCodeRisk,
-    structuredDataFields, titleCheck, breadcrumbCheck,
+    structuredDataFields, titleCheck, breadcrumbCheck, crawlerAccess,
   })
   const strengthFacts = {
     priceVisible: Boolean(prospectPrice),
@@ -591,14 +726,106 @@ export async function buildOutreachReportData({ company, website, productUrl, co
     showsMsrpDiscount: /\b(msrp|rrp|list price|was)\b.{0,40}\byou save\b|\byou save\b/i.test(identity.pageText),
     inStock: /\bin stock\b/i.test(identity.pageText),
     cheapestInStockListing: prospectRank === 1 && allPriced.length > 2,
-    aiCrawlersAllowed: crawlerAccess?.fullyAccessible ? `${crawlerAccess.accessibleCount} of ${crawlerAccess.totalBots} AI crawlers can fetch the page` : null,
+    aiCrawlersAllowed: crawlerAccess?.fullyAccessible && !crawlerAccess.robotsBlockedAiAgents?.length ? `${crawlerAccess.accessibleCount} of ${crawlerAccess.totalBots} AI crawlers can fetch the page` : null,
   }
-  const { gaps, strengths } = await analyzeOutreachGaps({
-    productName: identity.productName,
-    manufacturerCode: identity.manufacturerCode,
-    firedGaps,
-    strengthFacts,
+  // ---- Report writer: every section's text, from the evidence above (see reportWriter.js) ----
+  const revenueBasis = buildRevenueRisk({ revenueBracket, region })
+  const trimText = (t, n) => (typeof t === 'string' ? t.slice(0, n) : '')
+  const queryForWriter = (type) => (r) => ({
+    type, query: r.query, sellers_cited: r.sellersCited, prospect_cited: r.prospectCited,
+    cited_price_if_any: r.citedPrice || null, engine_answer_excerpts: r.answerExcerpts,
   })
+  const writer = await writeOutreachReport({
+    PRODUCT: {
+      seller: company, name: identity.productName, url: identity.url, seller_sku: identity.sellerSku || null,
+      manufacturer_brand: identity.manufacturerBrand || null, manufacturer_code: identity.manufacturerCode || null,
+      standard_designation: identity.standardDesignation || null, category: identity.category, unit_of_sale: identity.unitOfSale,
+      listed_price: prospectPrice?.raw || null, currency: region.currencyCode || null,
+      region: region.country || 'not determinable', region_source: region.source, business_address: resolvedLocation || null,
+    },
+    // PerplexityBot is left out: Perplexity is not part of this report.
+    CRAWLER_ACCESS: crawlerAccess
+      ? crawlerAccess.results.filter((r) => r.label !== 'PerplexityBot').map((r) => ({ agent: r.label, status: r.status, ok: r.ok, ...(crawlerAccess.inconclusive ? { test_inconclusive: true } : {}) }))
+      : null,
+    ROBOTS_TXT: trimText(crawlerAccess?.robotsTxt, 2000),
+    ORGANIC_QUERIES: [...namedResults.map(queryForWriter('product')), ...categoryResults.map(queryForWriter('category'))],
+    CITATION_SUMMARY: { cited_in: totalCitedCount, total_queries: totalAskedCount, engines: respondedEngines },
+    CROSS_ENGINE_RESEARCH: {
+      raw_responses: {
+        chatgpt: trimText(crossEngine.responses?.chatgpt, 6000),
+        claude: trimText(crossEngine.responses?.claude, 6000),
+        gemini: trimText(crossEngine.responses?.gemini, 6000),
+      },
+      synthesis: {
+        manufacturer_brand: crossEngineFindings.manufacturerBrand, manufacturer_code: crossEngineFindings.manufacturerCode,
+        is_standard_designation: crossEngineFindings.isStandardDesignation, page_review_findings: crossEngineFindings.pageReviewFindings,
+        conflicts: crossEngineFindings.conflicts, manufacturer_specs: crossEngineFindings.manufacturerSpecs,
+        claim_checks: crossEngineFindings.claimChecks || [], recommendations: crossEngineFindings.recommendations || [],
+        agreements: crossEngineFindings.agreements || [], page_read_reliability: crossEngineFindings.pageReadReliability || [],
+      },
+      // Which engines actually answered the research brief (after retries); a usage cap is disclosed, not hidden.
+      engine_status: crossEngine.engineStatus || null,
+    },
+    LISTING_CLAIMS: listingClaims,
+    // The seller's own page text, so the writer can set what the page states beside the manufacturer's documentation.
+    PAGE_TEXT: trimText(identity.pageText, 6000),
+    GROUND_TRUTH: {
+      price_visible_on_page: Boolean(prospectPrice), price_shown: prospectPrice?.raw || null,
+      manufacturer_code_shown_on_page: prospectHasCodeOnPage, real_code_on_page: realCodeOnPage,
+      spec_count_on_page: prospectSpecCount, has_structured_data: prospectHasJsonLd, structured_data_fields: structuredDataFields,
+      title_check: titleCheck, breadcrumb_check: breadcrumbCheck, page_requires_javascript: jsBlocked,
+      attributes_stated: identity.attributes, sibling_code_risk: siblingCodeRisk,
+      schema_conflicts: identity.schemaConflicts || [],
+      robots_txt_verdicts: (crawlerAccess?.robotsVerdicts || []).filter((v) => v.agent !== 'PerplexityBot').map((v) => ({ agent: v.agent, allowed: v.allowed, rule: v.rule || null })),
+    },
+    FIRED_GAP_RULES: firedGaps,
+    STRENGTH_FACTS: strengthFacts,
+    COMPETITOR_PRICES: allPriced.map((p) => ({ seller: p.isProspect ? `${company} (prospect)` : p.seller, price: p.price, ...(p.isProspect ? {} : { verified_on_seller_page: p.verification === 'confirmed' }), ...(p.packQty > 1 ? { listed_price: p.listedPrice, pack_size: p.packQty } : {}), region: region.country || null, supplementary: Boolean(p.supplementary) })),
+    // Same rule the rest of the report uses (lower half of the same-region price range = competitive).
+    PRICE_POSITION: {
+      prospect_rank: prospectRank || null, seller_count: allPriced.length, label: priceRankLabel,
+      price_is_competitive: prospectRank > 0 && prospectRank <= Math.ceil(allPriced.length / 2),
+    },
+    SPEC_DEPTH: specDepthRows,
+    REVENUE: { mode: revenueBasis.mode, base: revenueBasis.basis.rangeLabel, source_or_disclaimer: revenueBasis.basis.source },
+    CONTACT: { prepared_by: senderName, email: senderEmail },
+  })
+
+  console.log(`[outreach] report writer: ${writer?._meta?.model || 'none (fallback text)'} | competitors measured for spec depth: ${measuredCompetitors.length}`)
+  let gaps
+  let strengths
+  if (writer?.gaps?.length) {
+    gaps = writer.gaps
+    strengths = writer.strengths
+  } else {
+    ;({ gaps, strengths } = await analyzeOutreachGaps({
+      company,
+      productName: identity.productName,
+      manufacturerCode: identity.manufacturerCode,
+      firedGaps,
+      strengthFacts,
+    }))
+  }
+  const revenueRisk = buildRevenueRisk({ revenueBracket, region, model: writer?.revenueModel })
+
+  // The enriched page: the seller's real, live page with its content corrected and completed —
+  // MPN line, rewritten description and bullets, Specifications / Package contents / FAQ — all from
+  // the writer's evidence-checked content. Falls back to a composited layout only if the live page
+  // can't be edited (see captureEnrichedMockupScreenshot).
+  const enrichedMockupScreenshot = await captureEnrichedMockupScreenshot({
+    url: identity.url,
+    enriched: writer?.enrichedPage || null,
+    productName: identity.productName,
+    category: identity.category,
+    manufacturerBrand: identity.manufacturerBrand,
+    manufacturerCode: identity.manufacturerCode,
+    price: prospectPrice?.raw || null,
+    specs: crossEngineFindings.manufacturerSpecs || [],
+    description: `${identity.productName}${identity.manufacturerBrand ? ` from ${identity.manufacturerBrand}` : ''}${identity.category ? ` — ${identity.category}` : ''}.`,
+    headerCrop,
+    // Used only when the page shows a "no image" placeholder: a verified picture of this exact product from its manufacturer's page.
+    getProductImage: () => findProductImage({ urls: aiLinkedUrls, brand: identity.manufacturerBrand, code: identity.manufacturerCode, excludeDomain: prospectDomain }),
+  }).catch(() => null)
 
   // Fall back to the competitor median when the client's own price isn't visible, rather than
   // silently dropping the whole section — the copy makes clear it's a stand-in, not their price.
@@ -620,7 +847,7 @@ export async function buildOutreachReportData({ company, website, productUrl, co
   const now = new Date()
   const methodologyDate = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   const methodologyMonthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  const engineNames = ENGINE_LABELS.filter((e) => engines.includes(e.id)).map((e) => e.label)
+  const engineNames = ENGINE_LABELS.filter((e) => respondedEngines.includes(e.id)).map((e) => e.label)
   const engineNamesSentence = engineNames.length <= 1
     ? (engineNames[0] || 'live AI search')
     : `${engineNames.slice(0, -1).join(', ')} and ${engineNames[engineNames.length - 1]}`
@@ -667,8 +894,10 @@ export async function buildOutreachReportData({ company, website, productUrl, co
     totalCitedCount, totalAskedCount,
   })
 
-  return {
-    lead: { company, contactName, contactTitle, website: website || `https://${prospectDomain}`, location: resolvedLocation, timezoneLabel, email: contactEmail },
+  const reportData = {
+    lead: { company, contactName, contactTitle, website: website || `https://${prospectDomain}`, domain: prospectDomain, location: resolvedLocation, timezoneLabel, email: contactEmail },
+    region,
+    enrichedInjected: enrichedMockupScreenshot?.injected || null,
     product: { name: identity.productName, manufacturerBrand: identity.manufacturerBrand, manufacturerCode: identity.manufacturerCode, url: identity.url, category: identity.category },
     lede,
     crawlerAccess,
@@ -680,9 +909,11 @@ export async function buildOutreachReportData({ company, website, productUrl, co
             ? (/\bin stock\b/i.test(identity.pageText) ? 'Cheapest in stock.' : 'Cheapest listing found.')
             : priceIsCompetitive ? 'Competitively priced.' : 'Priced above comparable sellers.')
         : 'Price not shown on page.',
-      line2: crawlerAccess?.fullyAccessible
+      line2: crawlerAccess?.robotsBlockedAiAgents?.length
+        ? `robots.txt blocks ${crawlerAccess.robotsBlockedAiAgents.length} AI crawlers.`
+        : crawlerAccess?.fullyAccessible
         ? 'Open to every AI crawler.'
-        : crawlerAccess && crawlerAccess.accessibleCount < crawlerAccess.totalBots
+        : crawlerAccess && !crawlerAccess.inconclusive && crawlerAccess.accessibleCount < crawlerAccess.totalBots
           ? `Blocked for ${crawlerAccess.totalBots - crawlerAccess.accessibleCount} of ${crawlerAccess.totalBots} AI crawlers.`
           : 'Available to order.',
       line3: totalCitedCount === 0
@@ -709,7 +940,7 @@ export async function buildOutreachReportData({ company, website, productUrl, co
         title: `${engineNames.length} AI LLM${engineNames.length === 1 ? '' : 's'}, tested live`,
         body: `Buyer queries were run live with web search on ${methodologyDate}.${engineNames.includes('ChatGPT') && engineNames.includes('Claude') ? ' ChatGPT and Claude were each then asked to review your product page directly.' : ''} AI answers can vary between runs and between engines, so treat this as a snapshot rather than a fixed ranking.`,
       },
-      { title: 'Verified at source', body: "Product facts come from competitor listings and cross-reference catalogs, checked against your live page field by field." },
+      { title: 'Verified at source', body: "Competitor prices were compared with each seller's own product page where it could be read, and what the AI engines said about your page was checked against your live page." },
     ],
     engineNames,
     methodologyMonthYear,
@@ -767,16 +998,12 @@ export async function buildOutreachReportData({ company, website, productUrl, co
       ...(prospectPrice && allPriced.find((p) => !p.isProspect)
         ? [(() => {
             const competitor = allPriced.find((p) => !p.isProspect)
-            const prospectPerUnit = perUnitPrice(allPriced.find((p) => p.isProspect))
-            const competitorPerUnit = perUnitPrice(competitor)
-            // Per-unit normalization only when BOTH sides parse to the same inner unit (e.g. both
-            // "roll") — comparing a per-roll figure against a per-box figure would be misleading.
-            const comparable = prospectPerUnit && competitorPerUnit && prospectPerUnit.noun === competitorPerUnit.noun
+            const own = allPriced.find((p) => p.isProspect)
+            // Both prices are already per single item (see allPriced), so they compare directly.
+            const perItem = own.packQty > 1 || competitor.packQty > 1 ? ' per item' : ''
             return {
               title: 'Clear price comparison.',
-              detail: comparable
-                ? `${prospectPerUnit.raw} per ${prospectPerUnit.noun} (${prospectPrice.raw} total) compares directly with ${competitorPerUnit.raw} per ${competitorPerUnit.noun} at ${competitor.seller}.`
-                : `${prospectPrice.raw} can be compared directly with ${competitor.price} at ${competitor.seller}.`,
+              detail: `${own.price}${perItem}${own.packQty > 1 ? ` (${own.listedPrice} for ${own.packQty})` : ''} compares directly with ${competitor.price}${perItem} at ${competitor.seller}.`,
             }
           })()]
         : []),
@@ -791,15 +1018,21 @@ export async function buildOutreachReportData({ company, website, productUrl, co
       price: p.price,
       isProspect: p.isProspect,
     })),
+    priceVerificationNote,
     priceComparisonCaption: [
-      'Listed prices as displayed on each seller\'s site at the time of this check. Prices change, so treat differences of a few dollars as indicative.',
+      `Prices as found on ${methodologyDate}. Prices change, so treat differences of a few dollars as indicative.`,
+      priceVerificationNote || null,
       // Computed, not templated — only stated when there's a real "N of M" to report (needs the
       // prospect ranked against at least one other seller).
       prospectRank > 0 && allPriced.length > 1
         ? `${company}'s price is lower than ${allPriced.length - prospectRank} of the ${allPriced.length - 1} other sellers checked here.`
         : null,
+      priceUnitNote || null,
     ].filter(Boolean).join(' '),
     revenueTable,
+    // 12-month revenue at risk (page-1 tile) and the cost-of-doing-nothing model (page 5) — from
+    // the revenue band the visitor chose, or the illustrative 5M placeholder when they didn't.
+    revenueRisk,
     methodologyDate,
     // Conditional rather than a fixed claim — a page can check out on every rule this engine
     // tests (code shown, specs on par with its real competitor, structured data present) and
@@ -829,6 +1062,104 @@ export async function buildOutreachReportData({ company, website, productUrl, co
     availableOnRequest: 'AI query logs, page snapshot, 15-point scorecard and the 24-field attribute map for this product.',
     sender: { name: senderName, title: senderTitle, company: 'AltiusNxt Technologies', email: senderEmail },
     unsubscribeEmail: senderEmail,
+  }
+
+  // Fallback KPI tiles, from computed facts, used wherever the writer's tile didn't pass its check.
+  const fallbackKpis = [
+    { value: `${totalCitedCount} of ${totalAskedCount}`, label: `BUYER SEARCH ANSWERS THAT NAMED ${String(company).toUpperCase()}` },
+    prospectRank > 0 && allPriced.length > 1
+      ? { value: priceRankLabel, label: `PRICE RANK AMONG ${allPriced.length} ${region.country ? `${region.country.toUpperCase()} ` : ''}SELLERS OF THIS PRODUCT` }
+      : { value: `${prospectSpecCount}`, label: 'BUYING-DECISION SPECIFICATION FIELDS VISIBLE ON THE PAGE' },
+  ]
+  return applyWriterText(reportData, writer, { fallbackKpis, pageReaction })
+}
+
+/**
+ * Lays the report writer's text over the deterministic defaults, field by field — anything the
+ * writer didn't return (or that failed its checks) keeps the pipeline's own computed text.
+ * The third KPI tile is always the computed revenue figure, never model-written.
+ */
+export function applyWriterText(data, writer, { fallbackKpis, pageReaction }) {
+  const w = writer || {}
+  const risk = data.revenueRisk
+  const illustrative = risk.mode === 'illustrative'
+  const categoryName = risk.category.applied && risk.category.name ? risk.category.name.toUpperCase() : ''
+
+  const kpis = [...(w.kpis || [])]
+  for (const f of fallbackKpis) if (kpis.length < 2 && !kpis.some((k) => k.value === f.value)) kpis.push(f)
+  kpis.push(illustrative
+    ? { value: `~${risk.total.label}*`, label: 'ILLUSTRATIVE ANNUAL COST OF DOING NOTHING — *EXAMPLE SCALE ONLY, SEE P.5' }
+    : { value: risk.total.label, label: `EST. ANNUAL REVENUE AT RISK${categoryName ? ` ACROSS YOUR ${categoryName} RANGE` : ''} (RANGE, SEE P.5)` })
+
+  // The "what's fixed" bullets describe what was actually put on the enriched page, so they can't
+  // promise anything the screenshot doesn't show.
+  const ep = w.enrichedPage
+  const inj = data.enrichedInjected // what the screenshot step actually put on the page (null = unknown)
+  const countWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+  const spell = (n) => (n >= 0 && n <= 10 ? countWords[n] : String(n))
+  const brandForMpn = ep ? String(ep.mpnLabel || '').replace(/\s*MPN\s*$/i, '').trim() : ''
+  const placed = {
+    mpn: !inj || inj.mpn,
+    title: !inj || inj.title,
+    description: !inj || inj.description || inj.bullets,
+    sections: !inj || inj.sections,
+    fullSections: !inj || (inj.sections && !inj.specsOnly),
+  }
+  // Counts of what the screenshot really shows (content that did not fit the frame was trimmed).
+  const shownSpecs = ep ? (inj?.specRows ?? ep.specs?.length ?? 0) : 0
+  const shownFaqs = ep ? (inj?.faqCount ?? ep.faqs?.length ?? 0) : 0
+  const shownPackage = ep ? Boolean(ep.packageContents) && (inj?.packageContents ?? true) : false
+  const enrichedBullets = ep
+    ? [
+        ep.mpnValue && placed.mpn && `Real ${brandForMpn ? `${brandForMpn} ` : 'manufacturer '}part number ${ep.mpnValue} shown and labelled`,
+        ((ep.title && placed.title) || ((ep.description || ep.bullets?.length) && placed.description)) &&
+          `${[ep.title && placed.title && 'Title', (ep.description || ep.bullets?.length) && placed.description && 'description and bullet points'].filter(Boolean).join(', ').replace(/^./, (c) => c.toUpperCase())} rewritten to match the manufacturer's documentation`,
+        inj?.image && `Product image added from the manufacturer's own page (${inj.imageSource})`,
+        shownSpecs > 0 && placed.sections && `${shownSpecs}-attribute specification table visible without any click`,
+        shownPackage && placed.fullSections && 'Full package contents listed',
+        shownFaqs > 0 && placed.fullSections && `Short FAQ answering the ${spell(shownFaqs)} question${shownFaqs === 1 ? '' : 's'} buyers and AI engines were unsure about`,
+      ].filter(Boolean).slice(0, 5)
+    : []
+
+  // Writer quotes first, topped up to two with the pipeline's own checked quotes from other engines.
+  const quotes = [...(w.quotes || [])]
+  for (const [engine, quote] of [['chatgpt', pageReaction.chatgpt], ['claude', pageReaction.claude]]) {
+    if (quotes.length < 2 && quote && !quotes.some((q) => q.engine === engine)) quotes.push({ engine, quote })
+  }
+
+  return {
+    ...data,
+    headline: w.headline?.line1 && w.headline?.line2 ? w.headline : data.headline,
+    lede: w.lede || data.lede,
+    kpis,
+    fullAuditText: w.fullAuditText || `This summary sits on top of a fuller technical audit of your product page: ${data.availableOnRequest.replace(/\.$/, '')}.`,
+    methodology: w.methodology?.length === 3 ? w.methodology : data.methodology,
+    resultsHeadline: w.resultsHeadline || '',
+    resultsIntro: w.resultsIntro || '',
+    resultsFootnote: w.resultsFootnote || '',
+    quotes,
+    howToRead: w.howToRead || '',
+    fieldComparison: w.fieldComparison || null,
+    commercialImplications: w.commercialImplications || data.commercialImplications,
+    gapsIntro: w.gapsIntro || '',
+    specDepthCaption: w.specDepthCaption || data.specDepthCaption,
+    beforeAfter: {
+      ...data.beforeAfter,
+      currentBullets: w.currentBullets?.length ? w.currentBullets : data.beforeAfter.currentBullets,
+      enrichedBullets: enrichedBullets.length ? enrichedBullets : (w.enrichedBullets?.length ? w.enrichedBullets : data.beforeAfter.enrichedBullets),
+      caption: w.beforeAfterCaption || data.beforeAfter.caption,
+    },
+    businessImpact: w.businessImpact?.length ? w.businessImpact : data.businessImpact,
+    commercialIntro: w.commercialIntro || '',
+    priceComparisonCaption: w.priceCaption ? [w.priceCaption, data.priceVerificationNote].filter(Boolean).join(' ') : data.priceComparisonCaption,
+    priceFinding: w.priceFinding || null,
+    closingNote: w.closingNote || null,
+    nextSteps: {
+      ...data.nextSteps,
+      intro: w.nextSteps?.intro || '',
+      optionA: { ...data.nextSteps.optionA, body: w.nextSteps?.optionA || data.nextSteps.optionA.body },
+      optionB: { ...data.nextSteps.optionB, body: w.nextSteps?.optionB || data.nextSteps.optionB.body },
+    },
   }
 }
 

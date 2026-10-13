@@ -1,5 +1,33 @@
 import { config } from '../config.js'
 
+// A real usage cap / billing problem won't clear by waiting; anything else that fails (timeout,
+// 429 burst, 5xx, overloaded, network reset) usually does. Retry only the latter.
+const NON_RETRYABLE = /\b(401|402|403|invalid[_ ]api[_ ]key|insufficient[_ ]quota|exceeded your current quota|credit balance|billing|usage limit|permission)\b/i
+export function isUsageCapError(err) {
+  return NON_RETRYABLE.test(String(err?.message || err || ''))
+}
+
+const TIMED_OUT = /timeout|timed out|aborted/i
+
+/** Runs `fn`, retrying transient failures (up to `attempts` tries in total, with a short pause
+ *  between them). A usage cap or auth error is thrown straight away so it can be disclosed rather
+ *  than hidden behind retries. A call that ran out of time is not retried unless `retryTimeouts`
+ *  is set: a long research call has already spent its searches, and repeating it only repeats the cost. */
+export async function withTransientRetry(fn, { attempts = 3, delayMs = 2500, retryTimeouts = false } = {}) {
+  let lastErr
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (isUsageCapError(err) || i === attempts) break
+      if (!retryTimeouts && TIMED_OUT.test(String(err?.message || err))) break
+      await new Promise((r) => setTimeout(r, delayMs * i))
+    }
+  }
+  throw lastErr
+}
+
 export async function callOpenAI(prompt) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -60,7 +88,16 @@ export async function callClaude(prompt) {
  * OpenAI Responses API with the built-in web_search_preview tool — same OPENAI_API_KEY, a
  * different endpoint/call shape than the plain chat-completions call above.
  */
-export async function callOpenAIWithSearch(prompt) {
+// The search-tool declarations. With no userLocation they are exactly what was sent before; with
+// one, the engine is told the buyer's approximate location so its web search is localised.
+export function openAiSearchTools(userLocation) {
+  return [{ type: 'web_search_preview', ...(userLocation ? { user_location: { type: 'approximate', ...userLocation } } : {}) }]
+}
+export function anthropicSearchTool(maxSearches, userLocation) {
+  return { type: 'web_search_20250305', name: 'web_search', max_uses: maxSearches, ...(userLocation ? { user_location: { type: 'approximate', ...userLocation } } : {}) }
+}
+
+export async function callOpenAIWithSearch(prompt, { timeoutMs = 45000, userLocation } = {}) {
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -70,9 +107,9 @@ export async function callOpenAIWithSearch(prompt) {
     body: JSON.stringify({
       model: config.openai.model,
       input: prompt,
-      tools: [{ type: 'web_search_preview' }],
+      tools: openAiSearchTools(userLocation),
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 
   if (!res.ok) {
@@ -95,12 +132,12 @@ export async function callOpenAIWithSearch(prompt) {
  * Real-web-search-grounded variant for Claude, via Anthropic's server-side web_search tool.
  * Same ANTHROPIC_API_KEY as callClaude — only the tool declaration differs.
  */
-export async function callClaudeWithSearch(prompt) {
+export async function callClaudeWithSearch(prompt, { timeoutMs = 45000, maxTokens = 600, maxSearches = 3, userLocation } = {}) {
   const body = {
     model: config.anthropic.model,
-    max_tokens: 600,
+    max_tokens: maxTokens,
     messages: [{ role: 'user', content: prompt }],
-    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+    tools: [anthropicSearchTool(maxSearches, userLocation)],
   }
 
   async function post(extraHeaders = {}) {
@@ -113,7 +150,7 @@ export async function callClaudeWithSearch(prompt) {
         ...extraHeaders,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')

@@ -17,6 +17,26 @@ async function directFetch(url) {
   return { html: await res.text(), source: 'direct-fetch' }
 }
 
+// A site that refuses a plain request (403 / 429 / 503) is asked once more through scrape.do's
+// residential proxies (no JavaScript rendering — the proxy route does not support both), when scrape.do is set up.
+async function directFetchOrProxy(url) {
+  try {
+    return await directFetch(url)
+  } catch (err) {
+    if (!isScrapeDoConfigured() || !/\b(401|403|429|503)\b/.test(err.message)) throw err
+    const endpoint = new URL('https://api.scrape.do/')
+    endpoint.searchParams.set('token', config.scrapeDo.token)
+    endpoint.searchParams.set('url', url)
+    endpoint.searchParams.set('super', 'true')
+    const res = await fetch(endpoint.toString(), { signal: AbortSignal.timeout(60000) }).catch(() => null)
+    if (!res?.ok) throw err
+    const html = await res.text()
+    const visibleText = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/gi, ' ')
+    if (isBotChallengeText(visibleText)) throw err
+    return { html, source: 'scrape.do (proxy)' }
+  }
+}
+
 export async function fetchPageHtml(url) {
   if (isScrapeDoConfigured()) {
     try {
@@ -34,11 +54,11 @@ export async function fetchPageHtml(url) {
       // Some sites block scrape.do's renderer outright (e.g. aggressive bot protection).
       // Fall back to a plain fetch rather than failing the whole scan.
       console.warn(`scrape.do failed for ${url} (${err.message}), falling back to direct fetch`)
-      return directFetch(url)
+      return directFetchOrProxy(url)
     }
   }
 
-  return directFetch(url)
+  return directFetchOrProxy(url)
 }
 
 /** Strips scripts/styles and collapses whitespace so we can hand a bounded amount of text to Gemini. */
@@ -144,6 +164,17 @@ export function checkBreadcrumbDuplication(html) {
 /** True when a static fetch only got a "please enable JavaScript" shell instead of real content —
  *  common on heavy JS portals. Callers should treat spec/description counts from this text as
  *  unreliable (likely just nav/menu noise) rather than a genuine measure of the page. */
+/** Shown when a site's bot protection stopped every way we have of reading a page. */
+export const BOT_BLOCKED_MESSAGE = 'this site blocks automated visitors (its security check stopped our reader), so the page could not be read'
+
+/** True when the text is a bot-check / challenge screen ("Just a moment…", "Performing security
+ *  verification", "Access denied" …) rather than the page itself. These screens are short; a long
+ *  page that merely mentions a captcha is not one. */
+export function isBotChallengeText(text) {
+  const t = String(text || '')
+  return t.length < 1500 && /just a moment|performing security verification|verify(?:ing)? (?:that )?you are (?:a )?human|checking your browser|attention required|access denied|are you a robot|unusual traffic|pardon our interruption|request blocked|enable cookies to continue|captcha/i.test(t)
+}
+
 export function isJsBlockedText(text) {
   return /javascript is disabled|enable javascript|requires javascript/i.test(text || '')
 }

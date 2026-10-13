@@ -30,6 +30,10 @@ export const config = {
   },
   outreach: {
     apiToken: process.env.OUTREACH_API_TOKEN || '',
+    // Who the report is "prepared by" (cover, next-steps page, request-a-copy address)
+    senderName: process.env.OUTREACH_SENDER_NAME || 'Govindaraj L',
+    senderTitle: process.env.OUTREACH_SENDER_TITLE || 'Business Unit Head',
+    senderEmail: process.env.OUTREACH_SENDER_EMAIL || process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com',
   },
   googlePlaces: {
     apiKey: process.env.GOOGLE_PLACES_API_KEY || '',

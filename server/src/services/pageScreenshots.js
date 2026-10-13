@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { launchBrowserFor } from './browserLaunch.js'
 import sharp from 'sharp'
 
 // Same navy/orange palette as src/templates/reportTemplate.js, reused here so the
@@ -15,6 +16,81 @@ const CREAM = '#fbf1e6'
 
 const VIEWPORT = { width: 1280, height: 900 }
 const HEADER_CROP_HEIGHT = 130
+
+// Before/after screenshots for the PDF are the WHOLE page, top to bottom, like the reference
+// reports: the current page as it is, and the same page with its content corrected. Captured at
+// 1.5x pixel density so they stay sharp when the PDF is zoomed; very long pages are cut at
+// SHOT_MAX_HEIGHT CSS px so one report never carries an enormous image.
+const SHOT_SCALE = 1.5
+const SHOT_MAX_HEIGHT = 6000
+
+/**
+ * Hides everything on the page that is not part of the page itself: cookie/consent banners, chat
+ * widgets, newsletter / discount pop-ups with their dimming backdrops, and bottom notices. Runs
+ * inside the page and must stay self-contained (it is serialised into the browser).
+ */
+function hideOverlaysInPage() {
+  try {
+    if (!document.body) return
+    const kill = '[id*="cookie" i],[class*="cookie" i],[id*="consent" i],[class*="consent" i],[id*="onetrust" i],[class*="onetrust" i],[class*="cc-window" i],[id*="gdpr" i],[class*="gdpr" i],[aria-label*="cookie" i],[id*="intercom" i],[class*="intercom" i],[id*="drift" i],[id*="livechat" i],[class*="chat-widget" i],[id*="chat-widget" i],[class*="whatsapp" i],[id*="whatsapp" i],[role="dialog"],[aria-modal="true"],[class*="popup" i],[id*="popup" i],[class*="modal-backdrop" i],[class*="overlay" i],[class*="klaviyo" i],[id*="klaviyo" i],[class*="privy" i],[class*="newsletter-modal" i],[class*="subscribe-modal" i]'
+    document.querySelectorAll(kill).forEach((el) => {
+      // a plain page container that merely mentions "overlay" in a class must stay
+      if (el === document.body || el === document.documentElement || el.querySelector('h1')) return
+      el.style.setProperty('display', 'none', 'important')
+    })
+    // Anything pinned to the window that is not the page: bottom notices and corner widgets,
+    // full-window backdrops, and centred pop-ups.
+    for (const el of document.querySelectorAll('body *')) {
+      const s = getComputedStyle(el)
+      if (s.position !== 'fixed') continue
+      const r = el.getBoundingClientRect()
+      if (r.width < 4 || r.height < 4) continue
+      const bottomBanner = r.top > window.innerHeight * 0.55 && r.width > window.innerWidth * 0.5
+      const cornerWidget = r.width < 120 && r.height < 120 && r.left > window.innerWidth * 0.8 && r.top > window.innerHeight * 0.5
+      const backdrop = r.width > window.innerWidth * 0.9 && r.height > window.innerHeight * 0.6
+      const centredDialog = r.top > 40 && r.height > 100 && r.width < window.innerWidth * 0.85 && Math.abs(r.left + r.width / 2 - window.innerWidth / 2) < 90
+      if (bottomBanner || cornerWidget || backdrop || centredDialog) el.style.setProperty('display', 'none', 'important')
+    }
+    // Pop-ups lock scrolling and dim the page; undo both so the page photographs normally.
+    for (const el of [document.documentElement, document.body]) {
+      el.style.setProperty('overflow', 'visible', 'important')
+      el.style.setProperty('filter', 'none', 'important')
+    }
+  } catch (e) { /* never let cleanup break the page */ }
+}
+
+/** Keeps the clean-up running for the whole visit, so a pop-up that appears several seconds after
+ *  load (newsletter / discount dialogs usually do) is removed the moment it shows. */
+async function installOverlayKiller(page) {
+  await page.addInitScript(`(${hideOverlaysInPage.toString()}); setInterval(hideOverlaysInPage, 300);`)
+}
+
+/** Gets the page ready to be photographed: clears overlays, and scrolls the whole page once so
+ *  lazy-loaded images (related products, galleries) load. */
+async function prepareForShot(page) {
+  await page.evaluate(hideOverlaysInPage).catch(() => {})
+  await page.evaluate(async () => {
+    const step = Math.max(400, Math.floor(window.innerHeight * 0.8))
+    const max = Math.min(document.documentElement.scrollHeight, 12000)
+    for (let y = 0; y < max; y += step) {
+      window.scrollTo(0, y)
+      await new Promise((r) => setTimeout(r, 80))
+    }
+    window.scrollTo(0, 0)
+    await new Promise((r) => setTimeout(r, 250))
+  }).catch(() => {})
+  await page.waitForTimeout(1500) // let late pop-ups appear, then sweep once more
+  await page.evaluate(hideOverlaysInPage).catch(() => {})
+}
+
+/** Whole-page capture (see SHOT_* above): the full page top to bottom. The report template scales the
+ *  "current" and "enriched" shots by the same factor so they stay comparable (see page 4 of the template). */
+async function captureFullPageShot(page) {
+  await prepareForShot(page)
+  const pageHeight = await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.body?.scrollHeight || 0))
+  const height = Math.max(VIEWPORT.height, Math.min(SHOT_MAX_HEIGHT, pageHeight))
+  return page.screenshot({ type: 'png', fullPage: true, clip: { x: 0, y: 0, width: VIEWPORT.width, height } })
+}
 
 function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
@@ -33,21 +109,25 @@ export async function captureCurrentPageAndHeader(url) {
   let browser
   const result = { fullScreenshot: null, headerCrop: null, renderedText: '' }
   try {
-    browser = await chromium.launch({ headless: true })
-    const page = await browser.newPage({ viewport: VIEWPORT })
+    browser = await launchBrowserFor(url)
+    const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SHOT_SCALE })
+    await installOverlayKiller(page)
     await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 })
 
     // The browser-rendered text, which includes script-injected content (store-wide notice
     // banners, tabs filled client-side) that a static HTML fetch never sees.
     result.renderedText = await page.evaluate(() => (document.body?.innerText || '').slice(0, 20000)).catch(() => '')
 
-    result.fullScreenshot = await page.screenshot({ type: 'png', fullPage: false }).catch((err) => {
+    result.fullScreenshot = await captureFullPageShot(page).catch((err) => {
       console.warn(`captureCurrentPageAndHeader: full screenshot failed for ${url}: ${err.message}`)
       return null
     })
 
+    // The header crop feeds the composited fallback mock-up, which is laid out in 1x pixels —
+    // scale it back down from the 2x capture so that path is unchanged.
     result.headerCrop = await page
       .screenshot({ type: 'png', clip: { x: 0, y: 0, width: VIEWPORT.width, height: HEADER_CROP_HEIGHT } })
+      .then((buf) => sharp(buf).resize({ width: VIEWPORT.width }).png().toBuffer())
       .catch((err) => {
         console.warn(`captureCurrentPageAndHeader: header crop failed for ${url}: ${err.message}`)
         return null
@@ -350,150 +430,396 @@ async function captureCompositeMockupScreenshot({ productName, manufacturerBrand
   }
 }
 
-// Inline-styled (not class-based) so the injected panel's own look can't be overridden by the
-// host page's CSS cascade (resets, `* { all: unset }` frameworks, aggressive specificity, etc.).
-// Every rule here is written directly on a `style` attribute for that reason.
-// Deliberately plain/native-looking — no brand border, no "AI-OPTIMIZED" badge, no colored
-// pills. The report's own surrounding layout already labels this image "ENRICHED PAGE
-// (MOCK-UP)"; a loud overlay on the screenshot itself only made it read as a foreign widget
-// bolted onto the real page instead of the real page's own content, genuinely improved — which
-// is the whole point of injecting into the live DOM rather than compositing a separate card.
-function buildInjectedSpecTableHtml(specs) {
-  const rows = (Array.isArray(specs) ? specs : []).slice(0, 10).map((s, i) => `
-    <tr>
-      <td style="padding:9px 14px;border-bottom:1px solid ${LIGHT};font-size:13px;font-weight:600;color:${STEEL_2};width:40%;background:${i % 2 ? PAPER : '#fff'};">${esc(s?.label)}</td>
-      <td style="padding:9px 14px;border-bottom:1px solid ${LIGHT};font-size:13px;color:${NAVY};background:${i % 2 ? PAPER : '#fff'};">${esc(s?.value)}</td>
-    </tr>
-  `).join('')
-  if (!rows) return ''
-  return `<table id="__altiusnxt_spec_table" style="all:initial;display:table;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;width:100%;max-width:640px;border-collapse:collapse;margin:14px 0;border:1px solid ${LIGHT};font-size:13px;">${rows}</table>`
+// ---------------------------------------------------------------------------------------------
+// Enriched page: the seller's REAL page with its content corrected and completed.
+//
+// The reference reports show the live page twice — as it is, and the same page with its content
+// fixed: a manufacturer-part-number line beside the SKU, the description and bullet points
+// rewritten to match the manufacturer's documentation, and Specifications / Package contents /
+// FAQ sections added in the page's own fonts and colours. This reproduces that by editing the
+// live DOM in place. Each step is best-effort and independent, because the page is arbitrary
+// and unknown; nothing here is specific to one site or product.
+// ---------------------------------------------------------------------------------------------
+
+/** What to put on the page: the report writer's corrected content, with the manufacturer specs
+ *  found by the research as a fallback for the specification table. */
+function buildEnrichedContent({ enriched, specs, manufacturerBrand }) {
+  const e = enriched || {}
+  const fallbackSpecs = (Array.isArray(specs) ? specs : []).filter((s) => s?.label && s?.value)
+  return {
+    // The identity strip reads "Mfr. Name: <brand> | Mfr. Part Number: <MPN>" (the name only when it is known).
+    mfrName: manufacturerBrand || String(e.mpnLabel || '').replace(/\s*MPN\s*$/i, '').trim(),
+    mpnLabel: 'Mfr. Part Number',
+    mpnValue: e.mpnValue || '',
+    title: e.title || '',
+    description: e.description || '',
+    bullets: Array.isArray(e.bullets) ? e.bullets : [],
+    specs: Array.isArray(e.specs) && e.specs.length ? e.specs : fallbackSpecs,
+    packageContents: e.packageContents || '',
+    faqs: Array.isArray(e.faqs) ? e.faqs : [],
+  }
 }
 
-function buildInjectedDescriptionHtml(description) {
-  if (!description) return ''
-  return `<div id="__altiusnxt_description" style="all:initial;display:block;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:${STEEL};max-width:640px;margin:10px 0;">${esc(description)}</div>`
-}
+async function captureDomInjectedMockup({ url, content, getImage }) {
+  const hasContent = content.mpnValue || content.title || content.description || content.bullets.length || content.specs.length || content.packageContents || content.faqs.length
+  if (!hasContent) return null
 
-/**
- * Primary mock-up path: loads the prospect's real, live product page and edits its DOM in place
- * — same header, same nav, same real images and layout chrome as the actual page — then
- * screenshots that. This matches what the reference report actually does: a genuinely edited
- * real page, not a separate card appended alongside the untouched original content.
- *
- * Three things happen, each independently best-effort:
- * 1. The real, visible <h1> (if found) has its own text replaced with the enriched product name
- *    in place — it keeps the page's own real font/size/color since it's the same element, no
- *    new styling needed.
- * 2. A real <table> near the title/price (if found) is hidden and a new, richer spec table is
- *    inserted in the same spot — avoids the old behavior of showing both the thin original table
- *    AND a new one. If no table is found, the new one is appended after whatever anchor was
- *    located instead.
- * 3. A plain description paragraph is appended near the spec table.
- *
- * Finding a safe, generic anchor on an arbitrary unknown site is the real risk here. Three
- * strategies are tried in order of reliability: (1) the element containing the page's own
- * displayed price text; (2) the page's first visible <h1>; (3) the largest real product-sized
- * image. Returns null (never throws) if no anchor is found or anything goes wrong, so the caller
- * can fall back to the composited layout.
- */
-async function captureDomInjectedMockup({ url, productName, manufacturerBrand, manufacturerCode, price, specs, description }) {
   let browser
   try {
-    browser = await chromium.launch({ headless: true })
-    const page = await browser.newPage({ viewport: VIEWPORT })
+    browser = await launchBrowserFor(url)
+    const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SHOT_SCALE })
+    await installOverlayKiller(page)
     await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 })
+    // Same preparation as the "current page" shot, so hidden banners / lazy images match and
+    // the injection only ever sees what a visitor sees.
+    await prepareForShot(page)
 
-    const specTableHtml = buildInjectedSpecTableHtml(specs)
-    const descriptionHtml = buildInjectedDescriptionHtml(description)
-    const priceRaw = typeof price === 'string' ? price : null
-
-    const anchorFound = await page.evaluate(({ specTableHtml, descriptionHtml, priceRaw, productName }) => {
-      // A hidden SEO-only <h1> or an off-screen element would make scrollIntoView a no-op and
-      // leave the injected content invisible in the screenshot without anchorFound ever
-      // noticing — this is what made an earlier version of this function silently do nothing on
-      // sites that keep an invisible <h1> for accessibility/SEO ahead of the real, visible title.
-      function isVisible(el) {
+    const done = await page.evaluate((c) => {
+      const INLINE = new Set(['A', 'B', 'STRONG', 'EM', 'I', 'SPAN', 'BR', 'SMALL', 'U', 'MARK', 'SUP', 'SUB', 'FONT'])
+      const isVisible = (el) => {
         if (!el || !(el instanceof Element)) return false
-        const rect = el.getBoundingClientRect()
-        if (rect.width < 10 || rect.height < 10) return false
-        const style = window.getComputedStyle(el)
-        return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) !== 0
+        const r = el.getBoundingClientRect()
+        if (r.width < 10 || r.height < 6) return false
+        const s = getComputedStyle(el)
+        return s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) !== 0
       }
+      const inChrome = (el) => !!el.closest('header, nav, footer, aside, form, select, [role="navigation"], [role="banner"], [role="contentinfo"], [id*="cookie" i], [class*="cookie" i]')
+      const precedes = (a, b) => !!(b.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING) // a comes before b
+      const textOf = (el) => (el.innerText || '').replace(/\s+/g, ' ').trim()
+      const setText = (el, text) => {
+        // keep icon-only children (bullets drawn with <svg>/<i>), replace the words
+        const keep = [...el.children].filter((ch) => !ch.textContent.trim())
+        el.textContent = ''
+        keep.forEach((k) => el.appendChild(k))
+        el.appendChild(document.createTextNode(text))
+      }
+      const out = { title: false, mpn: false, description: false, bullets: false, sections: false, image: false }
+      // The enriched page is shown the way it would really look once published, so new and corrected
+      // content is not outlined or tinted; only the identity strip and the new tables carry their own styling.
+      const mark = () => {}
+      let h1 = [...document.querySelectorAll('h1')].find(isVisible) || null
 
-      function findPriceAnchor() {
-        if (!priceRaw) return null
-        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
-        let node
-        while ((node = walker.nextNode())) {
-          if (node.nodeValue && node.nodeValue.includes(priceRaw)) {
-            let el = node.parentElement
-            for (let i = 0; i < 2 && el && el.parentElement && el.parentElement !== document.body; i++) el = el.parentElement
-            if (isVisible(el)) return el
+      // 0. Title. The page's own heading is rewritten in place. A page whose heading is empty gets
+      //    its (empty) heading filled; a page with none gets a new one above the price / buy block.
+      if (c.title) {
+        const emptyH1 = h1 ? null : [...document.querySelectorAll('h1')].find((h) => !textOf(h) && !inChrome(h))
+        if (h1 || emptyH1) {
+          const el = h1 || emptyH1
+          setText(el, c.title)
+          mark(el)
+          h1 = el
+          out.title = true
+        } else {
+          const buy = [...document.querySelectorAll('button, input[type="submit"], input[type="button"], a')]
+            .find((b) => isVisible(b) && /add to (cart|basket|bag)|buy now/i.test(b.innerText || b.value || ''))
+          const bigPicture = (n) => [...n.querySelectorAll('img')].some((i) => i.getBoundingClientRect().width > 140)
+          let blk = buy
+          // climb to the block that holds the price beside the buy button, but never into a
+          // container that also holds the product picture
+          for (let hops = 0; blk && hops < 8; hops++) {
+            if (/price|\$\s?\d/i.test(textOf(blk))) break
+            const parent = blk.parentElement
+            if (!parent || parent === document.body || bigPicture(parent)) break
+            blk = parent
+          }
+          if (blk && blk.parentElement && /price|\$\s?\d/i.test(textOf(blk))) {
+            const t = document.createElement('div')
+            const bs = getComputedStyle(document.body)
+            Object.assign(t.style, { fontFamily: bs.fontFamily, color: bs.color, fontSize: '26px', fontWeight: '700', lineHeight: '1.25', margin: '0 0 12px' })
+            t.textContent = c.title
+            blk.parentElement.insertBefore(t, blk)
+            mark(t)
+            h1 = t
+            out.title = true
           }
         }
-        return null
-      }
-      const h1 = [...document.querySelectorAll('h1')].find(isVisible) || null
-      function findImageAnchor() {
-        const imgs = [...document.querySelectorAll('img')]
-          .filter((img) => img.naturalWidth >= 150 && img.naturalHeight >= 150 && isVisible(img))
-          .sort((a, b) => (b.naturalWidth * b.naturalHeight) - (a.naturalWidth * a.naturalHeight))
-        return imgs[0] || null
       }
 
-      const anchor = findPriceAnchor() || h1 || findImageAnchor()
-      if (!anchor || !anchor.parentElement) return false
-
-      // 1. Replace the real title's own text in place, if we found one — same element, so it
-      // keeps the page's real typography rather than needing its own styling.
-      if (h1 && productName) h1.textContent = productName
-
-      // 2. Look for a real spec table near the anchor (within a few ancestor levels, a generous
-      // but bounded search) to hide-and-replace rather than leaving both tables visible.
-      let container = anchor
-      for (let i = 0; i < 4 && container.parentElement; i++) container = container.parentElement
-      const existingTable = [...container.querySelectorAll('table')].find(isVisible)
-
-      const wrapper = document.createElement('div')
-      wrapper.innerHTML = specTableHtml + descriptionHtml
-      const nodes = [...wrapper.childNodes]
-
-      if (existingTable) {
-        existingTable.style.display = 'none'
-        for (const node of nodes) existingTable.parentElement.insertBefore(node, existingTable)
-      } else {
-        let insertAfter = anchor
-        for (const node of nodes) {
-          insertAfter.parentElement.insertBefore(node, insertAfter.nextSibling)
-          insertAfter = node
+      // 1. SKU line → add the manufacturer part number right beside it, in the same style.
+      if (c.mpnValue) {
+        const labelRe = /^\s*(sku|item\s*(no\.?|number|#)|part\s*(no\.?|number|#)|model(\s*(no\.?|number))?|product\s*code|upc)\b\s*[:#]?/i
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+        let skuEl = null
+        for (let n = walker.nextNode(); n && !skuEl; n = walker.nextNode()) {
+          if (!labelRe.test(n.nodeValue || '')) continue
+          let el = n.parentElement
+          while (el && el.parentElement && el.parentElement !== document.body && textOf(el.parentElement).length < 70) el = el.parentElement
+          if (el && isVisible(el) && !inChrome(el) && textOf(el).length < 90 && (!h1 || precedes(h1, el))) skuEl = el
+        }
+        // Identity strip under the title: "Mfr. Name: <brand> | Mfr. Part Number: <MPN> | SKU: <sku>" (each part only when known).
+        const anchorEl = h1 || skuEl
+        if (anchorEl) {
+          const skuValue = (skuEl && textOf(skuEl).match(/\bsku\b\s*[:#]?\s*([A-Za-z0-9][\w\-./]*)/i)?.[1]) || ''
+          const bodyStyle = getComputedStyle(document.body)
+          const strip = document.createElement('div')
+          strip.id = '__altiusnxt_mpn'
+          const part = (label, value) => {
+            const s = document.createElement('span')
+            const b = document.createElement('b')
+            b.textContent = `${label}: `
+            s.appendChild(b)
+            s.appendChild(document.createTextNode(value))
+            return s
+          }
+          const parts = [c.mfrName && part('Mfr. Name', c.mfrName), part(c.mpnLabel, c.mpnValue), skuValue && part('SKU', skuValue)].filter(Boolean)
+          parts.forEach((p, i) => {
+            if (i) {
+              const sep = document.createElement('span')
+              sep.textContent = '  |  '
+              sep.style.opacity = '0.45'
+              strip.appendChild(sep)
+            }
+            strip.appendChild(p)
+          })
+          Object.assign(strip.style, {
+            display: 'block', margin: '8px 0 10px', padding: '5px 10px', background: '#fdecea', border: '1px solid #f6d3cf', borderRadius: '3px',
+            fontFamily: bodyStyle.fontFamily, color: bodyStyle.color, fontSize: `${Math.max(11, parseFloat(bodyStyle.fontSize) * 0.82)}px`, lineHeight: '1.4',
+          })
+          anchorEl.after(strip)
+          out.mpn = true
         }
       }
 
-      const scrollTarget = document.getElementById('__altiusnxt_spec_table') || document.getElementById('__altiusnxt_description') || anchor
-      scrollTarget.scrollIntoView({ block: 'center', behavior: 'instant' })
-      return true
-    }, { specTableHtml, descriptionHtml, priceRaw, productName })
+      // 2. The page's own description (the longest plain text block after the title) and the bullet
+      //    list that follows it are rewritten in place — same elements, so same fonts and colours.
+      // The bullet points that follow a description: a real <ul>/<ol>, or consecutive short lines
+      // that start with a bullet glyph (many stores draw their bullets as plain lines).
+      const GLYPH = /^\s*[•◆▪●■‣⁃◦✓✔*\-–—]\s+/
+      const bulletsAfter = (el) => {
+        for (let s = el.nextElementSibling, hops = 0; s && hops < 3; s = s.nextElementSibling, hops++) {
+          if (/^(UL|OL)$/.test(s.tagName) && s.querySelectorAll(':scope > li').length >= 2 && isVisible(s)) {
+            return { kind: 'list', list: s, rows: [...s.children].filter((n) => n.tagName === 'LI'), last: s }
+          }
+        }
+        const rows = []
+        for (let s = el.nextElementSibling; s && rows.length < 8; s = s.nextElementSibling) {
+          const t = textOf(s)
+          if (!isVisible(s) || t.length < 8 || t.length > 220 || !GLYPH.test(t)) break
+          rows.push(s)
+        }
+        if (rows.length >= 2) return { kind: 'rows', rows, last: rows[rows.length - 1] }
+        if (!el.parentElement) return null
+        const u = [...el.parentElement.querySelectorAll('ul, ol')].find((x) => isVisible(x) && !inChrome(x) && precedes(el, x) && x.querySelectorAll(':scope > li').length >= 2)
+        return u ? { kind: 'list', list: u, rows: [...u.children].filter((n) => n.tagName === 'LI'), last: u } : null
+      }
+      // The main description is the long text block under a "Product information / Details /
+      // Description" heading (and followed by bullets), not the short intro beside the price.
+      const DESC_HEADING = /(information|details?|description|overview|about|summary|features|highlights)/i
+      const scoreOf = (el, b) => {
+        const heads = [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')].filter((h) => isVisible(h) && precedes(h, el))
+        const nearest = heads[heads.length - 1]
+        const underDescHeading = nearest && nearest !== h1 && DESC_HEADING.test(textOf(nearest))
+        return (underDescHeading ? 4 : 0) + (b ? 2 : 0) + Math.min(textOf(el).length, 2000) / 2000
+      }
+      let descEl = null
+      let found = null
+      let bestScore = -1
+      for (const el of document.querySelectorAll('p, div')) {
+        if (!isVisible(el) || inChrome(el) || el.closest('#__altiusnxt_mpn')) continue
+        if (h1 && !precedes(h1, el)) continue
+        if ([...el.children].some((ch) => !INLINE.has(ch.tagName))) continue
+        if (el.querySelector('button, input, select, textarea')) continue
+        const len = textOf(el).length
+        if (len < 120 || len > 2500) continue
+        const b = bulletsAfter(el)
+        const sc = scoreOf(el, b)
+        if (sc > bestScore) { bestScore = sc; descEl = el; found = b }
+      }
+      if (descEl && c.description) {
+        setText(descEl, c.description)
+        mark(descEl)
+        out.description = true
+      } else if (!descEl && c.description) {
+        // The page has no description at all: add one under the title / part number, in the page's body style.
+        const anchor = document.getElementById('__altiusnxt_mpn') || h1
+        if (anchor && anchor.parentElement) {
+          const bs = getComputedStyle(document.body)
+          const d = document.createElement('div')
+          Object.assign(d.style, { fontFamily: bs.fontFamily, color: bs.color, fontSize: '15px', lineHeight: '1.6', margin: '0 0 14px', maxWidth: '640px' })
+          const dh = document.createElement('div')
+          dh.textContent = 'Product Description'
+          Object.assign(dh.style, { fontFamily: bs.fontFamily, color: bs.color, fontSize: '15px', fontWeight: '700', margin: '12px 0 4px' })
+          d.textContent = c.description
+          anchor.after(dh)
+          dh.after(d)
+          out.description = true
+        }
+      }
+      let list = found ? found.last : null
+      if (found && c.bullets.length) {
+        const rows = found.rows
+        const tpl = rows[0]
+        const glyph = (textOf(tpl).match(GLYPH) || [''])[0]
+        const write = (el, text) => setText(el, found.kind === 'rows' ? `${glyph}${text}` : text)
+        c.bullets.forEach((b, i) => {
+          let row = rows[i]
+          if (!row) {
+            row = tpl.cloneNode(true)
+            rows[rows.length - 1].after(row)
+            rows.push(row)
+            list = found.kind === 'rows' ? row : list
+          }
+          write(row, b)
+        })
+        rows.slice(c.bullets.length).forEach((row) => row.remove())
+        if (found.kind === 'list') mark(found.list)
+        else rows.slice(0, c.bullets.length).forEach(mark)
+        out.bullets = true
+      }
 
-    // scrollIntoView can still land a fraction of a pixel short of actually bringing the new
-    // content into the viewport on some sticky-header layouts — verify after the fact and
-    // force-scroll if it's not actually visible, rather than trusting the DOM call blindly.
-    const contentVisible = await page.evaluate(() => {
-      const el = document.getElementById('__altiusnxt_spec_table') || document.getElementById('__altiusnxt_description')
-      if (!el) return true // nothing to place beyond the title rewrite — that's fine
-      const rect = el.getBoundingClientRect()
-      return rect.top < window.innerHeight && rect.bottom > 0 && rect.width > 0
-    })
-    if (anchorFound && !contentVisible) {
-      await page.evaluate(() => {
-        const el = document.getElementById('__altiusnxt_spec_table') || document.getElementById('__altiusnxt_description')
-        el?.scrollIntoView({ block: 'center', behavior: 'instant' })
+      // 3. New sections after the description: Specifications, Package contents, FAQ — styled from
+      //    the page's own body text and nearest section heading.
+      const hasSections = c.specs.length || c.packageContents || c.faqs.length
+      if (hasSections) {
+        let ref = list || descEl
+        if (!ref) {
+          // no description block found: land after the title's block instead
+          ref = h1 ? (h1.closest('div, section, article') || h1) : null
+        }
+        if (ref && ref.parentElement) {
+          const bodyRef = descEl || ref
+          const bs = getComputedStyle(bodyRef)
+          const body = { fontFamily: bs.fontFamily, fontSize: bs.fontSize, color: bs.color, lineHeight: bs.lineHeight === 'normal' ? '1.6' : bs.lineHeight }
+          const apply = (el, st) => { Object.assign(el.style, st); return el }
+          // Small bold section titles in the page's own body font, like a finished product page.
+          const heading = (text) => apply(Object.assign(document.createElement('div'), { textContent: text }), {
+            ...body, fontWeight: '700', margin: '18px 0 7px',
+          })
+          const para = (text, extra = {}) => apply(Object.assign(document.createElement('div'), { textContent: text }), { ...body, margin: '0', ...extra })
+
+          const wrap = apply(document.createElement('div'), { margin: '16px 0 8px', maxWidth: '100%' })
+          wrap.id = '__altiusnxt_sections'
+          const specRows = []
+          const faqItems = []
+          let faqHeading = null
+          let packageParts = []
+          let specHeading = null
+          if (c.specs.length) {
+            specHeading = heading('Technical Specifications')
+            wrap.appendChild(specHeading)
+            // A bordered attribute table with two label/value pairs per row: labels on a light tint, values on white.
+            const edge = '1px solid #f0d2ce'
+            const table = apply(document.createElement('table'), {
+              borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed', fontFamily: body.fontFamily, color: body.color,
+              fontSize: `${Math.max(10, parseFloat(body.fontSize) * 0.88)}px`,
+            })
+            const tbody = document.createElement('tbody')
+            table.appendChild(tbody)
+            const cell = (text, isLabel) => apply(Object.assign(document.createElement('td'), { textContent: text }), {
+              border: edge, padding: '4px 8px', verticalAlign: 'top', lineHeight: '1.35',
+              ...(isLabel ? { background: '#fdf1ef', fontWeight: '700', color: '#7a1f1a', width: '17%' } : { background: '#fff', width: '33%' }),
+            })
+            let tr = null
+            c.specs.forEach((s, i) => {
+              if (i % 2 === 0) { tr = document.createElement('tr'); tbody.appendChild(tr) }
+              const a = cell(s.label, true)
+              const b = cell(s.value, false)
+              tr.append(a, b)
+              specRows.push([a, b])
+            })
+            wrap.appendChild(table)
+          }
+          if (c.packageContents) {
+            packageParts = [heading('Package contents'), para(c.packageContents)]
+            packageParts.forEach((el) => wrap.appendChild(el))
+          }
+          if (c.faqs.length) {
+            faqHeading = heading('Frequently Asked Questions')
+            wrap.appendChild(faqHeading)
+            for (const f of c.faqs) {
+              const q = para(f.q, { fontWeight: '700', marginTop: '9px', fontSize: `${parseFloat(body.fontSize) * 0.92}px` })
+              const a = para(f.a, { opacity: '0.9', marginTop: '2px', fontSize: `${parseFloat(body.fontSize) * 0.92}px` })
+              wrap.appendChild(q)
+              wrap.appendChild(a)
+              faqItems.push([q, a])
+            }
+          }
+          // A narrow product column (a details panel beside the picture) would squeeze a specification
+          // table into a sliver, so the new sections go below the whole product row instead, at full width.
+          let anchor = ref
+          while (anchor.parentElement && anchor.parentElement !== document.body && anchor.getBoundingClientRect().width < window.innerWidth * 0.5) anchor = anchor.parentElement
+          anchor.after(wrap)
+          out.sections = true
+
+          // Everything added must be visible inside the report's frame (c.limitBottom is its bottom edge
+          // in page pixels). If it runs past that, the least important content is trimmed until it fits —
+          // the report only ever lists what the screenshot really shows.
+          const bottom = () => wrap.getBoundingClientRect().bottom + window.scrollY
+          // removing a table cell also removes its row once the row is empty
+          const drop = (els) => els.forEach((el) => {
+            const row = el.parentElement
+            el.remove()
+            if (row && row.tagName === 'TR' && !row.children.length) row.remove()
+          })
+          let guard = 40
+          while (c.limitBottom && bottom() > c.limitBottom && guard-- > 0) {
+            if (faqItems.length > 1) drop(faqItems.pop())
+            else if (specRows.length > 6) drop(specRows.pop())
+            else if (packageParts.length) { drop(packageParts); packageParts = [] }
+            else if (faqItems.length) { drop(faqItems.pop()); faqHeading?.remove(); faqHeading = null }
+            else if (specRows.length > 3) drop(specRows.pop())
+            else break
+          }
+          out.specRows = specRows.filter(([a]) => a.isConnected).length
+          if (specHeading && out.specRows) {
+            const count = document.createElement('span')
+            count.textContent = ` (${out.specRows} attributes)`
+            Object.assign(count.style, { fontWeight: '400', opacity: '0.6', fontSize: '0.85em' })
+            specHeading.appendChild(count)
+          }
+          out.faqCount = faqItems.filter(([q]) => q.isConnected).length
+          out.packageContents = packageParts.length > 0
+        }
+      }
+      window.scrollTo(0, 0)
+      return out
+    }, content)
+
+    // 4. Product image. When the page shows a "no image" placeholder, a real image of this product from
+    //    the manufacturer's own page (found and checked by getImage) takes its place.
+    if (getImage) {
+      const missing = await page.evaluate(() => {
+        const PLACEHOLDER = /no[-_ ]?(image|photo|picture|img)|placeholder|image[-_ ]?(not|coming|unavailable|missing)|coming[-_ ]?soon|default[-_ ]?(image|product)/i
+        const visible = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' }
+        const pics = [...document.querySelectorAll('img')]
+          .filter((i) => visible(i) && !i.closest('header, nav, footer, [role="navigation"], [role="banner"], [role="contentinfo"]'))
+          .map((i) => ({ i, r: i.getBoundingClientRect() }))
+          .filter((x) => x.r.width >= 120 && x.r.height >= 120)
+          .sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height)
+        if (!pics.length) return false
+        const main = pics[0].i
+        const hay = [main.currentSrc, main.src, main.alt, main.className, main.id, main.getAttribute('data-src'), main.parentElement && main.parentElement.className].join(' ')
+        if (!PLACEHOLDER.test(hay)) return false
+        main.setAttribute('data-altiusnxt-img', '1')
+        return true
       })
+      console.log(`[mockup] product image: ${missing ? 'the page shows a no-image placeholder' : 'the page has its own image (left as is)'}`)
+      if (missing) {
+        const img = await getImage().catch(() => null)
+        if (!img) console.log('[mockup] product image: no verified manufacturer image found')
+        if (img?.dataUrl) {
+          const placed = await page.evaluate(async (dataUrl) => {
+            const el = document.querySelector('img[data-altiusnxt-img]')
+            if (!el) return false
+            el.parentElement?.querySelectorAll('source').forEach((x) => x.remove())
+            ;['srcset', 'sizes', 'data-src', 'data-srcset', 'loading'].forEach((a) => el.removeAttribute(a))
+            el.src = dataUrl
+            el.style.objectFit = 'contain'
+            await el.decode().catch(() => {})
+            return true
+          }, img.dataUrl)
+          if (placed) { done.image = true; done.imageSource = img.host }
+        }
+      }
     }
 
-    if (!anchorFound) return null
+    console.log(`[mockup] injected: ${Object.entries(done).filter(([, v]) => v).map(([k]) => k).join(', ') || 'nothing'}`)
+    if (!Object.values(done).some(Boolean)) return null
 
-    await page.waitForTimeout(200)
-    return await page.screenshot({ type: 'png', fullPage: false })
+    await page.waitForTimeout(250)
+    const shot = await captureFullPageShot(page)
+    // What was really put on the page, so the report only lists fixes the screenshot shows.
+    return Object.assign(shot, { injected: done })
   } catch (err) {
     console.warn(`captureDomInjectedMockup failed for ${url}: ${err.message}`)
     return null
@@ -503,16 +829,19 @@ async function captureDomInjectedMockup({ url, productName, manufacturerBrand, m
 }
 
 /**
- * Renders the enriched product mock-up. Tries DOM injection into the real live page first (see
- * captureDomInjectedMockup) since that's the most faithful to "your actual page, enriched" — real
- * header, nav, images, everything. Falls back to header-crop compositing, then to a fully generic
- * layout, if injection can't find anywhere safe to land or fails for any reason. Returns a PNG
- * Buffer, or null on total failure across every strategy.
+ * Renders the enriched page: the seller's real page with its content corrected (see above).
+ * Falls back to header-crop compositing, then to a generic layout, only if the live page can't be
+ * edited. Returns a PNG Buffer, or null on total failure.
  */
-export async function captureEnrichedMockupScreenshot({ url, productName, manufacturerBrand, manufacturerCode, price, specs, description, headerCrop }) {
+export async function captureEnrichedMockupScreenshot({ url, enriched, productName, category, manufacturerBrand, manufacturerCode, price, specs, description, headerCrop, getProductImage }) {
   if (url) {
-    const injected = await captureDomInjectedMockup({ url, productName, manufacturerBrand, manufacturerCode, price, specs, description })
+    const injected = await captureDomInjectedMockup({ url, content: { ...buildEnrichedContent({ enriched, specs, manufacturerBrand }), limitBottom: SHOT_MAX_HEIGHT - 20 }, getImage: getProductImage })
     if (injected) return injected
   }
-  return captureCompositeMockupScreenshot({ productName, manufacturerBrand, manufacturerCode, price, specs, description, headerCrop })
+  // The composited fallback always shows a spec table, so give it a row when none were found.
+  const compositeSpecs = Array.isArray(specs) && specs.length ? specs : [{ label: 'Category', value: category || '—' }]
+  const composite = await captureCompositeMockupScreenshot({ productName, manufacturerBrand, manufacturerCode, price, specs: compositeSpecs, description, headerCrop })
+  // The composited layout only shows a spec table and a description line.
+  if (composite) Object.assign(composite, { injected: { sections: true, description: true, specsOnly: true } })
+  return composite
 }

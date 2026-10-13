@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
-import { fetchPageHtml, extractReadableText, hasJsonLd } from '../services/scrapeDo.js'
-import { quickAnalyze } from '../services/gemini.js'
+import { runSiteScan } from '../services/quickScan15.js'
 import { isGeminiConfigured } from '../config.js'
 
 const router = Router()
@@ -25,9 +24,8 @@ router.post('/quick-scan', limiter, async (req, res) => {
   }
 
   try {
-    const { html } = await fetchPageHtml(url)
-    const pageText = extractReadableText(html)
-    const result = await quickAnalyze({ url, pageText, hasJsonLd: hasJsonLd(html) })
+    // Fifteen evidence-based checks measured on the page itself (quickScan15.js).
+    const result = await runSiteScan(url)
     res.json({ ...result, url })
   } catch (err) {
     console.error('quick-scan failed:', err)

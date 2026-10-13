@@ -47,9 +47,10 @@ async function runJob(job, { lead, url }) {
       contactEmail: lead.email,
       location: '',
       timezoneLabel: '',
-      senderName: 'Govind',
-      senderTitle: 'Business Unit Head',
-      senderEmail: config.mail.leadNotifyEmail,
+      senderName: config.outreach.senderName,
+      senderTitle: config.outreach.senderTitle,
+      senderEmail: config.outreach.senderEmail,
+      revenueBracket: lead.revenueBracket,
     })
     lap('report data built')
 
@@ -110,6 +111,8 @@ router.post('/leads', limiter, (req, res) => {
     companyWebsite: body.companyWebsite || '',
     email: body.email,
     jobTitle: body.jobTitle || '',
+    // Sizes the revenue-at-risk estimate; empty ("prefer not to say") → $5M default in revenueRisk.js
+    revenueBracket: body.revenueBracket || '',
   }
   const url = body.url
 

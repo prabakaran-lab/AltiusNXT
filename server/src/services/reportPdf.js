@@ -70,7 +70,20 @@ export async function generateAuditReportPdf({ lead, url, quickScan, deep, score
   return renderHtmlToPdf(html)
 }
 
+// Page-1 QR code: opens a pre-addressed email to the report's sender asking for the walkthrough.
+function buildOutreachQrTarget(params) {
+  const email = params?.sender?.email || 'govind@altiusnxt.com'
+  const firstName = String(params?.sender?.name || '').split(/\s+/)[0] || 'there'
+  const company = params?.lead?.company || ''
+  const subject = encodeURIComponent(`Walkthrough request — ${company}`)
+  const body = encodeURIComponent(
+    `Hi ${firstName},\n\nI'd like to book the 20-minute walkthrough mentioned in our AI Readiness Report${company ? ` for ${company}` : ''}.\n\nThanks`
+  )
+  return `mailto:${email}?subject=${subject}&body=${body}`
+}
+
 export async function generateOutreachReportPdf(params) {
-  const html = buildOutreachReportHtml(params)
+  const qrDataUrl = await buildQrCode(buildOutreachQrTarget(params)).catch(() => null)
+  const html = buildOutreachReportHtml({ ...params, qrDataUrl })
   return renderHtmlToPdf(html)
 }
