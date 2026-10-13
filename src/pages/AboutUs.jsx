@@ -26,12 +26,13 @@ export default function AboutUs() {
           <div className="ah-copy">
             <p className="ah-eyebrow ah-r" style={{ '--d': '0ms' }}>About AltiusNxt · Since 2007</p>
             <h1 id="ah-title" className="ah-r" style={{ '--d': '80ms' }}>
-              The product data <br className="ah-br" />enrichment company <span>behind 15M+ products.</span>
+              The product data partner <span>for B2B industrial distributors.</span>
             </h1>
             <p className="ah-lede ah-r" style={{ '--d': '170ms' }}>
-              Since 2007, AltiusNxt has helped 500+ manufacturers and distributors in 15+ countries turn messy supplier
-              data into complete, human-verified product content that ranks on Google, sells on every channel and is ready
-              for AI search.
+              For nearly two decades, AltiusNxt has helped B2B industrial distributors in 15+ countries, from Fortune 500
+              companies to mid-sized and small businesses, turn messy supplier data into accurate, human-verified product
+              content. With 15M+ products enriched for 500+ distributors since 2007, we make complex technical catalogues
+              easier to find on Google, easier to buy from on every channel, and visible in all LLMs.
             </p>
             <dl className="ah-stats">
               {[['20+', 'Years of team expertise'], ['500+', 'Global clients'], ['15M+', 'Products enriched'], ['15+', 'Countries']].map(([n, l], i) => (
