@@ -50,7 +50,7 @@ export default function AboutUs() {
               srcSet={`${heroTeamSm} 900w, ${heroTeam} 1586w`}
               sizes="(max-width: 900px) 100vw, 54vw"
               width="1920" height="819" fetchPriority="high"
-              alt="A product data specialist reviewing an enriched product page on a laptop"
+              alt="A buyer reviewing an industrial product page on a laptop"
             />
           </figure>
         </div>
