@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, CircleAlert, ImageOff, ScanLine, Search, Sparkles, Tag } from 'lucide-react'
+import { ArrowRight, Check, CircleAlert, ScanLine, Search, Sparkles } from 'lucide-react'
 import { TESYS } from '../sampleProduct.js'
 import { SAMPLES } from '../catalogSamples.js'
 import { CATEGORIES } from '../../pages/attributeLibraryData.js'
 import LiveDemoModal from './LiveDemoModal.jsx'
 import LiveBeforeAfter from './LiveBeforeAfter.jsx'
+import { buildSampleResult } from './sampleResult.js'
 import { runLiveEnrichment } from './liveEnrich.js'
 import './EnrichDemo.css'
 
@@ -39,48 +40,14 @@ const PRODUCTS = CATEGORIES.map((c) => {
     ],
   }
 })
-const SCAN_END = 6.4
-const MSGS = (p) => (p.live
-  ? [`Reading ${p.sku}…`, 'Matching the manufacturer’s published data…', 'Normalising units and values…', 'Adding verified attributes…']
-  : [`Checking “SKU: ${p.sku}”…`, 'Reading the product photo…', 'Reading the spec sheet…', 'Normalising units and values…', 'Filling missing attributes…'])
-
-/* ---- live demo: the server returns verified attributes for the visitor's own page; this maps them onto the same
-   raw / changes shape the sample products use, so the scan, tiles and counters all work unchanged. ---- */
-const sameValue = (a, b) => a.toLowerCase().replace(/\s+/g, '') === b.toLowerCase().replace(/\s+/g, '')
-function liveToProduct(r) {
-  const attrs = r.after.attributes
-  const withPage = attrs.filter((a) => a.before)
-  const rest = attrs.filter((a) => !a.before).sort((a, b) => (b.group === 'technical') - (a.group === 'technical'))
-  const why = (a) => (a.source === 'page' ? 'Stated on your page, now a clean structured value.' : 'Published by the manufacturer, missing from your page.')
-  return {
-    id: `live-${Date.now()}`, live: true, r,
-    name: r.after.title || r.productName,
-    sku: r.displayUrl || r.partNumber || r.host,
-    img: r.image,
-    personas: [],
-    raw: withPage.map((a) => [a.label, a.before]),
-    changes: [
-      ...withPage.filter((a) => !sameValue(a.before, a.value)).map((a) => ({ k: 'norm', l: a.label, from: a.before, to: a.value, why: 'Standardised from your page wording, so filters and comparison work.' })),
-      ...rest.map((a) => ({ k: 'fill', l: a.label, to: a.value, why: why(a) })),
-    ],
-  }
-}
+/* A visitor's own page: the server returns the verified result, shown in the same Before / After window as the samples. */
+const liveToProduct = (r) => ({ id: `live-${Date.now()}`, live: true, r })
 const LIVE_STEPS = ['Reading your product page', 'Identifying the product', 'Checking the manufacturer’s published specifications', 'Writing the enriched title, description and attributes']
-
-/* Product photo with a calm fallback: pasted pages may block hot-linking, and some have no usable image. */
-function Photo({ src, alt, dark }) {
-  const [bad, setBad] = useState(false)
-  if (!src || bad) return <span className="rd-noimg" role="img" aria-label="No product image found"><ImageOff size={22} /></span>
-  return <img className={dark ? 'dark' : ''} src={src} alt={alt} referrerPolicy="no-referrer" onError={() => setBad(true)} />
-}
 
 export default function EnrichDemo({ children }) {
   const demoRef = useRef(null)
   const inputRef = useRef(null)
-  const st = useRef({ pid: null, t0: 0 })
   const [pid, setPid] = useState(null)
-  const [t, setT] = useState(0)
-  const [who, setWho] = useState('all')
   const [url, setUrl] = useState('')
   const [seen, setSeen] = useState(false)
   const [calm] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -92,24 +59,13 @@ export default function EnrichDemo({ children }) {
   const [waited, setWaited] = useState(0)
 
   const p = useMemo(() => (live && pid === live.id ? live : PRODUCTS.find((x) => x.id === pid)) || null, [pid, live])
+  // What the Before / After window shows: the live result, or the chosen sample in the same shape.
+  const view = useMemo(() => (p ? (p.live ? p.r : buildSampleResult(p)) : null), [p])
 
   useEffect(() => {
     const f = requestAnimationFrame(() => setSeen(true))
     return () => cancelAnimationFrame(f)
   }, [])
-
-  useEffect(() => {
-    if (!pid) return undefined
-    let raf = 0
-    const loop = (now) => {
-      const el = (now - st.current.t0) / 1000
-      setT(calm ? 99 : Math.min(el, 99))
-      if (!calm && el < SCAN_END + 3) raf = requestAnimationFrame(loop)
-    }
-    st.current.t0 = performance.now()
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [pid, calm])
 
   useEffect(() => {
     if (phase !== 'loading') return undefined
@@ -121,7 +77,7 @@ export default function EnrichDemo({ children }) {
 
   const toDemo = () => requestAnimationFrame(() => demoRef.current?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }))
   const run = (id) => {
-    setPhase('idle'); setPid(id); setWho('all'); setT(0)
+    setPhase('idle'); setPid(id)
     toDemo()
   }
   // "Check my page": ask who is requesting first, then run the live enrichment on their page.
@@ -134,30 +90,13 @@ export default function EnrichDemo({ children }) {
     try {
       const result = await runLiveEnrichment({ ...lead, url: target }, { onStage: (s) => s && setStage(s) })
       const product = liveToProduct(result)
-      setLive(product); setPid(product.id); setWho('all'); setT(0); setPhase('idle')
+      setLive(product); setPid(product.id); setPhase('idle')
       toDemo()
     } catch (err) {
       setLiveErr(err.message); setPhase('error')
     }
   }
   const retry = () => { setPhase('idle'); setLiveErr(''); inputRef.current?.focus(); inputRef.current?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' }) }
-
-  const done = p && t >= SCAN_END
-  const filled = p ? p.changes.filter((c) => c.k === 'fill') : []
-  const normed = p ? p.changes.filter((c) => c.k === 'norm') : []
-  const total = p ? p.raw.length + filled.length : 0
-  const msgs = p ? MSGS(p) : []
-  const scanPct = p ? Math.min(1, t / SCAN_END) : 0
-  /* one comparison table: every attribute once, with what the supplier sent and what CatalogWiz outputs */
-  const rows = useMemo(() => {
-    if (!p) return []
-    const fix = Object.fromEntries(p.changes.filter((c) => c.k === 'norm').map((c) => [c.l, c]))
-    return [
-      ...p.raw.map(([l, v]) => ({ l, before: v, after: fix[l] ? fix[l].to : v, k: fix[l] ? 'norm' : 'same', who: fix[l]?.who, why: fix[l]?.why })),
-      ...p.changes.filter((c) => c.k === 'fill').map((c) => ({ l: c.l, before: '', after: c.to, k: 'fill', who: c.who, why: c.why })),
-    ]
-  }, [p])
-  const at = Math.min(rows.length - 1, Math.floor(scanPct * rows.length))
 
   return (
     <div className={`rd${seen ? ' seen' : ''}`} id="try">
@@ -217,98 +156,8 @@ export default function EnrichDemo({ children }) {
             <div className="rd-empty rd-err" role="alert"><CircleAlert size={22} /><b>We couldn’t enrich that page</b><span>{liveErr.replace(/^We couldn't enrich that page:\s*/i, '')}</span><button type="button" className="btn btn-outline" onClick={retry}>Try another page</button></div>
           ) : !p ? (
             <div className="rd-empty"><ScanLine size={22} /><b>Paste your page or choose a sample above</b><span>You will see the original listing first, then the enriched version.</span></div>
-          ) : p.live ? (
-            <LiveBeforeAfter key={p.id} r={p.r} />
           ) : (
-            <div className="rd-stage" key={p.id}>
-              <header className={`rd-bar${done ? ' done' : ''}`}>
-                <span className="dots" aria-hidden="true"><i /><i /><i /></span>
-                <span className="url">app.catalogwiz.ai / enrich / <b>{p.sku}</b></span>
-                <span className="ai"><b>CatalogWiz <em>AI</em></b></span>
-                <em className="st">{done ? (p.live ? 'Enriched' : `Enriched in ${SCAN_END.toFixed(1)}s`) : `${Math.min(t, SCAN_END).toFixed(1)}s`}</em>
-                <i className="pg" style={{ transform: `scaleX(${done ? 1 : scanPct})` }} />
-              </header>
-
-              <div className="rd-body">
-                <div className="rd-head">
-                  <div className={`rd-photo${done ? ' done' : ''}`}>
-                    <span className="c tl" /><span className="c tr" /><span className="c bl" /><span className="c br" />
-                    <Photo key={p.id} src={p.img} alt={p.name} dark={p.dark} />
-                    {!done && <u style={{ top: `${(scanPct * 3 % 1) * 100}%` }} />}
-                  </div>
-                  <div className="rd-info">
-                    <h3>{p.name}</h3>
-                    <div className="rd-stats">
-                      <div><small>Supplier data</small><b>{p.raw.length}</b></div>
-                      <i aria-hidden="true"><ArrowRight size={16} /></i>
-                      <div className={`new${done ? ' on' : ''}`}><small>With CatalogWiz</small><b>{done ? total : '·'}</b></div>
-                      <ul className={`rd-sum${done ? ' on' : ''}`}>
-                        <li><b>{normed.length}</b>cleaned up</li>
-                        <li><b>{filled.length}</b>{p.live ? 'added from verified sources' : 'added from the spec sheet'}</li>
-                        {p.live && <li><b>{p.r.stats.technical}</b>technical</li>}
-                      </ul>
-                    </div>
-                  </div>
-                  {p.personas.length > 0 && (
-                    <div className={`rd-who${done ? ' on' : ''}`}>
-                      <small>Highlight values for</small>
-                      <div>
-                        {['all', ...p.personas].map((w) => <button type="button" key={w} disabled={!done} className={who === w ? 'on' : ''} onClick={() => setWho(w)}>{w === 'all' ? 'Every buyer' : w}</button>)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {p.live && (
-                  <div className={`rd-ba${done ? ' on' : ''}`}>
-                    <div className="ba-col before">
-                      <small>Before · your page today</small>
-                      <h4>{p.r.before.title || 'No product title found'}</h4>
-                      <p>{p.r.before.description || 'No product description found on the page.'}</p>
-                    </div>
-                    <i className="ba-arrow" aria-hidden="true"><ArrowRight size={18} /></i>
-                    <div className="ba-col after">
-                      <small>After · CatalogWiz</small>
-                      {done ? (
-                        <>
-                          <h4>{p.r.after.title.split(' ').map((w, i) => <span key={i} className="w" style={{ '--w': i }}>{w} </span>)}</h4>
-                          <p>{p.r.after.description ? p.r.after.description.split(' ').map((w, i) => <span key={i} className="w" style={{ '--w': i + 6 }}>{w} </span>) : 'The page does not give enough detail to write a description without guessing.'}</p>
-                        </>
-                      ) : (
-                        <div className="ba-skel" aria-hidden="true"><i /><i /><i /><i /></div>
-                      )}
-                    </div>
-                    <div className="ba-meter">
-                      <span>Your page states <b>{p.raw.length}</b> of the <b>{total}</b> attributes CatalogWiz found ({Math.round((p.raw.length / Math.max(total, 1)) * 100)}%)</span>
-                      <i aria-hidden="true"><u style={{ width: done ? `${(p.raw.length / Math.max(total, 1)) * 100}%` : 0 }} /></i>
-                    </div>
-                  </div>
-                )}
-
-                <div className="rd-main">
-                  <div className="rd-line">
-                    <p className={`rd-strip${done ? ' ok' : ''}`}>{done ? <Check size={14} strokeWidth={3} /> : <Sparkles size={14} />}{done ? `Done · ${total} structured fields, ${normed.length} cleaned up, ${filled.length} added` : msgs[Math.floor(t / 1.1) % msgs.length]}</p>
-                    <ul className="rd-key" aria-hidden="true"><li><i className="sup" />Supplier value</li><li><i className="fix" />Cleaned</li><li><i className="add" />Added by CatalogWiz</li></ul>
-                  </div>
-                  <ul className="rd-tiles" aria-label="Attributes">
-                    {rows.map((r, i) => {
-                      const reached = done || i < at
-                      const dim = done && who !== 'all' && (r.k === 'same' || r.who !== who)
-                      const hot = done && r.k !== 'same' && !dim
-                      return (
-                        <li key={r.l} className={`rd-tile ${r.k === 'norm' ? 'fixed' : r.k}${reached ? ' on' : ''}${!done && i === at ? ' scan' : ''}${dim ? ' dim' : ''}${hot ? ' hot' : ''}`} style={{ '--i': i }} tabIndex={hot ? 0 : undefined}>
-                          {(r.k !== 'fill' || reached) && <small>{r.l}</small>}
-                          {r.k === 'fill' ? (reached && <b className="v">{r.after}</b>) : <b className="v">{reached ? r.after : r.before}</b>}
-                          {r.k === 'norm' && reached && <s>{r.before}</s>}
-                          {done && r.k !== 'same' && <em>{r.k === 'norm' ? 'Cleaned' : 'Added'}</em>}
-                          {done && r.k !== 'same' && <p><Tag size={12} />{r.why}</p>}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <LiveBeforeAfter key={p.id} r={view} />
           )}
           <p className="rd-foot">
             {p?.live

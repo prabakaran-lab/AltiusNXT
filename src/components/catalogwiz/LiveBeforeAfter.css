@@ -232,3 +232,15 @@
   .lba-live .lba-nav b{ max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 }
 
+
+/* taxonomy tree on the enriched page: each level hangs from the one above */
+.lba-tax{ margin-top:8px; padding:13px 18px 12px; max-width:620px; border:1px solid #e6ebf2; border-radius:12px; background:linear-gradient(180deg,#fbfcfe,#f6f8fc); }
+.lba-tax small{ display:block; margin-bottom:9px; font:700 11px/1 var(--font-body); letter-spacing:.12em; text-transform:uppercase; color:#8a98ad; }
+.lba-tax ol{ margin:0; padding:0; list-style:none; }
+.lba-tax li{ position:relative; display:flex; align-items:center; min-height:27px; margin-left:calc(var(--d,0) * 22px); font:600 13px/1.3 var(--font-body); color:#3d4c63; }
+.lba-tax li:not(:first-child)::before{ content:""; position:absolute; left:-15px; top:-7px; width:11px; height:calc(50% + 7px); border-left:1.5px solid #cfd8e6; border-bottom:1.5px solid #cfd8e6; border-bottom-left-radius:6px; }
+.lba-tax li span{ display:inline-flex; align-items:center; overflow-wrap:anywhere; }
+.lba-tax li span::before{ content:""; flex:none; width:7px; height:7px; margin-right:9px; border-radius:50%; background:#cfd8e6; }
+.lba-tax li:last-child span{ color:var(--navy); font-weight:700; } .lba-tax li:last-child span::before{ background:var(--orange); box-shadow:0 0 0 4px rgba(255,106,26,.14); }
+.lba-layer.after.pop .lba-tax li{ animation:lba-pop .5s cubic-bezier(.3,1.5,.5,1) both; animation-delay:calc(var(--d,0) * .12s + .75s); }
+@media (max-width:760px){ .lba-tax{ padding:11px 14px; } .lba-tax li{ margin-left:calc(var(--d,0) * 16px); } }

@@ -8,25 +8,32 @@ import './LiveBeforeAfter.css'
    values on the Before side, and the enriched title, description and verified attributes on the After side. */
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
-const sameValue = (a, b) => String(a).toLowerCase().replace(/\s+/g, '') === String(b).toLowerCase().replace(/\s+/g, '')
+// a value counts as tidied when its wording differs from what the page / supplier sent, spacing and capitalisation included
+const isTidied = (a) => Boolean(a.before) && String(a.before).trim() !== String(a.value).trim()
 const BRAND_RE = /^(brand|manufacturer|mfr|make)\b/i
+const MPN_RE = /\b(mpn|mfr\.?\s*(part|p\/n)|manufacturer'?s?\s*(part|product))/i
 const ID_RE = /\b(part|sku|mpn|model|item|catalog(?:ue)?|style|upc|ean|gtin|product code|article)\b/i
 
-/** The identity block: brand / manufacturer and part-number style rows, from the attributes the page (or enrichment) really has. */
-function identityRows(pairs, max = 4) {
+/** The identity block, in a fixed order: manufacturer name, manufacturer part number, SKU, then any other identifier
+ *  (for example the seller's "Part #"). `canon` writes the first two as "Mfr. Name" and "Mfr. Part Number" (the enriched
+ *  page); the original page keeps its own labels. Each row is [label shown, value, the attribute's own label]. */
+function identityRows(pairs, canon = false, max = 5) {
+  const slot = { name: null, mpn: null, sku: null }
+  const others = []
+  for (const [label, value] of pairs) {
+    if (!value) continue
+    if (BRAND_RE.test(label) && !slot.name) slot.name = [canon ? 'Mfr. Name' : label, value, label]
+    else if (MPN_RE.test(label) && /\d/.test(value) && !slot.mpn) slot.mpn = [canon ? 'Mfr. Part Number' : label, value, label]
+    else if (/^sku$/i.test(label.trim()) && !slot.sku) slot.sku = [label, value, label]
+    else if (ID_RE.test(label) && /\d/.test(value) && value.length <= 40) others.push([label, value, label])
+  }
   const rows = []
   const seen = new Set()
-  for (const [label, value] of pairs) {
-    const isBrand = BRAND_RE.test(label)
-    const isId = ID_RE.test(label) && /\d/.test(value) && value.length <= 40
-    if (!isBrand && !isId) continue
-    const k = norm(value)
-    if (!k || seen.has(k)) continue
-    seen.add(k)
-    rows.push([label, value])
-    if (rows.length >= max) break
+  for (const row of [slot.name, slot.mpn, slot.sku, ...others]) {
+    const k = `${norm(row?.[0])}|${norm(row?.[1])}`
+    if (row && !seen.has(k)) { seen.add(k); rows.push(row) }
   }
-  return rows
+  return rows.slice(0, max)
 }
 
 function Product({ src }) {
@@ -64,15 +71,24 @@ export default function LiveBeforeAfter({ r }) {
 
   const attrs = r.after.attributes
   const before = r.before.attributes // [label, value] exactly as the page states them
-  const cleaned = attrs.filter((a) => a.before && !sameValue(a.before, a.value))
+  const cleaned = attrs.filter(isTidied)
   const added = attrs.filter((a) => !a.before)
-  const crumbs = useMemo(() => {
+  // The category path. A live page only has the path it states itself; a sample also carries the enriched taxonomy.
+  const pagePath = useMemo(() => {
     const c = attrs.find((a) => /^category$/i.test(a.label))?.before || ''
-    return ['Home', ...c.split('>').map((x) => x.trim()).filter(Boolean)]
+    return c.split('>').map((x) => x.trim()).filter(Boolean)
   }, [attrs])
+  const taxonomy = r.after.taxonomy || pagePath
+  const beforeCrumbs = r.before.crumbs || ['Home', ...pagePath]
+  const afterCrumbs = ['Home', ...taxonomy]
   const beforeId = useMemo(() => identityRows(before), [before])
-  const afterId = useMemo(() => identityRows(attrs.map((a) => [a.label, a.value])), [attrs])
+  const afterId = useMemo(() => identityRows(attrs.map((a) => [a.label, a.value]), true), [attrs])
+  // the identity rows are shown in the block above the table, so the table does not repeat them
+  const beforeGrid = before.filter(([l]) => !beforeId.some((row) => row[2] === l))
+  const afterGrid = attrs.filter((a) => !afterId.some((row) => row[2] === a.label))
   const shownUrl = r.displayUrl || r.host
+  const sample = Boolean(r.sample)
+  const technical = r.stats.technical
   const sources = (r.sources || []).map((s) => s.title).slice(0, 3)
 
   /* the moment the slider lands on "After", the enriched page pops in (see .lba-layer.after.pop) */
@@ -137,8 +153,17 @@ export default function LiveBeforeAfter({ r }) {
       <div className="lba-wrap">
         <header className="lba-head">
           <p className="lba-eyebrow">Before &amp; after CatalogWiz</p>
-          <h2 id="lba-live-title">Your product page. <em>Before and after.</em></h2>
-          <p className="lba-sub">This is your own listing, read live from {r.host}. Watch it wipe into the enriched page, or drag the handle to compare.</p>
+          {sample ? (
+            <>
+              <h2 id="lba-live-title">Same supplier file. <em>A product page buyers can trust.</em></h2>
+              <p className="lba-sub">A sample product from our catalog. Watch the raw supplier listing wipe into the enriched, human-verified page, or drag the handle to compare.</p>
+            </>
+          ) : (
+            <>
+              <h2 id="lba-live-title">Your product page. <em>Before and after.</em></h2>
+              <p className="lba-sub">This is your own listing, read live from {r.host}. Watch it wipe into the enriched page, or drag the handle to compare.</p>
+            </>
+          )}
         </header>
 
         <div className="lba-toggle" role="group" aria-label="Show before or after">
@@ -151,7 +176,7 @@ export default function LiveBeforeAfter({ r }) {
           {/* AFTER: the enriched page */}
           <div className={`lba-layer after${pop ? ' pop' : ''}`}>
             <Shell host={r.host} shownUrl={shownUrl}>
-              <ol className="lba-bc">{crumbs.map((c, i) => <li key={`${c}-${i}`}>{c}</li>)}</ol>
+              <ol className="lba-bc">{afterCrumbs.map((c, i) => <li key={`${c}-${i}`}>{c}</li>)}</ol>
               <div className="lba-cols">
                 <div className="lba-gal"><Product src={r.image} /></div>
                 <div className="lba-info">
@@ -160,13 +185,19 @@ export default function LiveBeforeAfter({ r }) {
                     <dl className="lba-id">{afterId.map(([l, v]) => <div key={l}><dt>{l}</dt><dd title={v}>{v}</dd></div>)}</dl>
                   )}
                   <p>{r.after.description || 'The page does not give enough detail to write a description without guessing.'}</p>
+                  {taxonomy.length > 1 && (
+                    <nav className="lba-tax" aria-label={sample ? 'Product taxonomy' : 'Category path'}>
+                      <small>{sample ? 'Taxonomy' : 'Category path'}</small>
+                      <ol>{taxonomy.map((t, i) => <li key={`${t}-${i}`} style={{ '--d': i }}><span>{t}</span></li>)}</ol>
+                    </nav>
+                  )}
                 </div>
               </div>
               <section className="lba-card" aria-label="Specifications after">
                 <header><b>Specifications</b><span className="lba-chip ok"><Check size={10} strokeWidth={3.4} />{attrs.length} attributes</span></header>
                 <div className="lba-spec">
-                  {attrs.map((a, i) => (
-                    <span key={`${a.label}-${i}`} className={!a.before ? 'add' : sameValue(a.before, a.value) ? '' : 'fix'} style={{ '--k': i }}>
+                  {afterGrid.map((a, i) => (
+                    <span key={`${a.label}-${i}`} className={!a.before ? 'add' : isTidied(a) ? 'fix' : ''} style={{ '--k': i }}>
                       <em title={a.label}>{a.label}</em><b title={a.value}>{a.value}</b>
                     </span>
                   ))}
@@ -178,7 +209,7 @@ export default function LiveBeforeAfter({ r }) {
           {/* BEFORE: the page exactly as it was scraped */}
           <div className="lba-layer before" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
             <Shell host={r.host} shownUrl={shownUrl}>
-              <ol className="lba-bc">{crumbs.map((c, i) => <li key={`${c}-${i}`}>{c}</li>)}</ol>
+              <ol className="lba-bc">{beforeCrumbs.map((c, i) => <li key={`${c}-${i}`}>{c}</li>)}</ol>
               <div className="lba-cols">
                 <div className="lba-gal"><Product src={r.image} /></div>
                 <div className="lba-info">
@@ -192,7 +223,7 @@ export default function LiveBeforeAfter({ r }) {
               <section className="lba-card" aria-label="Specifications before">
                 <header><b>Specifications</b><span className="lba-chip bad">{before.length} listed</span></header>
                 <div className="lba-spec">
-                  {before.length ? before.map(([l, v], i) => <span key={`${l}-${i}`}><em title={l}>{l}</em><b title={v}>{v}</b></span>) : <span className="lba-none"><em>No specifications are listed on this page.</em></span>}
+                  {beforeGrid.length ? beforeGrid.map(([l, v], i) => <span key={`${l}-${i}`}><em title={l}>{l}</em><b title={v}>{v}</b></span>) : <span className="lba-none"><em>No further specifications are listed on this page.</em></span>}
                 </div>
               </section>
             </Shell>
@@ -207,16 +238,18 @@ export default function LiveBeforeAfter({ r }) {
         </div>
 
         <ul className="lba-points">
-          <li><Check size={14} strokeWidth={3} /><b>{before.length} → {attrs.length}</b> attributes, {r.stats.technical} of them technical</li>
-          <li><Check size={14} strokeWidth={3} /><b>{cleaned.length}</b> value{cleaned.length === 1 ? '' : 's'} tidied, <b>{added.length}</b> added from verified sources</li>
-          <li><Check size={14} strokeWidth={3} /><b>Checked</b> against your page{sources.length ? ` and ${sources.join(', ')}` : ''}</li>
+          <li><Check size={14} strokeWidth={3} /><b>{before.length} → {attrs.length}</b> attributes{technical != null ? `, ${technical} of them technical` : ''}</li>
+          <li><Check size={14} strokeWidth={3} /><b>{cleaned.length}</b> value{cleaned.length === 1 ? '' : 's'} tidied, <b>{added.length}</b> added from {sample ? 'the manufacturer datasheet' : 'verified sources'}</li>
+          {sample
+            ? <li><Check size={14} strokeWidth={3} /><b>Human verified</b> before it goes live</li>
+            : <li><Check size={14} strokeWidth={3} /><b>Checked</b> against your page{sources.length ? ` and ${sources.join(', ')}` : ''}</li>}
         </ul>
 
         <details className="lba-changes">
           <summary>See every change ({cleaned.length + added.length})</summary>
           <ul>
             {cleaned.map((a, i) => <li key={`c${i}`}><u className="fix">Tidied</u><b>{a.label}</b><span><s>{a.before}</s> → {a.value}</span></li>)}
-            {added.map((a, i) => <li key={`a${i}`}><u className="add">Added</u><b>{a.label}</b><span>{a.value}<small>{a.source === 'web' ? 'manufacturer data' : 'your page'}</small></span></li>)}
+            {added.map((a, i) => <li key={`a${i}`}><u className="add">Added</u><b>{a.label}</b><span>{a.value}<small>{a.source === 'web' ? (sample ? 'manufacturer datasheet' : 'manufacturer data') : (sample ? 'supplier file' : 'your page')}</small></span></li>)}
             {!cleaned.length && !added.length && <li><span>Nothing could be added without guessing.</span></li>}
           </ul>
         </details>
