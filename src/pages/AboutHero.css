@@ -76,3 +76,11 @@
 
 /* phones: the About hero is text-first, so its photo is hidden */
 @media (max-width:767px){ .ah:not(.ah-res) .ah-media{ display:none; } }
+
+/* About hero photo: wide image, subject on the right */
+.ah:not(.ah-res) .ah-media img{ object-position:88% center; }
+@media (max-width:900px){ .ah:not(.ah-res) .ah-media img{ aspect-ratio:4 / 3; object-position:82% center; } }
+.ah:not(.ah-res) .ah-stats{ grid-template-columns:repeat(4,auto); gap:20px clamp(20px,2.6vw,44px); }
+@media (max-width:640px){ .ah:not(.ah-res) .ah-stats{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.ah-br{ display:none; }
+@media (min-width:1024px){ .ah-br{ display:inline; } .ah h1 span{ display:block; } }

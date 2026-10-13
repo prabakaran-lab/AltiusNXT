@@ -119,6 +119,7 @@ export default function AboutPortfolio() {
             <li><b>20+</b> years of team expertise</li>
             <li><b>500+</b> global clients</li>
             <li><b>15M+</b> products enriched</li>
+            <li><b>15+</b> countries</li>
           </ul>
           <a href="#testimonials">See customer success stories <Icon name="arrow-right" /></a>
         </div>

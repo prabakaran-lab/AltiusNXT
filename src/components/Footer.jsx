@@ -107,10 +107,10 @@ export default function Footer() {
           <div className="ft-cta-copy">
             <p className="ft-eyebrow">Ready to check your product data?</p>
             <h2 id="ft-cta-h">See how AI-ready your product content really is.</h2>
-            <p className="ft-cta-text">Start with one product page and discover where your data is complete, where AI may struggle to verify it, and what enrichment could improve.</p>
+            <p className="ft-cta-text">Paste one product page and get a free AI Readiness Report, verified and approved by a product data expert. See what is complete, what AI cannot read, and what to fix first.</p>
             <div className="ft-cta-act">
               <Link className="btn btn-primary" to="/ai-readiness-report">Free AI Readiness Report <Icon name="arrow-right" /></Link>
-              <Link className="ft-cta-link" to="/how-it-works#catalogwiz">Explore CatalogWiz Workbench <Icon name="arrow-right" /></Link>
+              <Link className="ft-cta-link" to="/how-it-works#catalogwiz">Explore CatalogWiz <Icon name="arrow-right" /></Link>
             </div>
             <small>One product page. Actionable findings. No obligation.</small>
             <ul className="ft-pills" aria-label="What the report covers">{PILLS.map((p) => <li key={p}>{p}</li>)}</ul>

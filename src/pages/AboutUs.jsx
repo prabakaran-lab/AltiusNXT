@@ -15,8 +15,8 @@ export default function AboutUs() {
   return (
     <>
       <PageSeo
-        title="About AltiusNxt | Product Data Experts Since 2007"
-        description="Since 2007, AltiusNxt has enriched 15M+ products for 500+ manufacturers and distributors in 15+ countries. ISO 9001 and ISO 27001 certified."
+        title="About AltiusNxt | Product Data Enrichment Company Since 2007"
+        description="AltiusNxt is a product data enrichment company. Since 2007 we have enriched 15M+ products for 500+ manufacturers and distributors in 15+ countries."
         keywords={['product data management company', 'product data enrichment company', 'catalog management services', 'product information management services']}
         structuredData={[breadcrumb('/about-us', 'About Us')]}
       />
@@ -24,14 +24,14 @@ export default function AboutUs() {
       <section className="ah" aria-labelledby="ah-title">
         <div className="ah-wrap">
           <div className="ah-copy">
-            <p className="ah-eyebrow ah-r" style={{ '--d': '0ms' }}>About AltiusNxt</p>
+            <p className="ah-eyebrow ah-r" style={{ '--d': '0ms' }}>About AltiusNxt · Since 2007</p>
             <h1 id="ah-title" className="ah-r" style={{ '--d': '80ms' }}>
-              Product data experts since 2007. <span>Trusted in 15+ countries.</span>
+              The product data <br className="ah-br" />enrichment company <span>behind 15M+ products.</span>
             </h1>
             <p className="ah-lede ah-r" style={{ '--d': '170ms' }}>
-              AltiusNxt is a product data enrichment and catalog management company. From offices in the United States and
-              India, we help manufacturers and distributors in 15+ countries turn messy supplier data into accurate,
-              human-verified, AI-ready product content.
+              Since 2007, AltiusNxt has helped 500+ manufacturers and distributors in 15+ countries turn messy supplier
+              data into complete, human-verified product content that ranks on Google, sells on every channel and is ready
+              for AI search.
             </p>
             <dl className="ah-stats">
               {[['20+', 'Years of team expertise'], ['500+', 'Global clients'], ['15M+', 'Products enriched'], ['15+', 'Countries']].map(([n, l], i) => (
@@ -48,8 +48,8 @@ export default function AboutUs() {
               src={heroTeam}
               srcSet={`${heroTeamSm} 900w, ${heroTeam} 1586w`}
               sizes="(max-width: 900px) 100vw, 54vw"
-              width="1586" height="992" fetchPriority="high"
-              alt="AltiusNxt team reviewing enriched product data on screen: extract supplier data, enrich with AI, validate and structure, publish to channels"
+              width="1920" height="819" fetchPriority="high"
+              alt="A product data specialist reviewing an enriched product page on a laptop"
             />
           </figure>
         </div>

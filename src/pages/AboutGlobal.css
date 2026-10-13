@@ -159,3 +159,6 @@
 
 .ag-final p span{ color:#fff; }
 @media (prefers-reduced-motion:reduce){ .ag-map .m-pulses{ display:none; } .ag-map .m-pin{ opacity:1; transform:none; } }
+.ag-clients{ margin:14px 0 0; font-size:13px; line-height:1.6; color:#6b7a90; }
+.ag-map .m-legend{ opacity:0; transition:opacity .7s ease .8s; }
+.ag:is(.s3,.s4) .m-legend{ opacity:1; }
