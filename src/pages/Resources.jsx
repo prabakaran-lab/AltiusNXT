@@ -19,7 +19,6 @@ import blogDataNormalization from '../assets/resources/blog-data-normalization.p
 import blogAttributeDevelopment from '../assets/resources/blog-attribute-development.webp'
 import UiIcon from '../components/ui/Icon.jsx'
 import wpBlogs from '../data/wpBlogs.json'
-import { subscribeToNewsletter } from '../services/newsletter.js'
 
 const ITEMS = [
   { featured: 1, type: 'blog', date: 'May 28, 2025', sort: '2025-05-28', img: blogDataCleansing, title: 'Why Product Data Cleansing is a Game Changer for eCommerce Stores', excerpt: 'In the fast-paced world of eCommerce, your product data is either working for you or against you.', meta: '5 min read', to: '/resources/blog/product-data-cleansing-game-changer', url: 'https://altiusnxt.com/why-product-data-cleansing-is-a-game-changer-for-ecommerce-stores/' },
@@ -98,8 +97,6 @@ export default function Resources() {
   const [active, setActive] = useState(TAB_IDS.includes(requestedTab) ? requestedTab : 'all')
   const [sort, setSort] = useState('latest')
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
-  const [email, setEmail] = useState('')
-  const [nl, setNl] = useState({ state: 'idle', msg: '' }) // newsletter form: idle | sending | done | error
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -148,26 +145,6 @@ export default function Resources() {
   const jsonLd = useMemo(() => visible.map((i) => (i.type === 'event'
     ? { '@context': 'https://schema.org', '@type': 'Event', name: i.title, description: i.excerpt, url: i.url, location: { '@type': 'Place', name: i.meta }, organizer: { '@type': 'Organization', name: 'AltiusNxt' } }
     : { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: i.title, description: i.excerpt, datePublished: i.sort, url: i.url, author: { '@type': 'Organization', name: 'AltiusNxt' } })), [visible])
-
-  // A real signup (POST /api/subscribe): the visitor stays on the page and sees the result, with no email program opening.
-  const subscribe = async (e) => {
-    e.preventDefault()
-    const address = email.trim()
-    if (!address || nl.state === 'sending') return
-    setNl({ state: 'sending', msg: '' })
-    try {
-      const r = await subscribeToNewsletter(address, 'resources', e.currentTarget.elements.website?.value || '')
-      setNl({
-        state: 'done',
-        msg: r.status === 'already'
-          ? 'You are already on the list. Thank you!'
-          : r.needsConfirmation ? 'Thank you! Please check your inbox and confirm your email address.' : 'Thank you for subscribing!',
-      })
-      setEmail('')
-    } catch (err) {
-      setNl({ state: 'error', msg: err.message })
-    }
-  }
 
   return (
     <>
@@ -319,36 +296,6 @@ export default function Resources() {
         </section>
       )}
 
-      {/* ---- Newsletter ---- */}
-      <section className="section bg-white" style={{ paddingTop: 8 }}>
-        <div className="wrap">
-          <div className="res-newsletter">
-            <span className="res-newsletter-icon"><Icon name="mail" size={34} /></span>
-            <div className="res-newsletter-copy">
-              <p className="kicker" style={{ margin: 0 }}>Stay updated</p>
-              <h2 style={{ margin: '4px 0 6px' }}>Get the latest insights in your inbox.</h2>
-              <p style={{ margin: 0, color: 'var(--steel)' }}>
-                Subscribe to receive new articles, case studies, event updates and practical guides
-                on product data, ecommerce and AI readiness.
-              </p>
-            </div>
-            <form className="res-newsletter-form" onSubmit={subscribe}>
-              <div className="res-newsletter-row">
-                <label className="res-newsletter-input">
-                  <Icon name="mail" size={16} />
-                  <input type="email" placeholder="Enter your email address" value={email} onChange={(e) => { setEmail(e.target.value); if (nl.state !== 'sending') setNl({ state: 'idle', msg: '' }) }} required aria-label="Email address" />
-                </label>
-                {/* hidden trap field: people never see or fill it, bots do */}
-                <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="res-newsletter-trap" />
-                <button type="submit" className="btn btn-primary" disabled={nl.state === 'sending'}>{nl.state === 'sending' ? 'Subscribing…' : <>Subscribe <Icon name="arrow" size={15} /></>}</button>
-              </div>
-              {nl.msg
-                ? <span className={`res-newsletter-msg ${nl.state}`} role={nl.state === 'error' ? 'alert' : 'status'}>{nl.msg}</span>
-                : <span className="res-newsletter-note">No spam. Unsubscribe anytime. See our <Link to="/privacy-policy">Privacy Policy</Link>.</span>}
-            </form>
-          </div>
-        </div>
-      </section>
     </>
   )
 }

@@ -54,7 +54,7 @@ export default function Header() {
                 {label}
               </NavLink>
             )))}
-          <a className="btn btn-primary header-cta" href="mailto:sales@altiusnxt.com"><Mail size={17} />Talk to a Product Data Expert</a>
+          <Link className="btn btn-primary header-cta" to="/contact#contact-form"><Mail size={17} />Talk to a Product Data Expert</Link>
         </nav>
         <button
           className="nav-toggle"
@@ -89,7 +89,7 @@ export default function Header() {
             })}
             <div className="nm-cta" style={{ '--i': navigation.length }}>
               <Link className="btn btn-primary" to="/ai-readiness-report" onClick={close}>Get free AI Readiness Report <ArrowRight size={16} /></Link>
-              <a className="btn btn-outline" href="mailto:sales@altiusnxt.com" onClick={close}>Talk to a Product Data Expert</a>
+              <Link className="btn btn-outline" to="/contact#contact-form" onClick={close}>Talk to a Product Data Expert</Link>
             </div>
           </nav>
         </>

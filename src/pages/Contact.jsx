@@ -62,7 +62,7 @@ export default function Contact() {
 
       <section className="ct-main">
         <div className="ct-wrap ct-grid">
-          <form className="ct-form" onSubmit={submit} noValidate={false} aria-describedby="ct-status">
+          <form id="contact-form" className="ct-form" onSubmit={submit} noValidate={false} aria-describedby="ct-status">
             {state === 'sent' ? (
               <div className="ct-done" role="status">
                 <span className="tick"><Check size={26} strokeWidth={3.2} /></span>
