@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BadgeCheck, Check, ImageOff, Minus, Search, ShoppingCart, X } from 'lucide-react'
+import { BadgeCheck, Check, ImageOff, Minus, Search, ShoppingCart } from 'lucide-react'
 import './LiveBeforeAfter.css'
 
-/* The visitor's own product page, before and after CatalogWiz, as one believable store page that changes state.
-   Before shows the listing exactly as it was scraped (with the gaps visible); After shows the enriched page. Switching
-   (or the first, automatic switch when the section scrolls into view) transforms the SAME page in place: the title,
-   description, identifiers, specifications, taxonomy and the data-quality indicators animate from one state to the other.
+/* The visitor's own product page, before and after CatalogWiz, as two different pages of the same store.
+   Before is the supplier's listing exactly as it was scraped: a plain, dated page showing only what the supplier
+   provided (nothing is shown for what is missing). After is the enriched, production-quality product page. Switching
+   (or the first, automatic switch when the section scrolls into view) cross-fades the two while the window resizes to fit,
+   then the filled-in gaps (new attributes, taxonomy, description, identifiers) appear one after another.
    Everything shown comes from the real enrichment result for the submitted URL, or from the sample product's data. */
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -71,36 +72,15 @@ function Product({ src }) {
   return <img src={src} alt="" onError={() => setBad(true)} />
 }
 
-/** Both states of one element share a cell, so the page never changes height; the inactive one is hidden (and not read out). */
-function Swap({ before, after, k = 0, className = '' }) {
-  return (
-    <span className={`lba-sw ${className}`} style={{ '--k': k }}>
-      <span className="b">{before}</span>
-      <span className="a">{after}</span>
-    </span>
-  )
-}
-
-function Shell({ host, shownUrl, children }) {
-  return (
-    <div className="lba-page">
-      <div className="lba-bar"><i /><i /><i /><span title={shownUrl}>{shownUrl}</span></div>
-      <div className="lba-nav">
-        <b><i />{host}</b>
-        <span className="lba-find"><Search size={13} />Search products or part numbers</span>
-        <ShoppingCart size={16} />
-      </div>
-      {children}
-    </div>
-  )
-}
-
 export default function LiveBeforeAfter({ r }) {
   const rootRef = useRef(null)
+  const rawRef = useRef(null)
+  const richRef = useRef(null)
   const timer = useRef(0)
   const touched = useRef(false)
   const [seen, setSeen] = useState(false)
   const [mode, setMode] = useState(() => (prefersReducedMotion() ? 'after' : 'before'))
+  const [hs, setHs] = useState({ raw: 0, rich: 0 })
   const after = mode === 'after'
 
   const attrs = r.after.attributes
@@ -122,33 +102,47 @@ export default function LiveBeforeAfter({ r }) {
   const sources = (r.sources || []).map((s) => s.title).slice(0, 3)
   const shownUrl = r.displayUrl || r.host
 
-  // identity strip: one row per identifier, with what the page had (or a visible gap) and what CatalogWiz settled on
-  const idRows = afterId.map(([label, value, own]) => ({ label, after: value, before: attrs.find((a) => a.label === own)?.before || '' }))
-  // specification table: the enriched attributes (identity shown above), each with the supplier's own value or a visible gap
-  const beforeMap = useMemo(() => new Map(before.map(([l, v]) => [norm(l), v])), [before])
+  // BEFORE: only what the supplier gave. Identifiers as plain lines, everything else in a plain table.
+  const beforeGrid = before.filter(([l]) => !beforeId.some((row) => row[2] === l))
+  // AFTER: identifiers in a strip, everything else in the specification table; rows CatalogWiz added are flagged
   const specRows = useMemo(() => {
+    let k = 0
     const rows = attrs
       .filter((a) => !afterId.some((row) => row[2] === a.label))
-      .map((a) => ({ label: a.label, before: a.before || beforeMap.get(norm(a.label)) || '', after: a.value, kind: !a.before ? 'add' : isTidied(a) ? 'fix' : 'same' }))
+      .map((a) => {
+        const kind = !a.before ? 'add' : isTidied(a) ? 'fix' : 'same'
+        return { label: a.label, value: a.value, kind, k: kind === 'same' ? 0 : k++ }
+      })
     for (const [l, v] of before) { // anything the supplier listed that the enriched record does not carry stays as it was
-      if (!attrs.some((a) => norm(a.label) === norm(l)) && !beforeId.some((row) => row[2] === l)) rows.push({ label: l, before: v, after: v, kind: 'same' })
+      if (!attrs.some((a) => norm(a.label) === norm(l)) && !beforeId.some((row) => row[2] === l)) rows.push({ label: l, value: v, kind: 'same', k: 0 })
     }
     return rows
-  }, [attrs, afterId, before, beforeId, beforeMap])
+  }, [attrs, afterId, before, beforeId])
 
-  // data-quality indicators, computed from the two states
+  // data-quality checks for the enriched page
   const depth = (c) => Math.max(0, c.length - 1)
-  const titleImproved = norm(r.before.title) !== norm(r.after.title)
   const checks = [
-    { label: 'Search-ready title', b: Boolean(r.before.title) && !titleImproved, a: Boolean(r.after.title), bd: titleImproved ? 'Supplier wording' : 'As listed', ad: 'Brand, product and key specs' },
-    { label: 'Product description', b: Boolean(r.before.description), a: Boolean(r.after.description), bd: 'Missing', ad: 'Written from the datasheet' },
-    { label: 'Category path', b: depth(beforeCrumbs) >= 3, a: depth(afterCrumbs) >= 3, bd: `${depth(beforeCrumbs)} level${depth(beforeCrumbs) === 1 ? '' : 's'}`, ad: `${depth(afterCrumbs)} levels` },
-    { label: 'Manufacturer part number', b: beforeId.some((row) => MPN_RE.test(row[0])), a: afterId.some((row) => row[0] === 'Mfr. Part Number'), bd: 'Not stated', ad: 'Stated and checked' },
-    { label: sample ? 'Human verified' : 'Checked against sources', b: false, a: sample || sources.length > 0, bd: 'No', ad: sample ? 'Signed off by a specialist' : 'Page and manufacturer data' },
+    { label: 'Search-ready title', ok: Boolean(r.after.title), note: 'Brand, product and key specs' },
+    { label: 'Product description', ok: Boolean(r.after.description), note: r.after.description ? 'Written from the datasheet' : 'Not enough evidence to write one' },
+    { label: 'Category path', ok: depth(afterCrumbs) >= 3, note: `${depth(afterCrumbs)} level${depth(afterCrumbs) === 1 ? '' : 's'}` },
+    { label: 'Manufacturer part number', ok: afterId.some((row) => row[0] === 'Mfr. Part Number'), note: 'Stated and checked' },
+    { label: sample ? 'Human verified' : 'Checked against sources', ok: sample || sources.length > 0, note: sample ? 'Signed off by a specialist' : 'Page and manufacturer data' },
   ]
   const total = Math.max(1, attrs.length)
   const count = useCount(after ? attrs.length : before.length)
   const pct = Math.round((count / total) * 100)
+
+  /* the window is as tall as the page being shown, and resizes smoothly when the page changes */
+  useEffect(() => {
+    const measure = () => setHs({ raw: rawRef.current?.offsetHeight || 0, rich: richRef.current?.offsetHeight || 0 })
+    measure()
+    if (!('ResizeObserver' in window)) return undefined
+    const ro = new ResizeObserver(measure)
+    ro.observe(rawRef.current)
+    ro.observe(richRef.current)
+    return () => ro.disconnect()
+  }, [])
+  const pageH = after ? hs.rich : hs.raw
 
   /* on arrival: the original page, then one automatic switch to the enriched page; after that the visitor is in control */
   useEffect(() => {
@@ -158,7 +152,7 @@ export default function LiveBeforeAfter({ r }) {
     const io = new IntersectionObserver(([e]) => {
       if (e.isIntersecting && !started) {
         started = true
-        timer.current = window.setTimeout(() => { if (!touched.current) setMode('after') }, 1700)
+        timer.current = window.setTimeout(() => { if (!touched.current) setMode('after') }, 1800)
       }
     }, { threshold: window.innerWidth < 768 ? 0.04 : 0.3 })
     io.observe(rootRef.current)
@@ -192,112 +186,107 @@ export default function LiveBeforeAfter({ r }) {
         </div>
         <p className="lba-sr" aria-live="polite">{after ? 'Showing the enriched product page.' : 'Showing the original supplier page.'}</p>
 
+        <div className={`lba-status${after ? ' is-after' : ''}`}>
+          <span className="st-l">{after ? 'Enriched and verified' : 'Supplier listing'}</span>
+          <span className="st-bar" role="img" aria-label={`${count} of ${total} attributes`}><i style={{ width: `${pct}%` }} /></span>
+          <span className="st-r"><b>{count}</b> of {total} attributes<em>{pct}%</em></span>
+        </div>
+
         <div className={`lba-stage${after ? ' is-after' : ''}`}>
-          <Shell host={r.host} shownUrl={shownUrl}>
-            <nav className="lba-bc" aria-label="Breadcrumb">
-              <Swap
-                before={<ol>{beforeCrumbs.map((c, i) => <li key={`${c}-${i}`}>{c}</li>)}</ol>}
-                after={<ol>{afterCrumbs.map((c, i) => <li key={`${c}-${i}`}>{c}</li>)}</ol>}
-              />
-            </nav>
+          <div className="lba-bar"><i /><i /><i /><span title={shownUrl}>{shownUrl}</span></div>
 
-            <div className="lba-cols">
-              <aside className="lba-side">
-                <div className="lba-gal"><Product src={r.image} /></div>
-
-                <nav className="lba-tax" aria-label={sample ? 'Product taxonomy' : 'Category path'}>
-                  <small>{sample ? 'Taxonomy' : 'Category path'}</small>
-                  <Swap
-                    className="lba-tax-sw"
-                    before={<span className="gap">Not classified: the supplier file only has a flat category.</span>}
-                    after={taxonomy.length > 1
-                      ? <ol>{taxonomy.map((t, i) => <li key={`${t}-${i}`} style={{ '--d': i }}><span>{t}</span></li>)}</ol>
-                      : <span className="gap">The page states no category path.</span>}
-                    k={5}
-                  />
-                </nav>
-
-              </aside>
-
-              <div className="lba-info">
-                <p className="lba-brand">
-                  <Swap
-                    before={<em className="gap">Brand not listed</em>}
-                    after={<>{afterId.find((row) => row[0] === 'Mfr. Name')?.[1] || r.host}<span className="lba-ver"><BadgeCheck size={13} />{sample ? 'Human verified' : 'Verified'}</span></>}
-                    k={1}
-                  />
-                </p>
-                <h3 className="lba-title">
-                  <Swap before={<span className="raw">{r.before.title || 'No product title found'}</span>} after={r.after.title} k={0} />
-                </h3>
-
-                {idRows.length > 0 && (
-                  <dl className="lba-id">
-                    {idRows.map((row, i) => (
-                      <div key={row.label}>
-                        <dt>{row.label}</dt>
-                        <dd title={row.after}>
-                          {row.before && row.before === row.after
-                            ? row.after
-                            : <Swap before={row.before ? row.before : <em className="gap">Not listed</em>} after={row.after} k={i + 1} />}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-
-                <div className="lba-desc">
-                  <Swap
-                    before={<span className={r.before.description ? '' : 'gap'}>{r.before.description || 'No product description on the page.'}</span>}
-                    after={r.after.description || 'The page does not give enough detail to write a description without guessing.'}
-                    k={3}
-                  />
-                </div>
-
-                <div className="lba-cta"><span className="p">Request a quote</span></div>
-
-                <section className="lba-q" aria-label="Product data quality">
-                  <header>
-                    <b>Data quality</b>
-                    <span className={`lba-chip ${after ? 'ok' : 'bad'}`}>{after ? <Check size={10} strokeWidth={3.4} /> : null}{pct}%</span>
-                  </header>
-                  <div className="lba-meter" role="img" aria-label={`${count} of ${total} attributes`}>
-                    <i style={{ width: `${pct}%` }} />
+          <div className="lba-pages" style={pageH ? { height: pageH } : undefined}>
+            {/* BEFORE: the supplier's own page, plain, with only what they provided */}
+            <div className="lba-pg raw" ref={rawRef}>
+              <div className="rw-top"><b>{r.host}</b><span>Home</span><span>Products</span><span>About us</span><span>Contact</span></div>
+              <div className="rw-body">
+                <p className="rw-bc">{beforeCrumbs.map((c, i) => <span key={`${c}-${i}`}>{c}</span>)}</p>
+                <div className="rw-prod">
+                  <div className="rw-img"><Product src={r.image} /></div>
+                  <div className="rw-info">
+                    <h3>{r.before.title || 'No product title found'}</h3>
+                    {beforeId.map(([l, v]) => <p key={l} className="rw-line"><b>{l}:</b> {v}</p>)}
+                    {r.before.description ? <p className="rw-desc">{r.before.description}</p> : null}
+                    <span className="rw-btn">Request a quote</span>
                   </div>
-                  <p className="lba-count"><b>{count}</b> of {total} attributes{technical != null && after ? <>, {technical} technical</> : null}</p>
-                  <ul className="lba-checks">
-                    {checks.map((c, i) => {
-                      const ok = after ? c.a : c.b
-                      return (
-                        <li key={c.label} style={{ '--k': i }} className={ok ? 'ok' : 'no'}>
-                          <span className="ic">{ok ? <Check size={11} strokeWidth={3.4} /> : after ? <Minus size={11} strokeWidth={3.4} /> : <X size={11} strokeWidth={3.4} />}</span>
-                          <span className="tx"><b>{c.label}</b><small>{after ? c.ad : c.bd}</small></span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </section>
-
+                </div>
+                <h4>Specifications</h4>
+                {beforeGrid.length > 0 ? (
+                  <table className="rw-spec">
+                    <tbody>{beforeGrid.map(([l, v], i) => <tr key={`${l}-${i}`}><th scope="row">{l}</th><td>{v}</td></tr>)}</tbody>
+                  </table>
+                ) : <p className="rw-none">No specifications are listed on this page.</p>}
               </div>
+              <p className="rw-foot">© {r.host}</p>
             </div>
 
-            <section className="lba-card" aria-label="Specifications">
-              <header>
-                <b>Specifications</b>
-                <span className={`lba-chip ${after ? 'ok' : 'bad'}`}>{after ? <Check size={10} strokeWidth={3.4} /> : null}{count} {after ? 'attributes' : 'listed'}</span>
-              </header>
-              <ul className="lba-spec">
-                {specRows.map((a, i) => (
-                  <li key={`${a.label}-${i}`} className={a.kind} style={{ '--k': i }}>
-                    <em title={a.label}>{a.label}</em>
-                    {a.kind === 'same'
-                      ? <b title={a.after}>{a.after}</b>
-                      : <Swap before={a.before ? <b title={a.before}>{a.before}</b> : <b className="gap">Not listed</b>} after={<b title={a.after}>{a.after}</b>} k={i} className="val" />}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </Shell>
+            {/* AFTER: the enriched, production-quality page */}
+            <div className="lba-pg rich" ref={richRef}>
+              <div className="lba-nav">
+                <b><i />{r.host}</b>
+                <span className="lba-find"><Search size={13} />Search products or part numbers</span>
+                <ShoppingCart size={16} />
+              </div>
+              <nav className="lba-bc" aria-label="Breadcrumb"><ol>{afterCrumbs.map((c, i) => <li key={`${c}-${i}`}>{c}</li>)}</ol></nav>
+
+              <div className="lba-cols">
+                <aside className="lba-side">
+                  <div className="lba-gal in" style={{ '--k': 0 }}><Product src={r.image} /></div>
+                  {taxonomy.length > 1 && (
+                    <nav className="lba-tax in" style={{ '--k': 6 }} aria-label={sample ? 'Product taxonomy' : 'Category path'}>
+                      <small>{sample ? 'Taxonomy' : 'Category path'}</small>
+                      <ol>{taxonomy.map((t, i) => <li key={`${t}-${i}`} style={{ '--d': i }}><span>{t}</span></li>)}</ol>
+                    </nav>
+                  )}
+                </aside>
+
+                <div className="lba-info">
+                  <p className="lba-brand in" style={{ '--k': 1 }}>
+                    {afterId.find((row) => row[0] === 'Mfr. Name')?.[1] || r.host}
+                    <span className="lba-ver"><BadgeCheck size={13} />{sample ? 'Human verified' : 'Verified'}</span>
+                  </p>
+                  <h3 className="lba-title in" style={{ '--k': 2 }}>{r.after.title}</h3>
+                  {afterId.length > 0 && (
+                    <dl className="lba-id in" style={{ '--k': 3 }}>
+                      {afterId.map(([l, v]) => <div key={l}><dt>{l}</dt><dd title={v}>{v}</dd></div>)}
+                    </dl>
+                  )}
+                  <p className="lba-desc in" style={{ '--k': 4 }}>{r.after.description || 'The page does not give enough detail to write a description without guessing.'}</p>
+                  <div className="lba-cta in" style={{ '--k': 5 }}><span className="p">Request a quote</span></div>
+
+                  <section className="lba-q in" style={{ '--k': 7 }} aria-label="Product data quality">
+                    <header>
+                      <b>Data quality</b>
+                      <span className="lba-chip ok"><Check size={10} strokeWidth={3.4} />{technical != null ? `${technical} technical attributes` : `${attrs.length} attributes`}</span>
+                    </header>
+                    <ul className="lba-checks">
+                      {checks.map((c, i) => (
+                        <li key={c.label} style={{ '--k': i }} className={c.ok ? 'ok' : 'no'}>
+                          <span className="ic">{c.ok ? <Check size={11} strokeWidth={3.4} /> : <Minus size={11} strokeWidth={3.4} />}</span>
+                          <span className="tx"><b>{c.label}</b><small>{c.note}</small></span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                </div>
+              </div>
+
+              <section className="lba-card" aria-label="Specifications">
+                <header>
+                  <b>Specifications</b>
+                  <span className="lba-chip ok"><Check size={10} strokeWidth={3.4} />{attrs.length} attributes</span>
+                </header>
+                <ul className="lba-spec">
+                  {specRows.map((a, i) => (
+                    <li key={`${a.label}-${i}`} className={`${a.kind}${a.kind === 'same' ? '' : ' in'}`} style={{ '--k': a.k }}>
+                      <em title={a.label}>{a.label}</em>
+                      <b title={a.value}>{a.value}</b>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </div>
         </div>
 
         <ul className="lba-points">
