@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Mail, Plus } from 'lucide-react'
 import './HomeFaq.css'
 
@@ -36,7 +37,7 @@ export default function HomeFaq() {
             <b>Still have a question?</b>
             <small>A Product Data Expert will reply with a clear answer, no sales pressure.</small>
             <div>
-              <a className="hq-mail" href="mailto:sales@altiusnxt.com"><Mail size={15} />Talk to an expert</a>
+              <Link className="hq-mail" to="/contact#contact-form"><Mail size={15} />Talk to an expert</Link>
             </div>
           </div>
         </div>

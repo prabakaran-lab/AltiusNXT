@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { MAP_SVG } from './globalMap.js'
 import './AboutGlobal.css'
 import Icon from '../components/ui/Icon.jsx'
@@ -70,7 +71,7 @@ export default function AboutGlobal() {
             manufacturers and distributors in 15+ countries.
           </p>
           <p className="ag-statement ag-r" style={{ '--d': '250ms' }}>One connected team. 15+ countries. Human-verified product data.</p>
-          <a className="ag-btn ag-r" style={{ '--d': '320ms' }} href="mailto:sales@altiusnxt.com?subject=Get%20in%20touch">Get in Touch <Icon name="arrow-right" /></a>
+          <Link className="ag-btn ag-r" style={{ '--d': '320ms' }} to="/contact#contact-form">Get in Touch <Icon name="arrow-right" /></Link>
         </div>
 
         {/* Desktop / tablet map */}

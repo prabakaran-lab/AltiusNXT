@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { ArrowRight, BarChart3, CalendarDays, Check, FileCheck2, FileText, Fingerprint, Link2, ListTree, Mail, MapPin, ScanSearch, ShieldCheck, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
 import badgeIso9001 from '../assets/awards/tuv-iso-9001.png'
@@ -284,7 +285,7 @@ export function NextSection() {
             <span className="rp-chip">Option A · Virtual</span>
             <h3>20-minute walkthrough</h3>
             <p>A screen-share with our catalog team to review the fuller audit: the AI query logs, your gaps and the proposed page rebuild. Bring your real revenue figures and we’ll replace the illustrative model with a precise one on the call.</p>
-            <a className="btn btn-primary" href="mailto:manoj@altiusnxt.com?subject=20-minute%20walkthrough%20of%20my%20AI%20Readiness%20Report">Book a walkthrough <ArrowRight size={16} /></a>
+            <RouterLink className="btn btn-primary" to="/contact#contact-form" target="_blank" rel="noopener">Book a walkthrough <ArrowRight size={16} /></RouterLink>
           </article>
           <article className="lv-card rv" style={{ '--d': 2 }}>
             <span className="rp-chip">Option B · Complimentary assessment</span>
