@@ -24,7 +24,7 @@ export async function sendDemoRequestNotification({ lead, url }) {
 
   await t.sendMail({
     from: `"AltiusNxt CatalogWiz demo" <${config.mail.user}>`,
-    to: config.mail.leadNotifyEmail,
+    to: [config.mail.leadNotifyEmail, ...config.mail.leadCopyEmails],
     replyTo: lead.email,
     subject: `New CatalogWiz enrichment demo request — ${lead.company}`,
     html: `

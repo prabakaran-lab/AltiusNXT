@@ -40,7 +40,7 @@ export async function sendLeadNotification({ lead, url, data, pdfBuffer }) {
 
   await t.sendMail({
     from: FROM(),
-    to: config.mail.leadNotifyEmail,
+    to: [config.mail.leadNotifyEmail, ...config.mail.leadCopyEmails],
     replyTo: lead.email,
     subject,
     html,
@@ -96,21 +96,21 @@ export async function sendReportToLead({ lead, pdfBuffer }) {
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
-export async function sendContactMessage({ name, email, company, topic, message }) {
+export async function sendContactMessage({ name, email, company, designation, message }) {
   const t = getTransporter()
   if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
   await t.sendMail({
     from: FROM(),
     to: config.mail.leadNotifyEmail,
     replyTo: `"${name.replace(/"/g, '')}" <${email}>`,
-    subject: `Website contact${topic ? ` (${topic})` : ''}: ${name}${company ? `, ${company}` : ''}`,
+    subject: `Website contact: ${name}${company ? `, ${company}` : ''}`,
     html: `
       <h2>New message from the website contact form</h2>
       <ul>
         <li><strong>Name:</strong> ${esc(name)}</li>
         <li><strong>Email:</strong> ${esc(email)}</li>
         ${company ? `<li><strong>Company:</strong> ${esc(company)}</li>` : ''}
-        ${topic ? `<li><strong>Topic:</strong> ${esc(topic)}</li>` : ''}
+        ${designation ? `<li><strong>Designation:</strong> ${esc(designation)}</li>` : ''}
       </ul>
       <p style="white-space:pre-wrap">${esc(message)}</p>
     `,

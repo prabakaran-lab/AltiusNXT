@@ -24,7 +24,7 @@ router.post('/contact', limiter, async (req, res) => {
     name: clip(b.name, 120),
     email: clip(b.email, 160),
     company: clip(b.company, 160),
-    topic: clip(b.topic, 60),
+    designation: clip(b.designation, 100),
     message: clip(b.message, 4000),
   }
   if (!msg.name || !msg.email || !msg.message) return res.status(400).json({ error: 'Please fill in your name, email and message.' })
