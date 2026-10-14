@@ -291,7 +291,7 @@ export function NextSection() {
             <span className="rp-chip">Option B · Complimentary assessment</span>
             <h3>Three products of your choice</h3>
             <p>Send us three product pages you care about most. No sales figures needed. We show you live how AI search responds to each one today, and what it would have to work with after enrichment. No proposal or commitment required.</p>
-            <a className="btn btn-outline" href="mailto:manoj@altiusnxt.com?subject=Three%20product%20pages%20for%20assessment&body=Product%20page%20URLs%3A%0A1.%0A2.%0A3.">Send three product pages</a>
+            <a className="btn btn-outline" href="mailto:govind@altiusnxt.com,manoj@altiusnxt.com?subject=Three%20product%20pages%20for%20assessment&body=Product%20page%20URLs%3A%0A1.%0A2.%0A3.">Send three product pages</a>
           </article>
         </div>
         <div className="tr rv">
