@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, Plus } from 'lucide-react'
+import { Check, Plus, Send } from 'lucide-react'
+import { sendContact } from '../services/api.js'
 import './HomeFaq.css'
 
 const QUESTIONS = [
@@ -14,10 +15,27 @@ const QUESTIONS = [
   ['Can we start with one category or a pilot?', 'Yes. Most teams start with a focused scope, such as one category or one product page. A Product Data Expert can agree a pilot with you before you decide on a wider rollout.'],
 ]
 
+const EMPTY = { name: '', email: '', company: '', designation: '', message: '', website: '' }
+
 export default function HomeFaq() {
   const ref = useRef(null)
   const [open, setOpen] = useState(0)
   const [seen, setSeen] = useState(false)
+  // the "Still have a question?" contact form (same API and fields as the Contact page)
+  const [f, setF] = useState(EMPTY)
+  const [state, setState] = useState('idle') // idle | sending | sent | error
+  const [err, setErr] = useState('')
+  const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }))
+  const submit = async (e) => {
+    e.preventDefault()
+    setState('sending'); setErr('')
+    try {
+      await sendContact(f)
+      setState('sent'); setF(EMPTY)
+    } catch (x) {
+      setState('error'); setErr(x.message || 'Something went wrong.')
+    }
+  }
 
   useEffect(() => {
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setSeen(true); io.disconnect() } }, { threshold: window.innerWidth < 768 ? 0.04 : 0.2 })
@@ -33,12 +51,35 @@ export default function HomeFaq() {
           <h2 id="hq-title">Answers before you <em>get started.</em></h2>
           <p className="hq-sub">The questions teams ask before choosing a product-data workflow or an AI diagnostic.</p>
 
-          <div className="hq-help">
+          <div className="hq-help hq-formcard">
             <b>Still have a question?</b>
             <small>A Product Data Expert will reply with a clear answer, no sales pressure.</small>
-            <div>
-              <Link className="hq-mail" to="/contact#contact-form"><Mail size={15} />Talk to an expert</Link>
-            </div>
+            {state === 'sent' ? (
+              <div className="hq-done" role="status">
+                <span className="tick"><Check size={20} strokeWidth={3.2} /></span>
+                <strong>Message sent</strong>
+                <p>Thank you. We have emailed you a confirmation and a Product Data Expert will reply shortly.</p>
+                <button type="button" className="hq-again" onClick={() => setState('idle')}>Send another message</button>
+              </div>
+            ) : (
+              <form className="hq-form" onSubmit={submit}>
+                <div className="hq-row">
+                  <label><span>Your name <i>*</i></span><input name="name" autoComplete="name" required value={f.name} onChange={set('name')} placeholder="Jane Doe" /></label>
+                  <label><span>Work email <i>*</i></span><input name="email" type="email" autoComplete="email" required value={f.email} onChange={set('email')} placeholder="jane@company.com" /></label>
+                </div>
+                <div className="hq-row">
+                  <label><span>Company</span><input name="company" autoComplete="organization" value={f.company} onChange={set('company')} placeholder="Company name" /></label>
+                  <label><span>Designation</span><input name="designation" autoComplete="organization-title" value={f.designation} onChange={set('designation')} placeholder="Head of eCommerce" /></label>
+                </div>
+                <label><span>How can we help? <i>*</i></span><textarea name="message" rows={3} required minLength={10} value={f.message} onChange={set('message')} placeholder="Tell us about your catalog and what you would like to improve." /></label>
+                <input className="hq-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.website} onChange={set('website')} />
+                <div className="hq-actions">
+                  <button type="submit" className="hq-send" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : <>Send message <Send size={15} /></>}</button>
+                  <small>By sending, you agree to our <Link to="/privacy-policy">Privacy Policy</Link>.</small>
+                </div>
+                <p className={`hq-err${state === 'error' ? ' on' : ''}`} role="alert">{state === 'error' && err}</p>
+              </form>
+            )}
           </div>
         </div>
 
