@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import booth from '../assets/events/booth.webp'
 import ceo from '../assets/events/ceo-booth.webp'
 import visitors from '../assets/events/visitors.webp'
@@ -33,7 +34,7 @@ export default function AboutEvents() {
           <p className="aev-next">
             <b>Next:</b> B2B eCommerce World Americas · Nov 2–3, 2026 · JW Marriott Indianapolis. Bring one product page and we'll check it live.
           </p>
-          <a className="aev-btn" href="mailto:sales@altiusnxt.com?subject=Book%20a%20meeting%20at%20B2B%20eCommerce%20World%20Americas">Book a meeting at the show</a>
+          <Link className="aev-btn" to={`/contact?message=${encodeURIComponent('I would like to book a meeting at B2B eCommerce World Americas (Nov 2–3, 2026, JW Marriott Indianapolis).')}#contact-form`}>Book a meeting at the show</Link>
         </header>
         <div className="aev-grid">
           {SHOTS.map((x, i) => (
