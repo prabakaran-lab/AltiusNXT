@@ -1,9 +1,14 @@
-import { fetchPageHtml, extractReadableText, isJsBlockedText, extractJsonLdObjects } from './scrapeDo.js'
+import { chromium } from 'playwright'
+import { fetchPageHtml, extractReadableText, isJsBlockedText, isBotChallengeText, extractJsonLdObjects } from './scrapeDo.js'
 import { askGeminiTextWithSearch, extractSellerPrices, filterRelevantSellers } from './gemini.js'
 import { callOpenAIWithSearch } from './liveEngines.js'
 import { isGeminiConfigured, isOpenAIConfigured } from '../config.js'
+import { CURRENCY_SYMBOLS, isForeignCurrencyPrice, regionSellerClause } from './region.js'
 
 const MAX_SELLERS = 10
+// Sellers priced outside the prospect's currency are dropped only when at least this many in-region
+// sellers remain; below that they are kept and marked as supplementary.
+const MIN_IN_REGION_SELLERS = 3
 // How far a seller's price can sit from the group median before it's treated as a different
 // unit/quantity (e.g. single unit vs. a box of 10) rather than a genuinely comparable price,
 // and dropped from the price chart. Wide enough to allow real price spread, narrow enough to
@@ -30,6 +35,41 @@ export function isSameSeller(a, b) {
   return short.length >= 3 && long.startsWith(short)
 }
 
+const nameTokens = (name) => String(name || '').toLowerCase()
+  .replace(/\([^)]*\)/g, ' ')
+  .replace(/\.(com|com\.au|co\.uk|co|net|store)\b/g, '')
+  .split(/[^a-z0-9]+/).filter(Boolean)
+
+/**
+ * Builds a test for "is this seller name the prospect itself?". A business is named several ways —
+ * "Acme Tools", "Acme Industrial Tools", "acmetools.com" — so besides the exact / substring match, a
+ * name also counts when it contains every DISTINCTIVE word of the prospect's name. The distinctive
+ * words are read from the prospect's own domain: the leading words of its name that spell the start
+ * of the domain ("kitts" + "tools" in "kittstools.com"). Words that are not part of the domain
+ * ("Industrial") are free to differ, and a name that shares only a generic word is not the prospect.
+ */
+export function prospectNameMatcher({ names = [], domain = '' } = {}) {
+  const stem = normalizeSellerName(String(domain || '').split('.')[0])
+  const keys = [...names.map(normalizeSellerName), stem].filter((k) => k.length >= 4)
+  const distinctive = names.map((n) => {
+    const run = []
+    let spelled = ''
+    for (const t of nameTokens(n)) {
+      if (!stem || !stem.startsWith(spelled + t)) break
+      run.push(t)
+      spelled += t
+    }
+    return run.join('').length >= 4 ? run : []
+  }).filter((run) => run.length)
+  return (sellerName) => {
+    const key = normalizeSellerName(sellerName)
+    if (!key) return false
+    if (keys.some((p) => key === p || key.includes(p) || p.includes(key))) return true
+    const tokens = new Set(nameTokens(sellerName))
+    return distinctive.some((run) => run.every((t) => tokens.has(t)))
+  }
+}
+
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
@@ -52,16 +92,37 @@ const PROMO_CONTEXT_RE = /\b(free\s+shipping|shipping\s+on\s+orders?|orders?\s+o
 // check the first match is the wrong one.
 const STRIKE_CONTEXT_RE = /\b(msrp|rrp|was|list price|retail price|compare at|regular price|you save|save)\b\s*:?\s*$/i
 
-export function extractPriceSignals(text) {
+// Currency markers the default pattern in extractPriceSignals already reads.
+const DEFAULT_PRICE_MARKERS = new Set(['$', 'A$', 'US$', 'NZ$', 'CA$', '£', '€'])
+
+// For a market whose currency the default pattern doesn't read (an "R" price in South Africa, "₹" in
+// India, "S$", "RM", ...): a pattern for that currency's symbol or ISO code, so its prices count too.
+// Used only once the market is known, because a bare letter such as "R" is not a price marker elsewhere.
+function marketPricePattern(currencyCode) {
+  const code = String(currencyCode || '').toUpperCase()
+  const symbol = String(CURRENCY_SYMBOLS[code] || '').trim()
+  const markers = [...new Set([symbol, code].filter((m) => m && !DEFAULT_PRICE_MARKERS.has(m)))]
+  if (!markers.length) return null
+  const esc = (m) => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(?<![A-Za-z])(${markers.map(esc).join('|')})\\s?(\\d{1,3}(?:[, ]\\d{3})+(?:\\.\\d{2})?|\\d{1,6}(?:\\.\\d{2})?)`, 'g')
+}
+
+export function extractPriceSignals(text, { currencyCode } = {}) {
   // Thousands separators are part of the number ("$4,450.00"), never a decimal comma — the old
   // pattern read "$4,672.50" as "4,67" → 467, which then poisoned every price-derived figure.
-  const matches = [...text.matchAll(/(A\$|US\$|NZ\$|CA\$|[$£€])\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d{1,6}(?:\.\d{2})?)/g)]
+  const marketRe = marketPricePattern(currencyCode)
+  const matches = [
+    ...text.matchAll(/(A\$|US\$|NZ\$|CA\$|[$£€])\s?(\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d{1,6}(?:\.\d{2})?)/g),
+    ...(marketRe ? text.matchAll(marketRe) : []),
+  ].sort((a, b) => a.index - b.index)
+    // "S$49.90" is also seen by the plain "$" pattern as "$49.90": keep only the longer, fuller match.
+    .filter((m, _, all) => !all.some((o) => o !== m && o.index < m.index && o.index + o[0].length >= m.index + m[0].length))
   const out = []
   for (const m of matches) {
     const windowStart = Math.max(0, m.index - 40)
     const windowEnd = Math.min(text.length, m.index + m[0].length + 20)
     if (PROMO_CONTEXT_RE.test(text.slice(windowStart, windowEnd))) continue
-    const value = Number(m[2].replace(/,/g, ''))
+    const value = Number(m[2].replace(/[, ]/g, ''))
     if (!(value > 0 && value < 1000000)) continue
     const before = text.slice(windowStart, m.index).trim()
     out.push({ raw: `${m[1]}${m[2]}`, value, isStrike: STRIKE_CONTEXT_RE.test(before) })
@@ -75,7 +136,7 @@ export function extractPriceSignals(text) {
  * — authoritative where present, and immune to the "MSRP shown before sale price" ordering trap.
  */
 export function extractPriceFromHtml(html) {
-  const symbolFor = (cur) => ({ USD: '$', AUD: 'A$', NZD: 'NZ$', CAD: 'CA$', GBP: '£', EUR: '€' }[String(cur || '').toUpperCase()] || '$')
+  const symbolFor = (cur) => CURRENCY_SYMBOLS[String(cur || '').toUpperCase()] || '$'
   const fmt = (value, cur) => `${symbolFor(cur)}${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   const toValue = (v) => Number(String(v ?? '').replace(/[^0-9.]/g, ''))
 
@@ -129,6 +190,175 @@ export function priceToValue(raw) {
   return m ? Number(m[0].replace(/,/g, '')) : NaN
 }
 
+/** How many single items a priced unit holds: "box of 25" / "25-pack" / "per 25-piece package" /
+ *  "per 100" → that number; "each", "per piece" or nothing stated → 1. Used to put every seller's
+ *  price on the same footing (per single item) before they are charted and ranked. */
+export function parsePackQuantity(unitText) {
+  const t = String(unitText || '').toLowerCase()
+  if (!t) return 1
+  const patterns = [
+    /(?:pack|package|pkg|box|case|carton|bag|set|lot|bundle)\s*(?:of|x)\s*(\d{1,4})\b/,
+    /\b(\d{1,4})\s*[- ]?\s*(?:pack|pk|pkg|package|piece|pieces|pc|pcs|ct|count)\b/,
+    /\bper\s+(\d{1,4})\b/,
+    /\b(\d{1,4})\s*\/\s*(?:box|case|pack|pk)\b/,
+  ]
+  for (const re of patterns) {
+    const m = t.match(re)
+    if (m) {
+      const n = Number(m[1])
+      if (n > 1 && n <= 5000) return n
+    }
+  }
+  if (/\b(?:the |a )?pair\b/.test(t)) return 2
+  return 1
+}
+
+/** Re-expresses a listed price as a price per single item, keeping what was listed so the report
+ *  can say how it got there. Prices that are already per item come back unchanged. */
+export function toPerUnit({ price, priceValue, unit }) {
+  const qty = parsePackQuantity(unit)
+  // Just the amount ("$4.52"), without the words an engine tacked on ("per wheel", "for the pair").
+  const listed = (String(price || '').match(/^\s*[^\d\s]*\s?\d[\d,]*(?:\.\d+)?/) || [String(price || '')])[0].trim()
+  if (qty <= 1 || !(priceValue > 0)) return { price: listed || price, priceValue, packQty: 1, listedPrice: listed || price }
+  const perItem = priceValue / qty
+  const symbol = (String(price || '').match(/^\s*([^\d\s]*)/) || [])[1] || '$'
+  return { price: `${symbol}${perItem.toFixed(2)}`, priceValue: perItem, packQty: qty, listedPrice: listed }
+}
+
+/** Every http(s) link in some AI answers (tracking parameters removed) — the engines name the
+ *  exact product pages they found, which is where a seller's spec depth should be measured. */
+export function extractUrls(...texts) {
+  const out = []
+  for (const text of texts) {
+    for (const m of String(text || '').matchAll(/https?:\/\/[^\s)\]>"'`]+/g)) {
+      try {
+        const u = new URL(m[0].replace(/[.,;]+$/, ''))
+        for (const k of [...u.searchParams.keys()]) if (/^utm_|^ref$|^srsltid$/i.test(k)) u.searchParams.delete(k)
+        out.push(u.toString())
+      } catch { /* not a URL */ }
+    }
+  }
+  return [...new Set(out)]
+}
+
+const NOT_A_SELLER_HOST = /(^|\.)(amazon|ebay|walmart|alibaba|aliexpress|etsy|facebook|youtube|pinterest|reddit|wikipedia|waze|google|bing|yelp|mapquest|linkedin|instagram|twitter|x|tiktok)\./i
+
+// The text of a page as a real browser shows it — for sites that refuse plain downloads or only
+// draw their content with JavaScript.
+async function renderedPageText(browser, url) {
+  const page = await browser.newPage()
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 })
+    await page.waitForTimeout(1800)
+    return await page.evaluate(() => (document.body?.innerText || '').slice(0, 20000))
+  } finally {
+    await page.close().catch(() => {})
+  }
+}
+
+// A page whose plain download shows fewer labelled spec fields than this is read again in a real
+// browser: specification tables are often filled in by JavaScript, so a plain download can show 0
+// for a page that really lists them. Same figure as the "enough specifications" bar used elsewhere.
+export const SPEC_RECHECK_BELOW = 4
+
+/** Spec-field count of a page as a real browser shows it (visible text, nothing clicked), or null if unreadable. */
+async function renderedSpecCount(url, getBrowser) {
+  try {
+    const text = await renderedPageText(await getBrowser(), url)
+    return text.length >= 200 && !isBotChallengeText(text) ? countSpecCues(text) : null
+  } catch { return null }
+}
+
+/**
+ * Spec depth of the competitors the AIs actually pointed at: reads each linked product page (one per
+ * seller) and counts its labelled specification fields — the same measure used for the prospect's
+ * own page. A plain download is tried first; if the page refuses it or needs JavaScript, a real
+ * browser reads it. A page that still can't be read is left out (not counted as 0 fields).
+ * Returns [{ seller, url, specCount }].
+ */
+export async function measureSpecDepthFromUrls({ urls, sellerNames = [], excludeDomain, limit = 5, productCode = '' }) {
+  // A competitor's page only says something about this product if it shows the product's own part
+  // number. Letters and digits only, so "49-16-28PS" and "4916 28 PS" are the same number.
+  const codeKey = String(productCode || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const checkCode = codeKey.length >= 4 && /[0-9]/.test(codeKey) // only a real-looking part number is worth matching
+  const showsProduct = (text) => !checkCode || String(text).toLowerCase().replace(/[^a-z0-9]/g, '').includes(codeKey)
+  const depth = (u) => u.pathname.split('/').filter(Boolean).length
+  const candidates = []
+  for (const raw of urls || []) {
+    try {
+      const u = new URL(raw)
+      const host = u.hostname.replace(/^www\./, '')
+      if (depth(u) < 1 || NOT_A_SELLER_HOST.test(host) || (excludeDomain && host.includes(excludeDomain))) continue
+      candidates.push({ url: u.toString(), host, depth: depth(u) })
+    } catch { /* skip */ }
+  }
+  // one page per seller (the deepest, most product-like URL), a handful at most
+  const picks = []
+  for (const c of candidates.sort((a, b) => b.depth - a.depth)) {
+    if (picks.some((p) => p.host === c.host)) continue
+    picks.push(c)
+    // Read a few more pages than needed: the ones that turn out not to show the product are dropped.
+    if (picks.length >= (checkCode ? limit * 2 : limit)) break
+  }
+  if (!picks.length) return []
+
+  const labelFor = (host) => {
+    const stem = normalizeSellerName(host.split('.')[0])
+    const named = sellerNames.find((n) => {
+      const k = normalizeSellerName(n)
+      return k.length >= 4 && stem.length >= 4 && (k === stem || k.includes(stem) || stem.includes(k))
+    })
+    return named || host.split('.')[0].replace(/[-_]+/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
+  }
+
+  let browser = null
+  const getBrowser = async () => (browser ||= await chromium.launch({ headless: true }))
+  try {
+    const results = await Promise.all(picks.map(async (p) => {
+      let text = ''
+      try {
+        const { html } = await fetchPageHtml(p.url)
+        text = extractReadableText(html, 6000)
+      } catch { /* fall through to the browser */ }
+      let count = text.length >= 200 && !isJsBlockedText(text) && !isBotChallengeText(text) ? countSpecCues(text) : null
+      let seen = text
+      // A low or unreadable plain count is checked against the page as a browser renders it; the
+      // higher reading stands, and a page neither way can read is left out (never counted as 0).
+      if (count === null || count < SPEC_RECHECK_BELOW || !showsProduct(seen)) {
+        try {
+          const rendered = await renderedPageText(await getBrowser(), p.url)
+          if (rendered.length >= 200 && !isBotChallengeText(rendered)) {
+            count = Math.max(count ?? 0, countSpecCues(rendered))
+            seen += ` ${rendered}`
+          }
+        } catch { /* keep the plain reading */ }
+      }
+      if (count === null || !showsProduct(seen)) return null
+      return { seller: labelFor(p.host), url: p.url, specCount: count }
+    }))
+    return results.filter(Boolean).slice(0, limit)
+  } finally {
+    if (browser) await browser.close().catch(() => {})
+  }
+}
+
+// The product page the AIs linked for a seller: same business by domain, preferring a deep
+// product URL over a homepage.
+export function findKnownUrl(sellerName, knownUrls, excludeDomain) {
+  const key = normalizeSellerName(sellerName)
+  if (key.length < 4) return null
+  const matches = (knownUrls || []).filter((u) => {
+    try {
+      const host = new URL(u).hostname.replace(/^www\./, '')
+      if (excludeDomain && host.includes(excludeDomain)) return false
+      const stem = normalizeSellerName(host.split('.')[0])
+      return stem.length >= 4 && (stem === key || key.includes(stem) || stem.includes(key))
+    } catch { return false }
+  })
+  const depth = (u) => { try { return new URL(u).pathname.split('/').filter(Boolean).length } catch { return 0 } }
+  return matches.sort((a, b) => depth(b) - depth(a))[0] || null
+}
+
 /**
  * Finds real sellers of the identical product and their prices via a live-web-search-grounded
  * LLM call (same engines already used for the citation audit), then extracts a structured list.
@@ -137,7 +367,7 @@ export function priceToValue(raw) {
  * dependency entirely using infrastructure already proven to work in this pipeline. Each found
  * seller's own page is then lightly scraped (best-effort, never fatal) for a spec-depth count.
  */
-export async function benchmarkCompetitors({ manufacturerBrand, manufacturerCode, productName, category, excludeDomain, excludeCompany }) {
+export async function benchmarkCompetitors({ manufacturerBrand, manufacturerCode, productName, category, excludeDomain, excludeCompany, region, knownUrls }) {
   const codeRegex = manufacturerCode ? new RegExp(manufacturerCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null
   if (!manufacturerBrand && !manufacturerCode && !productName) {
     throw new Error('Need at least a manufacturer brand, code, or product name to search for competitors')
@@ -149,11 +379,17 @@ export async function benchmarkCompetitors({ manufacturerBrand, manufacturerCode
   // quoting it verbatim as a search term returns nothing from anyone else.
   const query = [manufacturerBrand, manufacturerCode].filter(Boolean).join(' ').trim() || productName
   const naturalDescription = [manufacturerBrand, category || productName].filter(Boolean).join(' ')
-  const searchPrompt = `Find real online stores that currently sell ${naturalDescription} — specifically the variant described as ` +
-    `"${manufacturerCode || productName}". For each real seller you find (even if it's a similar or closely matching variant from the ` +
-    `same manufacturer), state the store/seller name, the exact current price, whether it is currently in stock or sold out / ` +
-    `unavailable, and the exact configuration or part number that price is for, as plain sentences. Include the manufacturer's own ` +
-    `store or official distributor if it sells direct. List as many distinct real sellers as you can find, with their prices.`
+  // Same market as the prospect: a South African store is compared with South African sellers in
+  // rand, not with US listings in dollars.
+  const country = region?.country || ''
+  // The one shared seller-region sentence (empty unless the region is known with confidence).
+  const sellerRegion = regionSellerClause(region)
+  const regionClause = sellerRegion ? ` ${sellerRegion}` : ''
+  const searchPrompt = `Find real online stores${country ? ` in ${country}` : ''} that currently sell ${naturalDescription} — specifically the variant described as ` +
+    `"${manufacturerCode || productName}". For each real seller you find, state the store/seller name, the exact current price, ` +
+    `whether it is currently in stock or sold out / unavailable, and the exact configuration or part number that price is for ` +
+    `(say plainly if it is a different variant, size or pack), as plain sentences. Include the manufacturer's own ` +
+    `store or official distributor if it sells direct. List as many distinct real sellers as you can find, with their prices.${regionClause}`
 
   let searchText = ''
   if (isGeminiConfigured()) {
@@ -171,20 +407,29 @@ export async function benchmarkCompetitors({ manufacturerBrand, manufacturerCode
   if (debug) console.error(`[debug benchmarkCompetitors] query="${query}" searchText:`, JSON.stringify(searchText))
   if (!searchText) return { query, sellers: [] }
 
-  const { sellers: rawSellers } = await extractSellerPrices({ text: searchText, excludeCompany })
-  if (debug) console.error(`[debug benchmarkCompetitors] extracted ${rawSellers.length} seller/price pairs:`, JSON.stringify(rawSellers))
+  const { sellers: extractedSellers } = await extractSellerPrices({ text: searchText, excludeCompany, country, region })
+  if (debug) console.error(`[debug benchmarkCompetitors] extracted ${extractedSellers.length} seller/price pairs:`, JSON.stringify(extractedSellers))
+
+  // Region gate: a seller tagged as outside the prospect's country, or priced in an explicitly
+  // different currency, isn't a like-for-like comparison. Dropped whenever at least three in-region
+  // sellers remain; otherwise kept, flagged as supplementary, so the benchmark isn't left empty.
+  // The currency the extraction reported for a seller counts too, not only the symbol in its price text.
+  const outOfRegion = (s) => s.inRegion === false || isForeignCurrencyPrice(s.price, region?.currencyCode) ||
+    Boolean(region?.currencyCode && /^[A-Za-z]{3}$/.test(String(s.currency || '').trim()) && String(s.currency).trim().toUpperCase() !== region.currencyCode)
+  const inRegion = extractedSellers.filter((s) => !outOfRegion(s))
+  if (country && inRegion.length >= MIN_IN_REGION_SELLERS && inRegion.length < extractedSellers.length) {
+    console.log(`[outreach] dropped ${extractedSellers.length - inRegion.length} seller(s) priced outside ${country}: ${extractedSellers.filter(outOfRegion).map((s) => `${s.seller} ${s.price}`).join('; ')}`)
+  }
+  const rawSellers = !country || inRegion.length >= MIN_IN_REGION_SELLERS
+    ? inRegion.length ? inRegion : extractedSellers
+    : extractedSellers.map((s) => (outOfRegion(s) ? { ...s, supplementary: true } : s))
 
   // Dedupe by normalized name — the extraction prompt asks for this too, but a second pass here
   // catches variants the LLM missed (e.g. "Amazon" and "Amazon AU" slipping through as separate).
   // The prospect itself must never appear as its own competitor — matched by store name AND by
   // domain stem, since engines name a store several ways ("MyToolSupply", "My Tool Supply",
   // "mytoolsupply.com") and the typed company name may differ from the store's trading name.
-  const prospectKeys = [excludeCompany, excludeDomain ? excludeDomain.split('.')[0] : '']
-    .map(normalizeSellerName).filter((k) => k.length >= 4)
-  const isProspect = (name) => {
-    const key = normalizeSellerName(name)
-    return prospectKeys.some((p) => key === p || key.includes(p) || p.includes(key))
-  }
+  const isProspect = prospectNameMatcher({ names: [excludeCompany], domain: excludeDomain })
   // Open marketplaces mix third-party, used and grey-import listings under one name, so their
   // price isn't a comparable dealer price — the reference reports cite them in the query tables
   // but never rank them in the price benchmark.
@@ -209,15 +454,21 @@ export async function benchmarkCompetitors({ manufacturerBrand, manufacturerCode
 
   // Relevance gate: drop candidates the LLM surfaced that share a name/brand but are clearly a
   // different product line (e.g. "Browning Safes" for a Browning power-transmission part).
-  const relevant = await filterRelevantSellers({ sellers: deduped, productName, manufacturerBrand, category })
+  const relevant = await filterRelevantSellers({ sellers: deduped, productName, manufacturerBrand, manufacturerCode, category })
   if (debug && relevant.length !== deduped.length) {
     console.error(`[debug benchmarkCompetitors] relevance filter dropped ${deduped.length - relevant.length}:`,
       JSON.stringify(deduped.filter((d) => !relevant.includes(d)).map((d) => d.seller)))
   }
 
+  // Every seller's price per SINGLE item: a "$85.74 per 25-pack" is $3.43 here, so a pack price is
+  // never charted or ranked against a single-item price. The listed price is kept for the report.
   const withPrices = relevant
     .map((s) => ({ ...s, priceValue: priceToValue(s.price) }))
     .filter((s) => Number.isFinite(s.priceValue) && s.priceValue > 0)
+    .map((s) => {
+      const u = toPerUnit({ price: s.price, priceValue: s.priceValue, unit: `${s.unit || ''} ${s.price || ''}` })
+      return { ...s, ...u, unit: u.packQty > 1 ? 'each' : s.unit }
+    })
 
   // Outlier sanity filter: a price far from the group median usually means a different unit or
   // quantity slipped through (single unit vs. a box of 10), not a genuinely comparable price —
@@ -233,30 +484,49 @@ export async function benchmarkCompetitors({ manufacturerBrand, manufacturerCode
     : withPrices
 
   const sellers = []
+  let browser = null
+  const getBrowser = async () => (browser ||= await chromium.launch({ headless: true }))
+  const isProductUrl = (u) => { try { return new URL(u).pathname.split('/').filter(Boolean).length >= 1 } catch { return false } }
+  try {
   for (const s of sane) {
-    let specCount = 0
+    // null = not measured. A page that wouldn't load, or that only renders with JavaScript, tells
+    // us nothing about its spec depth — it must not be charted as "0 fields".
+    let specCount = null
     let showsCode = false
     try {
       // Best-effort only — a seller named by the LLM but not independently confirmed by scrape
       // still has a real, LLM-sourced price; we just can't add a spec-depth count for it.
+      // First choice is the product page the AIs actually linked for this seller; otherwise
       // "Intech Bearing Inc." → intechbearinginc.com; "theBigBearingStore.com" keeps its own domain.
       const sellerLower = s.seller.trim().toLowerCase()
-      const guessUrl = /^https?:\/\//i.test(s.seller)
+      const guessUrl = findKnownUrl(s.seller, knownUrls, excludeDomain) || (/^https?:\/\//i.test(s.seller)
         ? s.seller
         : /\.[a-z]{2,}$/.test(sellerLower) && !/\s/.test(sellerLower)
           ? `https://${sellerLower}`
-          : `https://${sellerLower.replace(/[^a-z0-9]/g, '')}.com`
+          : `https://${sellerLower.replace(/[^a-z0-9]/g, '')}.com`)
       if (excludeDomain && guessUrl.includes(excludeDomain)) continue
       const { html } = await fetchPageHtml(guessUrl)
       const sellerText = extractReadableText(html, 5000)
-      specCount = isJsBlockedText(sellerText) ? 0 : countSpecCues(sellerText)
       showsCode = codeRegex ? codeRegex.test(sellerText) : false
+      // Spec depth is a property of a PRODUCT page. A guessed site root (no path) is not one — it
+      // would read as "0 fields" for any store — so those sellers are left unmeasured here.
+      if (isProductUrl(guessUrl)) {
+        if (sellerText.length >= 200 && !isJsBlockedText(sellerText) && !isBotChallengeText(sellerText)) specCount = countSpecCues(sellerText)
+        // A low or unreadable plain count is checked against the page as a browser renders it.
+        if (specCount === null || specCount < SPEC_RECHECK_BELOW) {
+          const rendered = await renderedSpecCount(guessUrl, getBrowser)
+          if (rendered !== null) specCount = Math.max(specCount ?? 0, rendered)
+        }
+      }
     } catch {
       // seller name isn't a cleanly guessable domain, or the page didn't load — fine, keep the price
     }
-    sellers.push({ seller: s.seller, price: s.price, unit: s.unit || '', priceValue: s.priceValue, specCount, showsCode })
+    sellers.push({ seller: s.seller, price: s.price, unit: s.unit || '', priceValue: s.priceValue, listedPrice: s.listedPrice, packQty: s.packQty || 1, specCount, showsCode, supplementary: Boolean(s.supplementary) })
+  }
+  } finally {
+    if (browser) await browser.close().catch(() => {})
   }
 
   sellers.sort((a, b) => a.priceValue - b.priceValue)
-  return { query, sellers }
+  return { query, sellers, urls: extractUrls(searchText) }
 }

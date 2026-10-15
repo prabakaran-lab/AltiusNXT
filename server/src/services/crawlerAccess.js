@@ -35,7 +35,8 @@ async function checkOne(url, bot) {
  *  a site that explicitly allows or disallows GPTBot/ClaudeBot/etc. is a real differentiator. */
 async function fetchRobotsTxt(origin) {
   try {
-    const res = await fetch(`${origin}/robots.txt`, { signal: AbortSignal.timeout(10000) })
+    // Same browser identity as the first bot check: many sites refuse a request with no User-Agent.
+    const res = await fetch(`${origin}/robots.txt`, { headers: { 'User-Agent': BOTS[0].ua }, signal: AbortSignal.timeout(10000) })
     if (!res.ok) return { found: false, text: '', namesAiCrawlers: false }
     const text = await res.text()
     const aiCrawlerNames = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-User', 'Google-Extended', 'PerplexityBot']
@@ -46,21 +47,92 @@ async function fetchRobotsTxt(origin) {
   }
 }
 
+// robots.txt groups: each "User-agent" line (or run of them) followed by Allow / Disallow rules.
+function parseRobotsGroups(text) {
+  const groups = []
+  let current = null
+  let lastWasAgent = false
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, '').trim()
+    if (!line) continue
+    const m = line.match(/^([a-z-]+)\s*:\s*(.*)$/i)
+    if (!m) continue
+    const field = m[1].toLowerCase()
+    const value = m[2].trim()
+    if (field === 'user-agent') {
+      if (!current || !lastWasAgent) { current = { agents: [], rules: [] }; groups.push(current) }
+      current.agents.push(value.toLowerCase())
+      lastWasAgent = true
+    } else if ((field === 'allow' || field === 'disallow') && current) {
+      current.rules.push({ type: field, path: value })
+      lastWasAgent = false
+    } else {
+      lastWasAgent = false
+    }
+  }
+  return groups
+}
+
+function robotsPathMatches(rulePath, target) {
+  if (!rulePath) return false // an empty Disallow allows everything
+  const pattern = '^' + rulePath.replace(/[.+?^{}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+  try { return new RegExp(pattern).test(target) } catch { return false }
+}
+
+/** For one crawler, does robots.txt allow it to fetch this page? Uses the crawler's own group when
+ *  robots.txt names it, otherwise the "*" group; the longest matching rule wins (Allow on a tie).
+ *  Returns the rule that decided it, verbatim, so the report can quote it. */
+function robotsVerdictFor(groups, agentName, pathname) {
+  const name = agentName.toLowerCase()
+  const own = groups.filter((g) => g.agents.includes(name))
+  const matched = own.length ? own : groups.filter((g) => g.agents.includes('*'))
+  if (!matched.length) return { allowed: true, rule: '', group: '' }
+  let best = null
+  for (const g of matched) {
+    for (const r of g.rules) {
+      if (!robotsPathMatches(r.path, pathname)) continue
+      if (!best || r.path.length > best.path.length || (r.path.length === best.path.length && r.type === 'allow')) best = r
+    }
+  }
+  const group = own.length ? agentName : '*'
+  if (!best) return { allowed: true, rule: '', group }
+  return { allowed: best.type === 'allow', rule: `${best.type === 'allow' ? 'Allow' : 'Disallow'}: ${best.path}`, group }
+}
+
 /** Runs the 10-bot crawler-access test against one URL plus a robots.txt check against its
  *  origin. Never throws — a failed individual bot check just records ok:false for that bot. */
 export async function testCrawlerAccess(url) {
-  const origin = new URL(url).origin
+  const parsed = new URL(url)
   const [results, robots] = await Promise.all([
     Promise.all(BOTS.map((bot) => checkOne(url, bot))),
-    fetchRobotsTxt(origin),
+    fetchRobotsTxt(parsed.origin),
   ])
   const accessibleCount = results.filter((r) => r.ok).length
+  // What robots.txt itself says for this page, bot by bot — ground truth separate from whether the
+  // server happened to answer. Only meaningful when a robots.txt was actually found.
+  const groups = robots.found ? parseRobotsGroups(robots.text) : []
+  const robotsVerdicts = robots.found
+    ? BOTS.map((bot) => ({ agent: bot.label, ...robotsVerdictFor(groups, bot.label === 'Standard Browser' ? '*' : bot.label, parsed.pathname + parsed.search) }))
+    : []
+  // The AI assistants this report covers (Perplexity is not part of it). Blocked here means the
+  // site's own robots.txt tells that crawler not to fetch this page, whatever the server answers.
+  const REPORTED_AI_AGENTS = ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-User', 'Google-Extended']
+  const robotsBlockedAiAgents = robotsVerdicts
+    .filter((v) => !v.allowed && REPORTED_AI_AGENTS.includes(v.agent))
+    .map((v) => ({ agent: v.agent, rule: v.rule }))
   return {
     results,
     accessibleCount,
     totalBots: BOTS.length,
+    // The "Standard Browser" request is the control: when even that is refused, the site's bot
+    // protection is turning away our test client, so the per-crawler results say nothing about what
+    // the real crawlers can fetch. The report must not call those "blocked".
+    inconclusive: !results[0]?.ok,
     fullyAccessible: accessibleCount === BOTS.length,
     robotsTxtFound: robots.found,
     robotsTxtNamesAiCrawlers: robots.namesAiCrawlers,
+    robotsTxt: robots.text.slice(0, 4000),
+    robotsVerdicts,
+    robotsBlockedAiAgents,
   }
 }

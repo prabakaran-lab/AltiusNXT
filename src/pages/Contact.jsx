@@ -4,16 +4,15 @@ import { sendContact } from '../services/api.js'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import './Contact.css'
 
-const TOPICS = ['Talk to a Product Data Engineer', 'Free AI Readiness Report', 'CatalogWiz demo', 'Partnership or integration', 'Careers', 'Something else']
 const OFFICES = [
   { id: 'us', name: 'United States', addr: ['31700 West Thirteen Mile Road, Suite 205', 'Farmington Hills, MI 48334'], phones: [['', '+1 313 486 9697', '+13134869697']] },
   { id: 'in', name: 'India', addr: ['56-C, Bharathi Park, 2nd Cross', 'Saibaba Colony, Coimbatore, Tamil Nadu 641011'], phones: [['Sales', '+91 9952317740', '+919952317740'], ['Careers', '+91 7708182828', '+917708182828']] },
 ]
-const EMPTY = { name: '', email: '', company: '', designation: '', topic: TOPICS[0], message: '', website: '' }
+const EMPTY = { name: '', email: '', company: '', designation: '', message: '', website: '' }
 
 export default function Contact() {
   const ref = useRef(null)
-  const [f, setF] = useState(EMPTY)
+  const [f, setF] = useState(() => ({ ...EMPTY, message: new URLSearchParams(window.location.search).get('message') || '' }))
   const [state, setState] = useState('idle') // idle | sending | sent | error
   const [err, setErr] = useState('')
   const [seen, setSeen] = useState(false)
@@ -37,7 +36,7 @@ export default function Contact() {
     }
   }
 
-  const mailto = `mailto:sales@altiusnxt.com?subject=${encodeURIComponent(f.topic)}&body=${encodeURIComponent(`${f.message}\n\n${f.name}${f.designation ? `, ${f.designation}` : ''}${f.company ? `, ${f.company}` : ''}`)}`
+  const mailto = `mailto:sales@altiusnxt.com?subject=${encodeURIComponent('Website enquiry')}&body=${encodeURIComponent(`${f.message}\n\n${f.name}${f.designation ? `, ${f.designation}` : ''}${f.company ? `, ${f.company}` : ''}`)}`
 
   return (
     <div className={`ct${seen ? ' seen' : ''}`} ref={ref}>
@@ -62,7 +61,7 @@ export default function Contact() {
 
       <section className="ct-main">
         <div className="ct-wrap ct-grid">
-          <form className="ct-form" onSubmit={submit} noValidate={false} aria-describedby="ct-status">
+          <form id="contact-form" className="ct-form" onSubmit={submit} noValidate={false} aria-describedby="ct-status">
             {state === 'sent' ? (
               <div className="ct-done" role="status">
                 <span className="tick"><Check size={26} strokeWidth={3.2} /></span>
@@ -79,7 +78,7 @@ export default function Contact() {
                 </div>
                 <div className="ct-row">
                   <label><span>Company</span><input name="company" autoComplete="organization" value={f.company} onChange={set('company')} placeholder="Company name" /></label>
-                  <label><span>Designation</span><input name="designation" autoComplete="organization-title" value={f.designation} onChange={set('designation')} placeholder="e.g. Head of eCommerce" /></label>
+                  <label><span>Designation</span><input name="designation" autoComplete="organization-title" value={f.designation} onChange={set('designation')} placeholder="Head of eCommerce" /></label>
                 </div>
                 <label><span>How can we help? <i>*</i></span><textarea name="message" rows={6} required minLength={10} value={f.message} onChange={set('message')} placeholder="Tell us about your catalog, channels and what you would like to improve." /></label>
                 <input className="ct-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.website} onChange={set('website')} />

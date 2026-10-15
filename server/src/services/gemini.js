@@ -1,6 +1,7 @@
 import { config, isGeminiConfigured } from '../config.js'
+import { regionBuyerClause, regionSellerClause } from './region.js'
 
-async function callGeminiRaw(prompt, { json = true } = {}) {
+async function callGeminiRaw(prompt, { json = true, timeoutMs = 45000 } = {}) {
   if (!isGeminiConfigured()) {
     throw new Error('GEMINI_API_KEY is not configured on the server')
   }
@@ -16,7 +17,7 @@ async function callGeminiRaw(prompt, { json = true } = {}) {
         ...(json ? { responseMimeType: 'application/json' } : {}),
       },
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 
   if (!res.ok) {
@@ -45,14 +46,14 @@ function parseJsonLoose(text) {
   }
 }
 
-export async function callGemini(prompt, { retried = false } = {}) {
-  const text = await callGeminiRaw(prompt, { json: true })
+export async function callGemini(prompt, { retried = false, timeoutMs } = {}) {
+  const text = await callGeminiRaw(prompt, { json: true, timeoutMs })
   const parsed = parseJsonLoose(text)
   if (parsed !== null) return parsed
 
   if (!retried) {
     console.warn('[gemini] JSON parse failed, retrying once. Raw response (first 500 chars):', text.slice(0, 500))
-    return callGemini(prompt, { retried: true })
+    return callGemini(prompt, { retried: true, timeoutMs })
   }
 
   console.error('[gemini] JSON parse failed twice. Raw response (first 1000 chars):', text.slice(0, 1000))
@@ -70,7 +71,7 @@ export async function askGeminiText(prompt) {
  * GEMINI_API_KEY as the calls above — only the request body differs (tool declaration,
  * and no responseMimeType since grounded answers must be plain text).
  */
-export async function askGeminiTextWithSearch(prompt) {
+export async function askGeminiTextWithSearch(prompt, { timeoutMs = 45000 } = {}) {
   if (!isGeminiConfigured()) {
     throw new Error('GEMINI_API_KEY is not configured on the server')
   }
@@ -84,7 +85,7 @@ export async function askGeminiTextWithSearch(prompt) {
       tools: [{ google_search: {} }],
       generationConfig: { temperature: 0.4 },
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 
   if (!res.ok) {
@@ -127,8 +128,14 @@ Return strict JSON with this exact shape:
   "hasStructuredData": boolean,   // same as the JSON-LD flag passed in, echoed back
   "score": number,                // 0-100 AI-readiness score, weighted across the five checks above
   "topGaps": string[],            // 3-5 short, concrete gap statements, most important first
-  "headline": string              // one sentence a distributor owner would understand, e.g. "3 of 5 AI-readiness checks failed"
-}`
+  "headline": string,             // one sentence a distributor owner would understand, e.g. "3 of 5 AI-readiness checks failed"
+  "brandName": string,            // the manufacturer/brand as the page writes it, "" if the page names none
+  "brandEvidence": string,        // a short phrase COPIED EXACTLY from the page text where that brand is named, "" if none
+  "applicationEvidence": string,  // one sentence (max 200 chars) COPIED EXACTLY from the page text that says what the product is used for, "" if none
+  "specFields": [ { "label": string, "value": string } ]  // every labelled specification you can find in the page text — including inside specification / details sections — copied exactly (max 25); [] if none
+}
+Copy text exactly as written on the page — never paraphrase or invent. Anything you return in brandEvidence,
+applicationEvidence or specFields is checked against the page text, and is discarded if it does not appear there.`
 
   return callGemini(prompt)
 }
@@ -371,7 +378,10 @@ Return strict JSON with this exact shape:
  * leaving manufacturerBrand/manufacturerCode empty when genuinely not determinable rather than
  * inventing one, since downstream steps already degrade gracefully on an empty value.
  */
-export async function extractProductIdentityFromPage({ url, pageText }) {
+export async function extractProductIdentityFromPage({ url, pageText, jsonLd = '' }) {
+  // The page's own schema.org blocks (when it has any) state brand / mpn / sku in machine-readable
+  // form, so they are shown alongside the text. Trimmed so a huge block can't crowd out the page.
+  const ldBlock = String(jsonLd || '').trim().slice(0, 3000)
   const prompt = `You are extracting product identity from a single product page an AI-discoverability report will be built around.
 
 URL: ${url}
@@ -379,6 +389,13 @@ PAGE TEXT (truncated):
 """
 ${pageText.slice(0, 4000)}
 """
+JSON-LD / SCHEMA.ORG BLOCKS FOUND ON THE PAGE:
+"""
+${ldBlock || 'none'}
+"""
+Use the JSON-LD as evidence for brand / part number, but it can be wrong (a store often puts its OWN name in "brand"
+and its own stock number in "sku"). If the schema "brand" names the reseller rather than the real manufacturer, say so
+in "schemaConflicts".
 
 IMPORTANT — the seller's own internal SKU/item number is NOT the manufacturer code, even though it often appears
 right next to it on the page. Pick the identifier that matches the MANUFACTURER's own part-numbering convention
@@ -409,6 +426,8 @@ Return strict JSON with this exact shape:
                                           // title (e.g. "2-ply", "700 sheets", "individually wrapped", "bore 40mm") —
                                           // these drive category-level search queries, so pick ones a real buyer
                                           // would search by, not generic marketing words. [] if none are stated.
+  "schemaConflicts": string[]           // each place the JSON-LD contradicts the page or the real manufacturer (e.g. brand
+                                          // names the reseller); [] if there is no JSON-LD or no conflict
 }
 Be honest about manufacturerBrand/manufacturerCode — leave either "" rather than guessing if the page genuinely doesn't support it.`
 
@@ -416,37 +435,78 @@ Be honest about manufacturerBrand/manufacturerCode — leave either "" rather th
 }
 
 /**
- * Generates the buyer-style query set for the live multi-engine audit: a majority naming the
- * product/brand directly, a few broader category searches that don't name it at all — mirroring
- * how real buyers search, split the same way the report tables split them.
+ * Lists the checkable factual claims a product page makes about the product itself (features,
+ * specifications, compatibility, certifications, what's in the box), quoted as the page words
+ * them, so the cross-engine research can verify each against the manufacturer's documentation.
+ * Every claim must actually appear in the page text — a claim the model can't be matched back to
+ * the page is dropped, so nothing is verified (or called false) that the page never said.
  */
-export async function buildOutreachQueries({ productName, manufacturerBrand, manufacturerCode, category, location, attributes }) {
+export async function extractListingClaims({ url, pageText }) {
+  const text = String(pageText || '').slice(0, 5000)
+  if (text.trim().length < 80) return []
+
+  const prompt = `You are listing the factual claims a product listing makes about the product itself, so each one can be
+checked against the manufacturer's own documentation.
+
+URL: ${url}
+PAGE TEXT:
+"""
+${text}
+"""
+
+List up to 6 specific, checkable claims the page makes — technical features and feature names, specifications,
+compatibility (battery system, standards, fittings), certifications, what is included in the box, warranty, origin.
+Prefer claims a buyer would rely on and that could be wrong or copied from a different variant (motor type, protection
+features, compatibility). Exclude price, shipping, store policies and vague marketing ("high quality", "best value").
+Copy each claim from the page text in the page's own words (at most 200 characters, no paraphrase).
+
+Return strict JSON: { "claims": [ string ] }. Return { "claims": [] } if the page makes no checkable claims.`
+
+  try {
+    const result = await callGemini(prompt)
+    const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+    const pageNorm = norm(text)
+    const seen = new Set()
+    return (Array.isArray(result?.claims) ? result.claims : [])
+      .map((c) => String(c || '').trim().replace(/\s+/g, ' ').slice(0, 220))
+      .filter((c) => c.length >= 12)
+      // Must trace back to the page: the claim's opening words appear in the page text.
+      .filter((c) => pageNorm.includes(norm(c).split(' ').slice(0, 5).join(' ')))
+      .filter((c) => !seen.has(norm(c)) && seen.add(norm(c)))
+      .slice(0, 6)
+  } catch (err) {
+    console.warn(`[outreach] listing-claim extraction failed: ${err.message}`)
+    return []
+  }
+}
+
+/** The prompt for the buyer-query step, kept separate so its exact wording can be checked in tests. */
+export function buildQueriesPrompt({ productName, manufacturerBrand, manufacturerCode, category, location, attributes, country, avoid = [], region }) {
   const attrList = (attributes || []).filter(Boolean)
-  const prompt = `You are drafting buyer search queries for an AI-discoverability audit of a specific product.
+  // Present only when the region is known with confidence; otherwise the prompt is unchanged.
+  const buyerRegion = regionBuyerClause(region)
+  return `You are drafting buyer search queries for an AI-discoverability audit of a specific product.
 
 PRODUCT: ${productName}
 MANUFACTURER BRAND: ${manufacturerBrand || 'unknown'}
 MANUFACTURER CODE: ${manufacturerCode || 'unknown'}
 CATEGORY: ${category}
 DISTINGUISHING ATTRIBUTES (actually stated on the page): ${attrList.length ? attrList.join(', ') : 'none given'}
+BUYER COUNTRY / MARKET: ${country || 'unknown'}
 BUYER LOCATION: ${location || 'unknown'}
+${buyerRegion ? `${buyerRegion}
+` : ''}
+Phrase every query the way a real buyer in ${country || 'the prospect\'s market'} types it — local spelling, local
+terms, and the country name where a buyer there would naturally add it (e.g. "... price South Africa"). Never name the
+seller's own store or website${avoid.length ? ` (${avoid.map((n) => `"${n}"`).join(', ')})` : ''}.
 
-Write exactly 5 "named" queries (name the brand/model/product) covering these distinct intents, one each:
-1. The exact product title, as a buyer would type it
-2. Code/model number + a couple of its key attributes (e.g. "<code>, <attribute>, <attribute>")
-3. Price intent ("lowest price for a <product> ...")
-4. Supplier + delivery confirmation ("which suppliers stock <product> with confirmed pricing and delivery")
-5. Pick whichever of these a real buyer of THIS specific category would most naturally ask next — don't default to
-   the same one every time:
-   - Local delivery, if a location is given ("<product> with delivery to <location>")
-   - Interchange / cross-reference numbers, for mechanical/industrial parts a buyer might cross-check against other
-     manufacturers' equivalents ("<product> interchange numbers" / "<product> cross-reference")
-   - Specifications/dimensions confirmation, when exact fit/rating matters before ordering ("<product> specifications
-     and dimensions")
-   - A second supplier/availability phrasing, as a last resort if none of the above fit
-   Whichever you pick, it must not be a near-duplicate of query 1 or 4.
+Write exactly 4 "named" queries (name the brand/model/product) covering these distinct intents, one each:
+1. The exact product, as a buyer would type it, with price intent ("<product> price <country>")
+2. Specifications confirmation ("<product> specifications <key attribute> <country>?")
+3. Where to buy ("Where to buy <product> <country>?")
+4. Cheapest / lowest price ("Cheapest <product> for sale <country>?")
 
-Write exactly 3 "category" queries that do NOT name the brand or model at all — build these FROM THE DISTINGUISHING
+Write exactly 2 "category" queries that do NOT name the brand or model at all — build these FROM THE DISTINGUISHING
 ATTRIBUTES above, phrased around a real buying SITUATION a buyer would actually type, not just the attributes
 concatenated. Prefer naming a plausible end-use or application when the category supports one (e.g. for a bearing:
 "ball bearing, 7/8 OD x 5/16 bore, for an electric motor" or "bulk sealed ball bearings for electric motor
@@ -457,11 +517,40 @@ alone, and never a query that's just the brand/code rephrased.
 Every query must be genuinely distinct in intent from every other query in its list — no near-duplicates (e.g.
 "buy X" and "where to buy X" count as the same intent; only include one).
 
+Make the second category query a local supplier / dealer search for this category in ${country || 'the buyer\'s market'}
+(e.g. "<category> supplier <city or country>, <brand> dealer?") — the one exception allowed to name the brand, as a
+dealer search, but never the model or code. Locate it at the level a buyer would type — the country, the state, or the
+nearest major city — never at suburb or street level, because a query that names the seller's own suburb mostly
+returns the seller and says nothing about how AI treats it among competitors.${region?.city && buyerRegion ? ` The buyer region's city is ${region.city}: use it, or the state or country, to locate that query.` : ''}
+
 Return strict JSON with this exact shape:
 { "named": string[], "category": string[] }
-Exactly 5 named, exactly 3 category. Keep each query realistic and short, the way someone actually types it.`
+Exactly 4 named, exactly 2 category. Keep each query realistic and short, the way someone actually types it.`
+}
 
-  return callGemini(prompt)
+/**
+ * Generates the buyer-style query set for the live multi-engine audit: a majority naming the
+ * product/brand directly, a few broader category searches that don't name it at all — mirroring
+ * how real buyers search, split the same way the report tables split them.
+ */
+export async function buildOutreachQueries({ productName, manufacturerBrand, manufacturerCode, category, location, attributes, country, avoidNames = [], region }) {
+  // The seller's own name / domain must never appear in a buyer query (it would just return the
+  // seller). The prompt is told which names; the result is also checked in code afterwards.
+  const avoid = [...new Set((avoidNames || []).map((n) => String(n || '').trim()).filter((n) => n.length >= 3))]
+  const mentionsAvoided = (q) => {
+    const flat = String(q).toLowerCase().replace(/[^a-z0-9]/g, '')
+    return avoid.some((n) => {
+      const key = n.toLowerCase().replace(/[^a-z0-9]/g, '')
+      return key.length >= 5 && flat.includes(key)
+    })
+  }
+  const prompt = buildQueriesPrompt({ productName, manufacturerBrand, manufacturerCode, category, location, attributes, country, avoid, region })
+
+  const result = await callGemini(prompt)
+  // A query that names the seller is dropped (it would only return the seller). Never padded with
+  // invented queries: a shorter list is reported as it is.
+  const clean = (list) => (Array.isArray(list) ? list.filter((q) => typeof q === 'string' && q.trim() && !mentionsAvoided(q)) : [])
+  return { ...result, named: clean(result?.named), category: clean(result?.category) }
 }
 
 /**
@@ -476,8 +565,10 @@ export async function extractCitedSellers({ texts, prospectCompany, prospectDoma
 
   const prompt = `Below are real, live-web-search-grounded answers from AI assistants responding to a buyer query.
 List only the distinct real seller/retailer/company names actually mentioned in this text — do not add any not present,
-and do not include generic terms like "online retailers" or "Amazon" unless literally named. Also say whether
-"${prospectCompany}"${prospectDomain ? ` (domain: ${prospectDomain})` : ''} is mentioned anywhere in this text.
+and do not include generic terms like "online retailers" or "Amazon" unless literally named. Treat near-duplicate
+names of the same business as ONE seller and list it once (e.g. "The Big Bearing Store" and "TheBigBearingStore.com").
+Also say whether "${prospectCompany}"${prospectDomain ? ` (domain: ${prospectDomain})` : ''} is mentioned anywhere in this text — report
+that only through "prospectCited", never inside "sellers" or "sellerPrices".
 Separately, list any seller+price pairs where a specific price is actually stated for that seller in this text.
 
 ANSWERS:
@@ -485,8 +576,9 @@ ANSWERS:
 ${joined}
 """
 
-Return strict JSON: { "sellers": string[], "prospectCited": boolean, "sellerPrices": [ { "seller": string, "price": string } ] }.
+Return strict JSON: { "sellers": string[], "prospectCited": boolean, "prospectCitedPrice": string, "sellerPrices": [ { "seller": string, "price": string } ] }.
 List at most 8 sellers, most-frequently-mentioned first. "price" is just currency symbol + number (e.g. "$67.00").
+"prospectCitedPrice" is the price this text states for "${prospectCompany}" itself, "" if none is stated.
 "sellerPrices" only includes sellers where this specific text states a price — it's fine for this to be empty or
 shorter than "sellers".`
 
@@ -495,10 +587,11 @@ shorter than "sellers".`
     return {
       sellers: Array.isArray(result?.sellers) ? result.sellers.slice(0, 8) : [],
       prospectCited: Boolean(result?.prospectCited),
+      prospectCitedPrice: typeof result?.prospectCitedPrice === 'string' ? result.prospectCitedPrice.trim() : '',
       sellerPrices: Array.isArray(result?.sellerPrices) ? result.sellerPrices : [],
     }
   } catch {
-    return { sellers: [], prospectCited: false, sellerPrices: [] }
+    return { sellers: [], prospectCited: false, prospectCitedPrice: '', sellerPrices: [] }
   }
 }
 
@@ -507,8 +600,10 @@ shorter than "sellers".`
  * askGeminiTextWithSearch). Purely extractive — every seller/price pair must already be present
  * in the text; this never estimates or invents a price.
  */
-export async function extractSellerPrices({ text, excludeCompany }) {
+export async function extractSellerPrices({ text, excludeCompany, country, region }) {
   if (!text?.trim()) return { sellers: [] }
+  // Only when the region is known with confidence; otherwise the prompt is unchanged.
+  const sellerRegion = regionSellerClause(region)
 
   const prompt = `Below is a real, live-web-search-grounded answer listing sellers of a specific product and their prices.
 Extract every distinct real seller/retailer name mentioned together with a specific price for this product. Treat
@@ -516,13 +611,16 @@ near-duplicate names as the SAME seller (e.g. "Amazon" and "Amazon.com" and "ama
 only one entry, its lowest/clearest price).
 Only include a seller if an actual price is given for it — skip any mentioned without a price.
 ${excludeCompany ? `Exclude "${excludeCompany}" from this list even if mentioned.` : ''}
-
+${sellerRegion ? `${sellerRegion}
+` : ''}
 TEXT:
 """
 ${text}
 """
 
-Return strict JSON: { "sellers": [ { "seller": string, "price": string, "unit": string, "inStock": boolean | null, "configuration": string } ] }.
+Return strict JSON: { "sellers": [ { "seller": string, "price": string, "unit": string, "inStock": boolean | null, "configuration": string${country ? ', "inRegion": boolean | null' : ''}${sellerRegion ? ', "currency": string' : ''} } ] }.${country ? `
+- "inRegion" is true if the text shows this seller sells to buyers in ${country} (a ${country} store, domain or
+  local-currency price), false if it is clearly based in / selling to a different country, null if the text doesn't say.` : ''}
 - "price" must be ONLY the currency symbol and number (e.g. "$72.95" or "A$67.00") — never append notes like
   "(excluding tax)" or "(sign-in price)" to it. If a seller gives both an including-tax and excluding-tax price,
   use the including-tax one. If a price range is given, use the lower number.
@@ -530,7 +628,8 @@ Return strict JSON: { "sellers": [ { "seller": string, "price": string, "unit": 
   "box of 10", "per 100") — "" if genuinely not stated.
 - "inStock" is false ONLY if the text says that seller's listing is sold out, out of stock, discontinued,
   unavailable or backordered; true if it says in stock / available; null if the text doesn't say.
-- "configuration" is the exact variant / part number / bundle the price is for, as stated ("" if not stated).
+- "configuration" is the exact variant / part number / bundle the price is for, as stated ("" if not stated).${sellerRegion ? `
+- "currency" is the ISO code of the currency that seller's price is in (e.g. "NZD"), "" if the text doesn't say.` : ''}
 List at most 14 distinct sellers, cheapest first if determinable.`
 
   try {
@@ -548,18 +647,20 @@ List at most 14 distinct sellers, cheapest first if determinable.`
  * and drops anything that fails. Fails open (keeps everything) on a parse error, since a missed
  * false-positive is a smaller problem than silently dropping all competitor data.
  */
-export async function filterRelevantSellers({ sellers, productName, manufacturerBrand, category }) {
+export async function filterRelevantSellers({ sellers, productName, manufacturerBrand, manufacturerCode, category }) {
   if (!sellers?.length) return []
-  const prompt = `You are checking whether each candidate seller genuinely sells the SAME product line, not just a
+  const prompt = `You are checking whether each candidate seller genuinely sells the SAME product, not just a
 brand-name match. The product being benchmarked is: "${productName}" — brand "${manufacturerBrand || 'unknown'}",
-category "${category || 'unknown'}".
+${manufacturerCode ? `model / part number "${manufacturerCode}", ` : ''}category "${category || 'unknown'}".
 
-CANDIDATES:
-${sellers.map((s, i) => `${i + 1}. ${s.seller} — ${s.price}${s.unit ? ` (${s.unit})` : ''}`).join('\n')}
+CANDIDATES (seller — price (unit) [the configuration / part number that price is for]):
+${sellers.map((s, i) => `${i + 1}. ${s.seller} — ${s.price}${s.unit ? ` (${s.unit})` : ''}${s.configuration ? ` [${s.configuration}]` : ''}`).join('\n')}
 
 A candidate FAILS if it's clearly a different product line from the same manufacturer (e.g. "Browning Safes" when
-the product is a Browning power-transmission part), a different brand that merely shares a word, or an obviously
-unrelated business. A candidate PASSES if there's no clear reason to doubt it's the same product line.
+the product is a Browning power-transmission part), a different brand that merely shares a word, an obviously
+unrelated business, or — when its configuration is stated — a clearly different model, size or specification of the
+product (a pack or quantity difference alone is NOT a different product: the price is compared per item later).
+A candidate PASSES if there's no clear reason to doubt it's the same product.
 
 Return strict JSON: { "keepIndexes": number[] } — the 1-based indexes of candidates above that PASS.`
 
@@ -581,16 +682,16 @@ Return strict JSON: { "keepIndexes": number[] } — the 1-based indexes of candi
  * numbers shown elsewhere in the report (e.g. the spec-depth chart) the way free-form generation
  * could. If no rules fired, returns an empty gaps array rather than inventing filler.
  */
-export async function analyzeOutreachGaps({ productName, manufacturerCode, firedGaps, strengthFacts }) {
+export async function analyzeOutreachGaps({ company, productName, manufacturerCode, firedGaps, strengthFacts }) {
   if (!firedGaps?.length) {
-    return { gaps: [], strengths: await writeStrengths({ productName, strengthFacts }) }
+    return { gaps: [], strengths: await writeStrengths({ company, productName, strengthFacts }) }
   }
 
   const prompt = `You are writing the "gaps on this page" section of an AltiusNxt outreach report. Each gap below
 ALREADY fired against real measured evidence — your only job is to phrase it as a specific, concrete finding using
 ONLY the evidence given for that gap. Do not add any claim not supported by its evidence object. Do not invent
 additional gaps beyond the ones listed.
-
+${companyNameRule(company)}
 PRODUCT: ${productName}
 MANUFACTURER CODE: ${manufacturerCode || 'not stated on the page'}
 
@@ -605,17 +706,28 @@ Return strict JSON with this exact shape:
 }`
 
   const { gaps } = await callGemini(prompt)
-  return { gaps: Array.isArray(gaps) ? gaps : [], strengths: await writeStrengths({ productName, strengthFacts }) }
+  return { gaps: Array.isArray(gaps) ? gaps : [], strengths: await writeStrengths({ company, productName, strengthFacts }) }
 }
 
-async function writeStrengths({ productName, strengthFacts }) {
+// The report is addressed to the store that owns the page — the manufacturer/brand of the product
+// is a different business and must never be presented as the customer.
+function companyNameRule(company) {
+  if (!company) return ''
+  return `
+SELLER (the business that owns this page and receives this report): ${company}
+When you refer to the seller, use exactly "${company}" — never the product's manufacturer or brand, which is a
+different business. Name "${company}" at most once per item, and never repeat it back to back.
+`
+}
+
+async function writeStrengths({ company, productName, strengthFacts }) {
   if (!strengthFacts || Object.values(strengthFacts).every((v) => !v)) {
     return 'Other factors also influence which sellers AI cites, including product-level reviews, brand recognition and overall site authority — this page was not evaluated on any of those beyond what is noted elsewhere in this report.'
   }
   const prompt = `Write 2-3 sentences on what a product page already does well, using ONLY these real measured facts —
 do not add anything not given. End with one sentence noting other factors (reviews, brand recognition, site
 authority) also influence AI citation.
-
+${companyNameRule(company)}
 PRODUCT: ${productName}
 FACTS: ${JSON.stringify(strengthFacts)}
 

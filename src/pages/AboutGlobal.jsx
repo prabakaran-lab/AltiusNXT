@@ -71,7 +71,7 @@ export default function AboutGlobal() {
             manufacturers and distributors in 15+ countries.
           </p>
           <p className="ag-statement ag-r" style={{ '--d': '250ms' }}>One connected team. 15+ countries. Engineer-verified product data.</p>
-          <Link className="ag-btn ag-r" style={{ '--d': '320ms' }} to="/contact">Get in Touch <Icon name="arrow-right" /></Link>
+          <Link className="ag-btn ag-r" style={{ '--d': '320ms' }} to="/contact#contact-form">Get in Touch <Icon name="arrow-right" /></Link>
         </div>
 
         {/* Desktop / tablet map */}

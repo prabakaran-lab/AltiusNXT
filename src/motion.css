@@ -1,6 +1,7 @@
 /* Entrance motion (see components/Motion.jsx). Only applied when JS tags an element, so content is never hidden without it. */
 @keyframes mx-route{ from{ opacity:0; filter:blur(8px); transform:translateY(10px); } to{ opacity:1; filter:none; transform:none; } }
-#main.mx-route{ animation:mx-route .6s cubic-bezier(.22,1,.36,1) both; }
+/* "backwards", not "both": a held end state leaves a transform on <main>, which turns it into the containing block for every position:fixed child (modals) and pushes them off-screen. */
+#main.mx-route{ animation:mx-route .6s cubic-bezier(.22,1,.36,1) backwards; }
 
 #root [data-mx]{
   opacity:0; transform:translate3d(0,18px,0); filter:blur(7px);

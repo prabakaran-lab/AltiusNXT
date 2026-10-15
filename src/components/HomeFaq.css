@@ -33,19 +33,30 @@
 .hq .panel p{ padding:0 70px 22px 60px; font:400 15px/1.7 var(--font-body); color:#4a5a72; opacity:0; transform:translateY(-6px); transition:opacity .35s ease .05s, transform .35s ease .05s; }
 .hq-list li.on .panel p{ opacity:1; transform:none; transition-delay:.12s; }
 
-@media (max-width:980px){ .hq-wrap{ grid-template-columns:1fr; } .hq-intro{ position:static; } }
-@media (max-width:560px){ .hq-list button{ padding:16px 14px; gap:12px; } .hq .panel p{ padding:0 16px 18px 16px; } .hq .num{ display:none; } .hq-help{ padding:16px; } }
-@media (prefers-reduced-motion:reduce){ .hq *{ transition:none !important; animation:none !important; } .hq-intro > *,.hq-list li{ opacity:1; transform:none; } }
+/* "Still have a question?" contact form: the Contact page form, scaled to fit this card */
+.hq-help.hq-formcard{ max-width:480px; padding:22px; }
+.hq-form{ margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+.hq-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.hq-form label{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.hq-form label > span{ font:600 12.5px/1 var(--font-body); color:var(--navy); } .hq-form label i{ color:var(--orange-2); }
+.hq-form :is(input,textarea){ width:100%; border:1.5px solid #cfd8e6; border-radius:11px; background:#fff; padding:0 13px; font:400 14px/1.4 var(--font-body); color:var(--navy); transition:border-color .2s, box-shadow .2s; }
+.hq-form input{ height:44px; } .hq-form textarea{ padding:11px 13px; resize:vertical; min-height:84px; }
+.hq-form ::placeholder{ color:#97a4b8; }
+.hq-form :is(input,textarea):hover{ border-color:#aebbd0; }
+.hq-form :is(input,textarea):focus{ outline:0; border-color:var(--orange); box-shadow:0 0 0 4px rgba(255,106,26,.14); }
+.hq-form :is(input,textarea):user-invalid{ border-color:#d92d20; }
+.hq-hp{ position:absolute !important; left:-9999px; width:1px !important; height:1px !important; opacity:0; }
+.hq-actions{ display:flex; align-items:center; flex-wrap:wrap; gap:10px 16px; margin-top:2px; }
+.hq-actions small{ font:400 12px/1.45 var(--font-body); color:#6b7a90; } .hq-actions a{ color:var(--navy); text-decoration:underline; text-underline-offset:2px; }
+.hq-send{ display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 20px; border:0; border-radius:12px; background:var(--orange); color:#fff; cursor:pointer; font:700 14px/1 var(--font-body); box-shadow:0 12px 22px -12px rgba(255,106,26,.7); transition:background .2s, transform .2s; }
+.hq-send:hover{ background:var(--orange-2); transform:translateY(-1px); } .hq-send:disabled{ opacity:.7; cursor:wait; transform:none; }
+.hq-send:focus-visible{ outline:2px solid var(--orange); outline-offset:3px; }
+.hq-err{ margin:0; font:600 13px/1.5 var(--font-body); color:#b42318; } .hq-err:not(.on){ display:none; }
+.hq-help > .hq-done{ margin-top:16px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding:12px 4px 4px; }
+.hq-done .tick{ width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--green); color:#fff; box-shadow:0 0 0 7px rgba(26,143,94,.14); }
+.hq-done strong{ font:800 17px/1.3 var(--font-head); color:var(--navy); } .hq-done p{ font:400 13.5px/1.55 var(--font-body); color:#4a5a72; }
+.hq-again{ border:0; background:none; cursor:pointer; padding:4px; font:700 13px/1 var(--font-body); color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
 
-/* the question form inside the "Still have a question?" card */
-.hq-help{ max-width:520px; }
-.hq-form{ margin-top:16px; display:grid; gap:12px; }
-.hq-form .r2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.hq-form label{ display:block; min-width:0; } .hq-form label span{ display:block; margin-bottom:5px; font:600 12px/1.2 var(--font-body); color:var(--navy); } .hq-form label i{ color:var(--orange); font-style:normal; }
-.hq-form input, .hq-form textarea{ width:100%; padding:10px 12px; border:1px solid #d9e1ee; border-radius:10px; background:#fff; font:400 13.5px/1.4 var(--font-body); color:var(--navy); }
-.hq-form textarea{ resize:vertical; min-height:80px; }
-.hq-form input:focus, .hq-form textarea:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,106,26,.15); }
-.hq-form .hq-mail{ justify-self:start; border:0; cursor:pointer; } .hq-form .hq-mail:disabled{ opacity:.7; cursor:default; }
-.hq-hp{ position:absolute !important; left:-9999px; width:1px; height:1px; opacity:0; }
-.hq-ok{ margin-top:16px; display:flex; align-items:center; gap:8px; font:600 13.5px/1.4 var(--font-body); color:#0f8a5f; } .hq-err{ font:500 12.5px/1.4 var(--font-body); color:#c0392b; }
-@media (max-width:560px){ .hq-form .r2{ grid-template-columns:1fr; } }
+@media (max-width:980px){ .hq-wrap{ grid-template-columns:1fr; } .hq-intro{ position:static; } }
+@media (max-width:560px){ .hq-list button{ padding:16px 14px; gap:12px; } .hq .panel p{ padding:0 16px 18px 16px; } .hq .num{ display:none; } .hq-help{ padding:16px; } .hq-row{ grid-template-columns:1fr; } .hq-help.hq-formcard{ padding:16px; } .hq-send{ width:100%; justify-content:center; } }
+@media (prefers-reduced-motion:reduce){ .hq *{ transition:none !important; animation:none !important; } .hq-intro > *,.hq-list li{ opacity:1; transform:none; } }

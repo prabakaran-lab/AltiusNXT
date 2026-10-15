@@ -2037,3 +2037,10 @@ body :is(.container,.section-container,.wrap,
   .hero-std{ display:flex; align-items:center; min-height:var(--hero-h); height:var(--hero-h); padding-block:24px; box-sizing:border-box; }
 }
 @media (max-width:767px){ .hero-std{ padding-block:44px; } }
+
+/* newsletter signup: result message and the hidden bot trap */
+.res-newsletter-msg{ font-size:13px; font-weight:600; line-height:1.4; }
+.res-newsletter-msg.done{ color:var(--green); }
+.res-newsletter-msg.error{ color:#b42318; }
+.res-newsletter-note a{ color:inherit; text-decoration:underline; }
+.res-newsletter-trap{ position:absolute !important; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none; }

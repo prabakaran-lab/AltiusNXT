@@ -27,9 +27,17 @@ export const config = {
     user: process.env.GMAIL_USER || '',
     appPassword: process.env.GMAIL_APP_PASSWORD || '',
     leadNotifyEmail: process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com',
+    // Extra inboxes that get the same team notification as leadNotifyEmail when a visitor runs the CatalogWiz
+    // enrichment demo or generates an AI Readiness Report (comma or semicolon separated).
+    leadCopyEmails: [...new Set((process.env.LEAD_COPY_EMAILS || '').split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean))]
+      .filter((e) => e !== (process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com').trim().toLowerCase()),
   },
   outreach: {
     apiToken: process.env.OUTREACH_API_TOKEN || '',
+    // Who the report is "prepared by" (cover, next-steps page, request-a-copy address)
+    senderName: process.env.OUTREACH_SENDER_NAME || 'Govindaraj L',
+    senderTitle: process.env.OUTREACH_SENDER_TITLE || 'Business Unit Head',
+    senderEmail: process.env.OUTREACH_SENDER_EMAIL || process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com',
   },
   googlePlaces: {
     apiKey: process.env.GOOGLE_PLACES_API_KEY || '',

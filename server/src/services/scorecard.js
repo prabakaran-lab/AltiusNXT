@@ -24,9 +24,17 @@ export function computeScorecard(evidence) {
   const pillar1 = [
     {
       ref: '1.1', metric: 'Crawler access',
-      score: evidence.crawlerAccess?.fullyAccessible ? PASS : evidence.crawlerAccess?.accessibleCount > 0 ? PARTIAL : FAIL,
-      finding: evidence.crawlerAccess
-        ? `${evidence.crawlerAccess.accessibleCount} of ${evidence.crawlerAccess.totalBots} bot user-agents could load the page.`
+      // Loading the page is not the whole story: robots.txt can tell an AI crawler to stay away from it.
+      score: evidence.crawlerAccess?.inconclusive ? (evidence.crawlerAccess.robotsBlockedAiAgents?.length ? FAIL : PARTIAL)
+        : evidence.crawlerAccess?.fullyAccessible && !evidence.crawlerAccess?.robotsBlockedAiAgents?.length ? PASS
+        : evidence.crawlerAccess?.accessibleCount > 0 ? PARTIAL : FAIL,
+      finding: evidence.crawlerAccess?.inconclusive
+        ? `Could not be measured: the site's bot protection refused our own test request, so nothing is shown about what AI crawlers can fetch.${evidence.crawlerAccess.robotsBlockedAiAgents?.length ? ` robots.txt disallows this page for ${evidence.crawlerAccess.robotsBlockedAiAgents.map((b) => b.agent).join(', ')}.` : ''}`
+        : evidence.crawlerAccess
+        ? `${evidence.crawlerAccess.accessibleCount} of ${evidence.crawlerAccess.totalBots} bot user-agents could load the page.` +
+          (evidence.crawlerAccess.robotsBlockedAiAgents?.length
+            ? ` robots.txt disallows this page for ${evidence.crawlerAccess.robotsBlockedAiAgents.map((b) => b.agent).join(', ')}.`
+            : '')
         : 'Crawler access not tested.',
     },
     {

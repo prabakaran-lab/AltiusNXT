@@ -32,7 +32,6 @@ const NAV = [
   {
     id: 'resources', title: 'Resources',
     links: [
-      { label: 'Insights', to: '/resources?tab=blogs' },
       { label: 'Events', to: '/resources?tab=events' },
       { label: 'FAQs', to: '/resources?tab=faqs' },
     ],

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Icon from './ui/Icon.jsx'
 
 export default function Modal({ title, onClose, children }) {
@@ -8,7 +9,8 @@ export default function Modal({ title, onClose, children }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  return (
+  // Rendered on <body> so no animated ancestor (page transition, scroll reveals) can become its containing block.
+  return createPortal(
     <div className="modal-overlay" role="presentation" onClick={onClose}>
       <div
         className="modal-dialog"
@@ -21,6 +23,7 @@ export default function Modal({ title, onClose, children }) {
         {title && <h3 className="modal-title">{title}</h3>}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

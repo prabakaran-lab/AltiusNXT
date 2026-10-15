@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import booth from '../assets/events/booth.webp'
 import ceo from '../assets/events/ceo-booth.webp'
 import visitors from '../assets/events/visitors.webp'
