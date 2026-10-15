@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { ArrowRight, BarChart3, CalendarDays, Check, FileCheck2, FileText, Fingerprint, Link2, ListTree, Mail, MapPin, ScanSearch, ShieldCheck, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
+import QuestionForm from '../components/QuestionForm.jsx'
 import badgeIso9001 from '../assets/awards/tuv-iso-9001.png'
 import badgeIso27001 from '../assets/awards/tuv-iso-27001.png'
 import badgeB2bea from '../assets/awards/b2bea-member-badge.svg'
@@ -343,6 +344,7 @@ export function FaqSection() {
           <span className="rp-eb">FAQ</span>
           <h2 id="rp-faq">Answers before <em>you get started.</em></h2>
           <p>Short answers on what we test, what you receive and what it costs.</p>
+          <QuestionForm />
         </header>
         <div className="rp-faqs">
           {AI_READINESS_FAQ.map(([q, a], i) => (

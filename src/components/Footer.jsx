@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import logo from '../assets/altiusnxt_logo_white.png'
+import logo from '../assets/altiusnxt_logo.png'
 import badgeIso9001 from '../assets/awards/tuv-iso-9001.png'
 import badgeIso27001 from '../assets/awards/tuv-iso-27001.png'
 import badgeB2bea from '../assets/awards/b2bea-member-badge.svg'

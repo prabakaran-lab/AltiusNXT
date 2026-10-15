@@ -142,8 +142,8 @@ export default function CatalogWiz() {
 
       <EnrichDemo>
         <div className="cw-ctacard">
-          <h3>Start with one category, <em>or 500 SKUs.</em></h3>
-          <p>Send a sample of your supplier data. A product data engineer will enrich 20 SKUs free, show you every change with its source, and quote a fixed price for the pilot (from $X).</p>
+          <h3>Simple pricing logic: bigger scope, <em>bigger engagement, tailored quote.</em></h3>
+          <p>Tell us what you need and we will put a number on it.</p>
           <div className="cwh-act">
             <Link className="btn btn-primary" to="/contact">Talk to a Product Data Engineer <ArrowRight size={16} /></Link>
             <Link className="btn btn-outline" to="/ai-readiness-report">Get Free AI Readiness Report</Link>
