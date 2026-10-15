@@ -19,7 +19,7 @@ export function narrator(stage, s) {
   switch (stage) {
     case 0: return { stat: ['3 → 1', 'sources become one product record'], t: 'Connect supplier data', d: 'Excel, PDF and image files become one raw product record, and the gaps show up immediately.', items: [['Supplier Excel imported', s.imported[0]], ['Technical PDF imported', s.imported[1]], ['Product image imported', s.imported[2]], ['3 missing attributes detected', s.missing >= 3]] }
     case 1: return { stat: ['5 → 17', 'attributes after AI enrichment'], t: 'AI finds what is missing', d: 'CatalogWiz AI reads the datasheet, matches each value to its source and builds the full record.', items: [['Voltage rating found', s.rows[0] === 'found'], ['Breaking capacity found', s.rows[1] === 'found'], ['Poles normalised', s.rows[2] === 'found'], ['Mounting suggested', s.rows[3] === 'found'], ['12 more attributes extracted', s.extra === 12], ['Title, taxonomy and SEO written', s.done]] }
-    case 2: return { stat: [`${s.done ?? 0} / 4`, 'values checked by a data specialist'], t: 'Experts verify every value', d: 'A product data specialist checks each AI suggestion against the manufacturer document.', items: [['AC voltage rating verified', s.voltage === 'done'], ['Interrupting rating verified', s.breaking === 'done'], ['Product taxonomy accepted', s.taxonomy === 'done'], ['Mounting type flagged, then corrected', s.mounting === 'done']] }
+    case 2: return { stat: [`${s.done ?? 0} / 4`, 'values checked by a product data engineer'], t: 'An engineer checks the source', d: 'A product data engineer checks each AI suggestion against the manufacturer document (for example, datasheet p.2).', items: [['AC voltage rating verified', s.voltage === 'done'], ['Interrupting rating verified', s.breaking === 'done'], ['Product taxonomy accepted', s.taxonomy === 'done'], ['Mounting type flagged, then corrected', s.mounting === 'done']] }
     case 3: return { stat: ['17 / 17', 'attributes verified and approved'], t: 'Approved before it goes live', d: 'The record passes a final quality gate. Nothing is published without human sign-off.', items: [['Quality checks passed', s.checks === 4], ['Human verified & approved', s.stamp]] }
     default: return { stat: ['1 → 6', 'example channels, one clean record'], t: 'Ready for every channel', d: 'The approved record becomes a complete product page, ready for your storefronts.', items: [['Content, taxonomy and SEO ready', s.checks === 4], ['Channel selected', s.selected], ['Product page complete', s.success]] }
   }
@@ -194,7 +194,7 @@ export function Review({ s }) {
         <div className="wt-faux"><i /><i /><i /><i /></div>
       </section>
       <section className={`wt-rec2 rev${s.active >= 0 ? ' working' : ''}`} aria-label="Review checklist">
-        <Brand active={3} crumb="Review" label="Human review" />
+        <Brand active={3} crumb="Verify" label="Engineer review" />
         <div className="wt-rb">
           <Act live={!s.complete} text={s.active >= 0 ? `Specialist validating “${REVIEW[s.active].label}” against ${REVIEW[s.active].ev}…` : s.complete ? 'All values verified · ready for approval' : 'Preparing evidence for review…'} />
           <div className="wt-rtop slim">

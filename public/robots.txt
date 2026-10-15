@@ -1,0 +1,21 @@
+# AltiusNxt: all crawlers, including search and AI assistants, are welcome.
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# AI search and assistant crawlers (listed explicitly so firewall rules and policies are unambiguous)
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: GPTBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: ClaudeBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Googlebot
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+
+Sitemap: https://www.altiusnxt.com/sitemap.xml

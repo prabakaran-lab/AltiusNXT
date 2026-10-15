@@ -190,7 +190,7 @@ function Strip({ item, minutes }) {
 function useArticleSeo(item) {
   useEffect(() => {
     if (!item.published) return undefined
-    const url = `${window.location.origin}/resources/blog/${item.slug}`
+    const url = `https://www.altiusnxt.com/resources/blog/${item.slug}`
     const made = []
     const add = (tag, attrs) => {
       const el = document.createElement(tag)

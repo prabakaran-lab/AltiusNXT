@@ -4,12 +4,12 @@ import { sendContact } from '../services/api.js'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import './Contact.css'
 
-const TOPICS = ['Talk to a Product Data Expert', 'Free AI Readiness Report', 'CatalogWiz demo', 'Partnership or integration', 'Careers', 'Something else']
+const TOPICS = ['Talk to a Product Data Engineer', 'Free AI Readiness Report', 'CatalogWiz demo', 'Partnership or integration', 'Careers', 'Something else']
 const OFFICES = [
   { id: 'us', name: 'United States', addr: ['31700 West Thirteen Mile Road, Suite 205', 'Farmington Hills, MI 48334'], phones: [['', '+1 313 486 9697', '+13134869697']] },
   { id: 'in', name: 'India', addr: ['56-C, Bharathi Park, 2nd Cross', 'Saibaba Colony, Coimbatore, Tamil Nadu 641011'], phones: [['Sales', '+91 9952317740', '+919952317740'], ['Careers', '+91 7708182828', '+917708182828']] },
 ]
-const EMPTY = { name: '', email: '', company: '', topic: TOPICS[0], message: '', website: '' }
+const EMPTY = { name: '', email: '', company: '', designation: '', topic: TOPICS[0], message: '', website: '' }
 
 export default function Contact() {
   const ref = useRef(null)
@@ -37,12 +37,12 @@ export default function Contact() {
     }
   }
 
-  const mailto = `mailto:sales@altiusnxt.com?subject=${encodeURIComponent(f.topic)}&body=${encodeURIComponent(`${f.message}\n\n${f.name}${f.company ? `, ${f.company}` : ''}`)}`
+  const mailto = `mailto:sales@altiusnxt.com?subject=${encodeURIComponent(f.topic)}&body=${encodeURIComponent(`${f.message}\n\n${f.name}${f.designation ? `, ${f.designation}` : ''}${f.company ? `, ${f.company}` : ''}`)}`
 
   return (
     <div className={`ct${seen ? ' seen' : ''}`} ref={ref}>
       <PageSeo
-        title="Contact AltiusNxt | Talk to a Product Data Expert"
+        title="Contact AltiusNxt | Talk to a Product Data Engineer"
         description="Talk to a product data expert about product data enrichment, catalog management and CatalogWiz. Offices in the USA and India."
         keywords={['contact AltiusNxt', 'product data expert', 'product data enrichment services', 'catalog management services', 'CatalogWiz demo']}
         structuredData={[breadcrumb('/contact', 'Contact')]}
@@ -51,7 +51,7 @@ export default function Contact() {
         <div className="ct-wrap">
           <p className="ct-eyebrow">Contact</p>
           <h1>Let&rsquo;s talk about your <em>product data.</em></h1>
-          <p className="ct-lead">Tell us what you are working on. A Product Data Expert will reply with a clear answer, with no sales pressure.</p>
+          <p className="ct-lead">Tell us what you are working on. A product data engineer will reply within one business day with a clear answer and no sales pressure.</p>
           <ul className="ct-quick">
             <li><Clock size={15} />Reply within one business day</li>
             <li><Check size={15} strokeWidth={3} />No obligation</li>
@@ -67,7 +67,7 @@ export default function Contact() {
               <div className="ct-done" role="status">
                 <span className="tick"><Check size={26} strokeWidth={3.2} /></span>
                 <h2>Message sent</h2>
-                <p>Thank you. We have emailed you a confirmation and a Product Data Expert will reply shortly.</p>
+                <p>Thank you. We have emailed you a confirmation and a product data engineer will reply shortly.</p>
                 <button type="button" className="btn btn-outline" onClick={() => setState('idle')}>Send another message</button>
               </div>
             ) : (
@@ -79,9 +79,7 @@ export default function Contact() {
                 </div>
                 <div className="ct-row">
                   <label><span>Company</span><input name="company" autoComplete="organization" value={f.company} onChange={set('company')} placeholder="Company name" /></label>
-                  <label><span>I would like to</span>
-                    <select name="topic" value={f.topic} onChange={set('topic')}>{TOPICS.map((t) => <option key={t}>{t}</option>)}</select>
-                  </label>
+                  <label><span>Designation</span><input name="designation" autoComplete="organization-title" value={f.designation} onChange={set('designation')} placeholder="e.g. Head of eCommerce" /></label>
                 </div>
                 <label><span>How can we help? <i>*</i></span><textarea name="message" rows={6} required minLength={10} value={f.message} onChange={set('message')} placeholder="Tell us about your catalog, channels and what you would like to improve." /></label>
                 <input className="ct-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.website} onChange={set('website')} />

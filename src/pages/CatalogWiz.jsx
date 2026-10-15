@@ -16,20 +16,20 @@ import './CatalogWiz.css'
 
 const WT_HEAD = {
   eyebrow: 'How it works',
-  title: <>How CatalogWiz runs, <em>step by step.</em></>,
-  sub: 'Watch one sample product go from raw supplier files to a finished, expert-verified product page. The demo plays on its own, or click any step.',
+  title: <>From supplier file to verified product page <em>in five steps.</em></>,
+  sub: 'Watch one sample product go from raw supplier files to a finished, engineer-verified product page. The demo plays on its own, or click any step.',
 }
 const GIVE = [
   { t: 'One clean product record', d: 'Excel, PDF and image files become one product record, with every gap flagged.', Ico: Layers },
-  { t: 'Human-verified accuracy', d: 'AI drafts every value. A data specialist verifies it against the manufacturer source before it goes live.', Ico: ShieldCheck },
+  { t: 'Engineer-verified, with sources', d: 'Every value links to the datasheet page it came from, checked by a product data engineer before it goes live.', Ico: ShieldCheck },
   { t: 'Ready for every channel', d: 'Approved product data goes live on your eCommerce store, marketplaces, PIM, ERP and AI shopping agents using UCP.', Ico: Send },
 ]
 const UCP_POINTS = [
   { t: 'Complete attributes agents can compare', d: 'Every spec an agent filters on is filled in, not left blank.', Ico: Layers },
-  { t: 'Consistent names, units and categories', d: 'The same unit and format on every product, so agents can compare like with like.', Ico: Ruler },
+  { t: 'Consistent identifiers and units', d: 'Brand, MPN and GTIN match the manufacturer, with the same unit and format on every product.', Ico: Ruler },
   { t: 'Accurate price and stock', d: 'Agents only buy what they can see is available, at the right price.', Ico: Tag },
 ]
-const PROOF = [['20+', 'years of team expertise'], ['500+', 'global clients'], ['15M+', 'products enriched']]
+const PROOF = [['15M+', 'products enriched'], ['500+', 'distributors'], ['15+', 'countries']]
 const BADGES = [[badgeIso9001, 'TÜV Austria ISO 9001:2015'], [badgeIso27001, 'TÜV Austria ISO/IEC 27001:2022'], [badgeB2bea, 'B2B Ecommerce Association member']]
 
 function useReveal(ref) {
@@ -49,8 +49,8 @@ export default function CatalogWiz() {
   return (
     <div className="home-page cw-page" ref={root}>
       <PageSeo
-        title="CatalogWiz | AI Product Data Enrichment Software"
-        description="Turn supplier spreadsheets and PDFs into complete, human-verified product data, ready for your store, marketplaces and UCP-based AI shopping."
+        title="CatalogWiz | AI Product Data Enrichment, Engineer-Verified"
+        description="CatalogWiz enriches supplier data with AI, then AltiusNxt engineers verify every value against the manufacturer source. Delivered to your PIM, ERP or store."
         keywords={['AI product data enrichment software', 'product data enrichment tool', 'catalog enrichment software', 'PIM data enrichment', 'product attribute extraction', 'product data cleansing', 'UCP-ready product data', 'agentic commerce']}
         structuredData={[
           breadcrumb('/catalogwiz', 'CatalogWiz'),
@@ -60,11 +60,11 @@ export default function CatalogWiz() {
       <section className="cwh" id="cw-promise" aria-labelledby="cwh-t">
         <div className="cwh-glow" aria-hidden="true" />
         <div className="cwh-wrap">
-          <p className="cwh-kicker">CatalogWiz · AI-enriched, human-verified product data</p>
-          <h1 id="cwh-t">Messy supplier data in. <em>Sell-ready product data out.</em></h1>
-          <p className="cwh-sub">CatalogWiz is AI product data enrichment software with human verification built in. Upload spreadsheets, PDF datasheets and images. AI fills in the missing attributes, a data specialist verifies every value against the manufacturer source, and approved data goes live on your store, marketplaces and PIM, ready for AI shopping agents using Google's Universal Commerce Protocol (UCP).</p>
+          <p className="cwh-kicker">CatalogWiz · AI enrichment + engineer verification</p>
+          <h1 id="cwh-t">Messy supplier data in. <em>Verified product data out.</em></h1>
+          <p className="cwh-sub">CatalogWiz is AltiusNxt’s product data enrichment platform. Upload supplier spreadsheets, PDF datasheets and images. AI fills the missing attributes, taxonomy and descriptions. Then an AltiusNxt product data engineer checks every value against the manufacturer source before it goes to your store, PIM, marketplaces and Google Merchant Center.</p>
           <div className="cwh-act">
-            <Link className="btn btn-primary" to="/contact">Talk to a Product Data Expert <ArrowRight size={16} /></Link>
+            <Link className="btn btn-primary" to="/contact">Talk to a Product Data Engineer <ArrowRight size={16} /></Link>
             <a className="btn btn-outline" href="#catalogwiz">See how it works</a>
           </div>
 
@@ -95,9 +95,9 @@ export default function CatalogWiz() {
       <section className="cw-ucp" id="ucp" aria-labelledby="cw-ucp-title">
         <div className="cw-wrap">
           <header className="cw-ucp-head">
-            <p className="cwh-kicker">Ready for UCP</p>
-            <h2 id="cw-ucp-title">Built for agentic commerce. <em>Ready for UCP.</em></h2>
-            <p>AI assistants are starting to buy, not just recommend. Google's Universal Commerce Protocol (UCP) is an open standard that lets AI shopping agents discover, compare and check out products for a buyer. Agents can only choose products whose data is complete and consistent. CatalogWiz fills the gaps, a data specialist human-verifies every value, and your catalog is ready for UCP-based shopping.</p>
+            <p className="cwh-kicker">Ready for AI shopping agents</p>
+            <h2 id="cw-ucp-title">Product data AI agents can <em>compare, trust and buy.</em></h2>
+            <p>AI assistants are starting to shop for buyers. Google's Universal Commerce Protocol (UCP) and OpenAI's Agentic Commerce Protocol (ACP) let agents find, compare and check out. Both depend on the same thing: complete, consistent product data with the right price and stock. CatalogWiz builds that data. Your commerce platform or Merchant Center handles the protocol connection, and we tell you which one applies to you.</p>
           </header>
 
           <div className="cw-ucp-grid">
@@ -127,7 +127,7 @@ export default function CatalogWiz() {
                   <small>After CatalogWiz</small>
                   <b>17 of 17 details (100%)</b>
                   <ul>
-                    <li><Check size={13} strokeWidth={3} />690 V ac, human-verified</li>
+                    <li><Check size={13} strokeWidth={3} />690 V ac, engineer-verified</li>
                     <li><Check size={13} strokeWidth={3} />DIN rail mount</li>
                     <li><Check size={13} strokeWidth={3} />Price and stock included</li>
                   </ul>
@@ -142,10 +142,10 @@ export default function CatalogWiz() {
 
       <EnrichDemo>
         <div className="cw-ctacard">
-          <h3>Start with one category, <em>or one product page.</em></h3>
-          <p>Share a sample of your supplier data and a Product Data Expert will show you what CatalogWiz makes of it. No obligation.</p>
+          <h3>Start with one category, <em>or 500 SKUs.</em></h3>
+          <p>Send a sample of your supplier data. A product data engineer will enrich 20 SKUs free, show you every change with its source, and quote a fixed price for the pilot (from $X).</p>
           <div className="cwh-act">
-            <Link className="btn btn-primary" to="/contact">Talk to a Product Data Expert <ArrowRight size={16} /></Link>
+            <Link className="btn btn-primary" to="/contact">Talk to a Product Data Engineer <ArrowRight size={16} /></Link>
             <Link className="btn btn-outline" to="/ai-readiness-report">Get Free AI Readiness Report</Link>
           </div>
         </div>

@@ -52,8 +52,8 @@ export default function AboutPurpose() {
               <h3>Make trusted product information accessible everywhere buyers look.</h3>
               <p>
                 A world where every product a manufacturer or distributor sells has complete, accurate information everywhere
-                buyers look: online stores, marketplaces, PIM systems, AI search and the AI shopping agents now arriving with
-                Google's Universal Commerce Protocol (UCP).
+                buyers look: online stores, marketplaces, PIM systems, AI search and AI shopping agents using standards such as
+                Google's UCP and OpenAI's ACP.
               </p>
             </div>
           </article>
@@ -62,7 +62,7 @@ export default function AboutPurpose() {
             <span className="ap-num">02</span>
             <div>
               <p className="ap-label">Our mission</p>
-              <h3>Turn messy product data into product pages that sell.</h3>
+              <h3>Engineer product data that buyers and AI can trust.</h3>
               <p>
                 We combine product data experts with AI that works fast. Together we enrich, clean and organise your product
                 information so buyers, marketplaces and AI search can find it and trust it.

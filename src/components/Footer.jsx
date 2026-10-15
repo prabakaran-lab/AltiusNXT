@@ -59,6 +59,7 @@ const PILLS = ['Product identity', 'Specifications', 'Structured data']
 const LEGAL = [
   { label: 'Privacy', to: '/privacy-policy' },
   { label: 'Terms', to: '/terms' },
+  { label: 'Sitemap', to: '/sitemap' },
   // Add { label: 'Cookie Policy', to: '…' } here once that page exists.
 ]
 
@@ -106,11 +107,11 @@ export default function Footer() {
         <section className="ft-cta ft-rise" style={{ '--d': '0ms' }} aria-labelledby="ft-cta-h">
           <div className="ft-cta-copy">
             <p className="ft-eyebrow">Ready to check your product data?</p>
-            <h2 id="ft-cta-h">See how AI-ready your product content really is.</h2>
-            <p className="ft-cta-text">Paste one product page and get a free AI Readiness Report, verified and approved by a product data expert. See what is complete, what AI cannot read, and what to fix first.</p>
+            <h2 id="ft-cta-h">Is AI recommending your products, or a competitor’s?</h2>
+            <p className="ft-cta-text">Paste one product page. We ask ChatGPT, Claude, Gemini and Perplexity the questions your buyers ask, show who they recommend, and a product data engineer approves your free report.</p>
             <div className="ft-cta-act">
               <Link className="btn btn-primary" to="/ai-readiness-report">Free AI Readiness Report <Icon name="arrow-right" /></Link>
-              <Link className="ft-cta-link" to="/how-it-works#catalogwiz">Explore CatalogWiz <Icon name="arrow-right" /></Link>
+              <Link className="ft-cta-link" to="/catalogwiz">Explore CatalogWiz <Icon name="arrow-right" /></Link>
             </div>
             <small>One product page. Actionable findings. No obligation.</small>
             <ul className="ft-pills" aria-label="What the report covers">{PILLS.map((p) => <li key={p}>{p}</li>)}</ul>
@@ -140,9 +141,9 @@ export default function Footer() {
         <div className="ft-main">
           <div className="ft-brand ft-rise" style={{ '--d': '100ms' }}>
             <Link to="/" aria-label="AltiusNxt home"><img className="ft-logo" src={logo} alt="AltiusNxt" width="186" height="80" /></Link>
-            <p className="ft-statement">Product data engineered for discovery, enrichment and growth.</p>
-            <p className="ft-about">Helping manufacturers and distributors turn fragmented product information into structured, AI-ready and channel-ready content.</p>
-            <p className="ft-trust">Serving industrial businesses since 2007.</p>
+            <p className="ft-statement">Industrial product data, engineered for AI search.</p>
+            <p className="ft-about">AltiusNxt’s product data engineers enrich and verify catalogs for industrial distributors, suppliers and manufacturers, then test them on Google and AI assistants.</p>
+            <p className="ft-trust">Since 2007 · Farmington Hills, MI and Coimbatore, India.</p>
             <a className="ft-social" href="https://www.linkedin.com/company/altiusnxt-tech" target="_blank" rel="noopener noreferrer"><LinkedInIcon /> LinkedIn / Follow AltiusNxt <Icon name="arrow-right" /></a>
           </div>
 

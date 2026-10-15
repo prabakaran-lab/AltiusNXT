@@ -111,7 +111,7 @@ export default function ReadinessChecklist() {
             </div>
 
             <Button to="/ai-readiness-report">Get my free AI Readiness Report</Button>
-            <p className="rc-fine">Our report tests this on ChatGPT, Claude, Gemini and Perplexity. This checklist is a self-assessment, not an audit.</p>
+            <p className="rc-fine">Our report tests this on ChatGPT, Claude, Gemini and Perplexity. This checklist is a self-assessment, not an audit. Want to know which competitor AI names instead? Get the free report.</p>
             <button type="button" className="rc-reset" onClick={reset}><RotateCcw size={12} />Clear checks</button>
           </aside>
         </div>

@@ -7,7 +7,7 @@ import './Header.css'
 
 const navigation = [
   { to: '/about-us', label: 'About Us', hint: 'Our story, team and clients', Ico: Building2 },
-  { to: '/catalogwiz', label: 'CatalogWiz', hint: 'AI enrichment, human-verified', Ico: LayoutGrid },
+  { to: '/catalogwiz', label: 'CatalogWiz', hint: 'AI enrichment, engineer-verified', Ico: LayoutGrid },
   { to: '/ai-readiness-report', label: 'AI Readiness', hint: 'See how AI reads your pages', Ico: ScanSearch },
   { to: '/resources', label: 'Resources', hint: 'Case studies, guides, events', Ico: BookOpen },
 ]
@@ -54,7 +54,7 @@ export default function Header() {
                 {label}
               </NavLink>
             )))}
-          <a className="btn btn-primary header-cta" href="mailto:sales@altiusnxt.com"><Mail size={17} />Talk to a Product Data Expert</a>
+          <Link className="btn btn-primary header-cta" to="/contact"><Mail size={17} />Talk to a Product Data Engineer</Link>
         </nav>
         <button
           className="nav-toggle"
@@ -89,7 +89,7 @@ export default function Header() {
             })}
             <div className="nm-cta" style={{ '--i': navigation.length }}>
               <Link className="btn btn-primary" to="/ai-readiness-report" onClick={close}>Get free AI Readiness Report <ArrowRight size={16} /></Link>
-              <a className="btn btn-outline" href="mailto:sales@altiusnxt.com" onClick={close}>Talk to a Product Data Expert</a>
+              <Link className="btn btn-outline" to="/contact" onClick={close}>Talk to a Product Data Engineer</Link>
             </div>
           </nav>
         </>

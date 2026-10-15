@@ -5,7 +5,7 @@ import { Approve, Connect, Enrich, Publish, Review, narrator } from './stages.js
 import './Walkthrough.css'
 
 const ICONS = [Plug, Sparkles, ShieldCheck, BadgeCheck, Send]
-const SUBS = ['Supplier data', 'AI fills the gaps', 'Expert verifies', 'Final sign-off', 'Go live']
+const SUBS = ['Supplier data', 'AI fills the gaps', 'Engineer checks the source', 'Final sign-off', 'Go live']
 const VIEWS = [Connect, Enrich, Review, Approve, Publish]
 const SUMMARY = 'Illustrative walkthrough of one motor circuit breaker, Schneider Electric TELGV3P73. Connect: a supplier Excel file, a technical PDF and a product image are imported into a raw record. Enrich: CatalogWiz AI finds missing attributes in the datasheet and suggests values with sources. Review: a product data specialist verifies, edits or flags each value. Approve: the record passes quality checks. Publish: the approved record fills an ecommerce product page preview.'
 
@@ -93,7 +93,7 @@ export default function Walkthrough({ head }) {
             <p>{head.sub}</p>
           </header>
         ) : (
-          <h2 id="wt-title" className="visually-hidden">From raw supplier data to commerce-ready content</h2>
+          <h2 id="wt-title" className="visually-hidden">How one supplier file becomes a verified product page</h2>
         )}
 
         <div className="wt-shell">

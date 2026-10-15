@@ -7,7 +7,7 @@ import { TESYS } from '../sampleProduct.js'
 export const STAGES = [
   { id: 'connect', n: '01', label: 'Connect', dur: 8.5 },
   { id: 'enrich', n: '02', label: 'Enrich', dur: 15.5 },
-  { id: 'review', n: '03', label: 'Review', dur: 10.5 },
+  { id: 'review', n: '03', label: 'Verify', dur: 10.5 },
   { id: 'approve', n: '04', label: 'Approve', dur: 7.5 },
   { id: 'publish', n: '05', label: 'Publish', dur: 10.5 },
 ]

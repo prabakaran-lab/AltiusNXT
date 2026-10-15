@@ -31,9 +31,8 @@ export default function AboutEvents() {
           <h2 id="aev-title">Meet the team at <span>industry events.</span></h2>
           <p className="aev-lede">We attend trade shows such as IRX to talk to distributors and manufacturers about product data, face to face.</p>
           <p className="aev-next">
-            <b>Next:</b> B2B eCommerce World Americas · Nov 2–3, 2026 · JW Marriott Indianapolis. Bring one product page and we'll check it live.
+            <b>Next:</b> B2B eCommerce World Americas · Nov 2–3, 2026 · JW Marriott Indianapolis. Find us there, and bring one product page and we'll check it live.
           </p>
-          <a className="aev-btn" href="mailto:sales@altiusnxt.com?subject=Book%20a%20meeting%20at%20B2B%20eCommerce%20World%20Americas">Book a meeting at the show</a>
         </header>
         <div className="aev-grid">
           {SHOTS.map((x, i) => (

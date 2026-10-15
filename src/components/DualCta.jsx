@@ -152,7 +152,7 @@ export default function DualCta() {
         <div className="dc-grid">
           {PRODUCTS.map((p, i) => <ProductCard key={p.id} p={p} delay={100 + i * 110} />)}
         </div>
-        <p className="dc-foot">Not sure where to start? <a href="mailto:sales@altiusnxt.com">Talk to a Product Data Expert <Icon name="arrow-right" /></a></p>
+        <p className="dc-foot">Not sure where to start? <Link to="/contact">Talk to a Product Data Engineer <Icon name="arrow-right" /></Link></p>
       </div>
     </section>
   )

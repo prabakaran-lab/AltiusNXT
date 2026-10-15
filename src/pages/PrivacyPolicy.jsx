@@ -32,7 +32,7 @@ export default function PrivacyPolicy() {
           <p>
             AltiusNxt operates as an eCommerce data enrichment and PIM solutions provider. This policy
             governs how we handle personal data collected through our website, our products (including the
-            Catalogwiz Workbench and the AI Readiness Report), and in the course of delivering our services.
+            CatalogWiz Workbench and the AI Readiness Report), and in the course of delivering our services.
           </p>
 
           <h2>2. Information We Collect</h2>

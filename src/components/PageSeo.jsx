@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 const SITE_URL = 'https://www.altiusnxt.com'
 
@@ -25,8 +26,30 @@ export function breadcrumb(path, name) {
   }
 }
 
+// Pages that are served at more than one address point to the main one.
+const CANONICAL_PATH = { '/how-it-works': '/' }
+
+// One <link rel="canonical"> for the page: no query string, no hash, no trailing slash.
+function setCanonical(href) {
+  let link = document.querySelector('link[rel="canonical"]')
+  const created = !link
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'canonical'
+    document.head.appendChild(link)
+  }
+  const previous = link.href
+  link.href = href
+  return () => { if (created) link.remove(); else link.href = previous }
+}
+
 export default function PageSeo({ title, description, keywords, structuredData = [] }) {
+  const { pathname } = useLocation()
   useEffect(() => {
+    const clean = pathname.replace(/\/+$/, '') || '/'
+    const canonical = SITE_URL + (CANONICAL_PATH[clean] ?? clean)
+    const restoreCanonical = setCanonical(canonical)
+    const restoreOgUrl = setMeta('og:url', canonical, 'property')
     const previousTitle = document.title
     document.title = title
     const restoreDescription = setMeta('description', description)
@@ -47,9 +70,11 @@ export default function PageSeo({ title, description, keywords, structuredData =
       restoreKeywords()
       restoreOgTitle()
       restoreOgDescription()
+      restoreCanonical()
+      restoreOgUrl()
       scripts.forEach((script) => script.remove())
     }
-  }, [title, description, keywords, structuredData])
+  }, [title, description, keywords, structuredData, pathname])
 
   return null
 }

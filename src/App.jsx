@@ -12,6 +12,7 @@ import Resources from './pages/Resources.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import Terms from './pages/Terms.jsx'
 import Contact from './pages/Contact.jsx'
+import Sitemap from './pages/Sitemap.jsx'
 import SchemaStudio from './pages/SchemaStudio.jsx'
 import AttributeLibrary from './pages/AttributeLibrary.jsx'
 import ResourcesOverviewPage from './pages/resources/ResourcesOverviewPage.jsx'
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/sitemap" element={<Sitemap />} />
           <Route path="/ai-page-check" element={<Navigate to="/catalogwiz#try" replace />} />
           <Route path="/ai-readability" element={<Navigate to="/catalogwiz#try" replace />} />
           <Route path="/product-schema-markup" element={<SchemaStudio />} />

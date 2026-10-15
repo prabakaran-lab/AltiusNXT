@@ -96,7 +96,7 @@ export async function sendReportToLead({ lead, pdfBuffer }) {
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
-export async function sendContactMessage({ name, email, company, topic, message }) {
+export async function sendContactMessage({ name, email, company, designation, topic, message }) {
   const t = getTransporter()
   if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
   await t.sendMail({
@@ -109,6 +109,7 @@ export async function sendContactMessage({ name, email, company, topic, message 
       <ul>
         <li><strong>Name:</strong> ${esc(name)}</li>
         <li><strong>Email:</strong> ${esc(email)}</li>
+        ${designation ? `<li><strong>Designation:</strong> ${esc(designation)}</li>` : ''}
         ${company ? `<li><strong>Company:</strong> ${esc(company)}</li>` : ''}
         ${topic ? `<li><strong>Topic:</strong> ${esc(topic)}</li>` : ''}
       </ul>
@@ -120,6 +121,6 @@ export async function sendContactMessage({ name, email, company, topic, message 
     from: FROM(),
     to: email,
     subject: 'We received your message | AltiusNxt',
-    html: `<p>Hi ${esc(name)},</p><p>Thanks for contacting AltiusNxt. A Product Data Expert will reply to you shortly.</p><p>AltiusNxt</p>`,
+    html: `<p>Hi ${esc(name)},</p><p>Thanks for contacting AltiusNxt. A product data engineer will reply to you shortly.</p><p>AltiusNxt</p>`,
   })
 }

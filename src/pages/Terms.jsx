@@ -13,7 +13,7 @@ export default function Terms() {
         <div className="wrap">
           <h1 style={{ maxWidth: 720 }}>Terms of Use</h1>
           <p className="lede" style={{ maxWidth: 640 }}>
-            These terms govern your use of the AltiusNxt website, the Catalogwiz Workbench and the
+            These terms govern your use of the AltiusNxt website, the CatalogWiz Workbench and the
             free AI Readiness Report.
           </p>
         </div>
@@ -59,7 +59,7 @@ export default function Terms() {
 
           <h2>4. Intellectual property</h2>
           <p>
-            The website design, text, graphics, the Catalogwiz Workbench and the report format are owned by
+            The website design, text, graphics, the CatalogWiz Workbench and the report format are owned by
             AltiusNxt. Product content you submit remains yours. The report we generate for you is yours to
             use within your business; please do not resell or republish it as your own methodology.
           </p>

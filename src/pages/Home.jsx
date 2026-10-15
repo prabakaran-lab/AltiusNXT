@@ -39,9 +39,9 @@ export default function Home() {
   return (
     <div className="home-page">
       <PageSeo
-        title="AI Product Data Enrichment Services | AltiusNxt"
-        description="AI-powered product data enrichment, verified by experts. Fill missing attributes, fix errors and get your products found on Google and AI search."
-        keywords={['product data enrichment', 'AI product data enrichment', 'product content enrichment', 'eCommerce catalog enrichment', 'B2B product data', 'UCP-ready product data']}
+        title="Industrial Product Data Enrichment & AI Search | AltiusNxt"
+        description="Product data engineers enrich and verify industrial catalogs value by value, then test them on ChatGPT, Gemini, Perplexity and Google. Free AI Readiness Report."
+        keywords={['industrial product data enrichment', 'product data enrichment services', 'product data enrichment for distributors', 'catalog enrichment', 'AI search visibility', 'human-in-the-loop product data', 'MRO product data']}
         structuredData={[breadcrumb('/', 'AI-Powered Product Data Enrichment')]}
       />
       <HomeHero />
@@ -51,8 +51,8 @@ export default function Home() {
       <BeforeAfter />
       <WhoItsFor />
       <Industries />
-      <WhereFits />
       <HowWeWork />
+      <WhereFits />
       <AiLayers />
       <ReadinessDemo />
       <ReadinessChecklist />

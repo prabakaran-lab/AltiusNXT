@@ -24,6 +24,7 @@ router.post('/contact', limiter, async (req, res) => {
     name: clip(b.name, 120),
     email: clip(b.email, 160),
     company: clip(b.company, 160),
+    designation: clip(b.designation, 120),
     topic: clip(b.topic, 60),
     message: clip(b.message, 4000),
   }

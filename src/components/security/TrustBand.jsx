@@ -18,7 +18,7 @@ const BADGES = [
   { src: iso9001, name: 'ISO 9001', sub: 'Quality management' },
   { src: iso27001, name: 'ISO 27001', sub: 'Information security' },
 ]
-const FACTS = [['20+ years', 'of product data management experience'], ['Every value', 'human-verified']]
+const FACTS = [['Since 2007', 'in industrial product data'], ['Every value', 'checked by an engineer']]
 
 export default function TrustBand() {
   const ref = useRef(null)
@@ -60,8 +60,8 @@ export default function TrustBand() {
       <div className="tb-wrap">
         <header className="tb-head">
           <p className="tb-eyebrow">Data quality &amp; security</p>
-          <h2 id="tb-title">Accurate product data. <em>Human-verified. Delivered by an ISO-certified team.</em></h2>
-          <p className="tb-sub">CatalogWiz AI enriches your product data, and a person verifies every value against the manufacturer source. Each value passes four quality checks before it is published to your customers.</p>
+          <h2 id="tb-title">Every value checked by an engineer, <em>not left to your team.</em></h2>
+          <p className="tb-sub">Most AI enrichment tools hand the checking back to your staff. We don’t. An AltiusNxt product data engineer verifies each value against the manufacturer document and records where it came from. Each value passes four quality checks before it is published. Found a wrong value? We correct it free, because we carry the accuracy risk, not you.</p>
         </header>
 
         <div className="tb-card">
@@ -93,7 +93,7 @@ export default function TrustBand() {
             <ul className="facts">
               {FACTS.map(([n, l]) => <li key={l}><b>{n}</b><small>{l}</small></li>)}
             </ul>
-            <p className="mem"><img src={b2bea} alt="" loading="lazy" /><span>Member, B2B Ecommerce Association</span></p>
+            <p className="mem"><img src={b2bea} alt="" loading="lazy" /><span>Member, B2B Ecommerce Association (2026)</span></p>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { COMPANIES } from '../../pages/AboutPortfolio.jsx'
 import Icon from '../ui/Icon.jsx'
 import './HomeTrust.css'
 
-const STATS = [['20+', 'years of team expertise'], ['500+', 'global clients'], ['15M+', 'products enriched']]
+const STATS = [['15M+', 'products enriched'], ['500+', 'distributors'], ['15+', 'countries']]
 const ROW_A = COMPANIES.slice(0, 11)
 const ROW_B = COMPANIES.slice(11)
 
@@ -25,7 +25,7 @@ export default function HomeTrust() {
         <div className="ht-head">
           <div>
             <p className="ht-eyebrow">Trusted by industrial leaders</p>
-            <h2 id="ht-title">Trusted across complex <em>B2B product categories.</em></h2>
+            <h2 id="ht-title">Trusted by industrial <em>distributors in 15+ countries.</em></h2>
           </div>
           <ul className="ht-stats">
             {STATS.map(([n, l]) => <li key={l}><b>{n}</b><span>{l}</span></li>)}

@@ -9,12 +9,12 @@ import UiIcon from '../components/ui/Icon.jsx'
 const MILESTONES = [
   { year: '2007', title: 'AltiusNxt is founded', text: 'Founded by Mr. Vellayan to help companies reach revenue goals by enriching their product content.', tag: 'Inception', icon: 'flag', art: 'plain', detail: 'Inception of AltiusNxt Technologies Pvt Ltd, with a clear vision: help companies reach their revenue goals through better product content.', stat: ['2007', 'Year founded'] },
   { year: '2010', title: 'Full-fledged company', text: 'A team of 50 building online data for industrial product catalogs.', tag: 'Team growth', icon: 'team', art: 'plain', detail: 'Reached a team size of 50, creating online data for a wide range of industrial product catalogs.', stat: ['50', 'Team members'] },
-  { year: '2012', title: '100 employees and growing', text: 'One of the fastest-growing companies in the industry, with 100+ people.', tag: 'Scale', icon: 'scale', art: 'plain', detail: 'Became one of the fastest-growing companies in the industry, with over 100 employees and still growing at a steady pace.', stat: ['100+', 'Employees'] },
-  { year: '2014', title: '1 billion USD', text: 'We helped one client reach a turnover of 1 billion USD.', tag: 'Client impact', icon: 'star', art: 'plain', detail: 'Our enriched product data helped one of our clients reach a turnover of 1 billion USD.', stat: ['$1B', 'Client turnover'] },
+  { year: '2012', title: '100 employees and growing', text: '100+ product data specialists working on industrial catalogs.', tag: 'Scale', icon: 'scale', art: 'plain', detail: 'Grew to over 100 product data specialists working on industrial catalogs.', stat: ['100+', 'Employees'] },
+  { year: '2014', title: '1 billion USD', text: 'Enriched the catalog of a distributor with US$1B+ in revenue.', tag: 'Client impact', icon: 'star', art: 'plain', detail: 'We enriched the product catalog of a distributor with US$1B+ in revenue.', stat: ['$1B', 'Client turnover'] },
   { year: '2017', title: 'Additional offerings', text: 'Partnered with leading PIM and eCommerce platforms and began building eCommerce stores for clients.', tag: 'Digital commerce', icon: 'cart', art: 'grid', detail: 'Partnered with several PIM and eCommerce platforms and started developing successful eCommerce stores for our clients.', stat: ['PIM + eCommerce', 'Platform partners'] },
   { year: '2020', title: 'Expanding beyond horizon', text: 'Clients across the Americas, EU, EMEA and APAC.', tag: 'Global expansion', icon: 'globe', art: 'globe', detail: 'With clients across the Americas, EU, EMEA and APAC, we are set to expand beyond the horizon with multiple service offerings.', stat: ['4 regions', 'Americas · EU · EMEA · APAC'] },
   { year: '2025', title: 'ISO certified', text: 'ISO 9001 and ISO 27001 certified.', tag: 'Trust & certification', icon: 'shield', art: 'seal', detail: 'Independently audited for quality and information security, so your supplier files and product data stay protected.', stat: ['2', 'ISO certifications'] },
-  { year: '2026', title: 'CatalogWiz AI', text: 'We launched CatalogWiz AI: AI-enriched, human-verified product data, ready for AI search and UCP-based AI shopping agents.', tag: 'AI-enabled product data', icon: 'flow', art: 'dots', detail: 'Our newest chapter: AI does the heavy lifting, experts verify every value, and the data is ready for AI search.', stat: ['AI + experts', 'Human-verified data'] },
+  { year: '2026', title: 'CatalogWiz AI', text: 'We launched CatalogWiz AI and the AI Readiness Report: live tests on ChatGPT, Claude, Gemini and Perplexity.', tag: 'AI-enabled product data', icon: 'flow', art: 'dots', detail: 'Our newest chapter: AI does the heavy lifting, our engineers verify every value, and we test the result on AI search.', stat: ['AI + engineers', 'Engineer-verified data'] },
 ]
 
 // Animated line-art for the active milestone: strokes draw in, shapes pop, then ambient motion keeps looping
@@ -290,7 +290,7 @@ export default function AboutJourney() {
           <p className="aj-eyebrow aj-r" style={{ '--d': '0ms' }}>Our journey</p>
           <h2 id="aj-title" className="aj-r" style={{ '--d': '80ms' }}>From a small team to a <span>trusted global partner.</span></h2>
           <p className="aj-intro aj-r" style={{ '--d': '170ms' }}>
-            Since 2007 we have grown from a small product data team into a partner for 500+ manufacturers and distributors in 15+ countries.
+            Since 2007 we have grown from a small product data team into a partner for 500+ distributors in 15+ countries.
           </p>
         </header>
 

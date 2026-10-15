@@ -9,7 +9,7 @@ const STEP_S = 4.6
 const HOLD_S = 3
 const STEPS = [
   { n: '01', title: 'Share your data', you: 'Send supplier files, a PIM export, or just a product URL.', we: 'We connect and read every source.' },
-  { n: '02', title: 'AI enriches. Experts verify.', you: 'Nothing to do. Review the result if you like.', we: 'CatalogWiz AI fills the gaps, then a specialist checks each value.' },
+  { n: '02', title: 'AI enriches. Engineers verify.', you: 'Nothing to do. Review the result if you like.', we: 'CatalogWiz AI fills the gaps, then a product data engineer checks each value against the datasheet.' },
   { n: '03', title: 'Go live on your channels', you: 'Approve the record.', we: 'We deliver channel-ready content to your storefront, marketplaces and PIM.' },
 ]
 const ROWS = [['AC voltage rating', '690 V ac'], ['Interrupting rating', '65 kA'], ['Mounting type', 'DIN Rail'], ['Series', 'TeSys Deca']]
@@ -37,7 +37,7 @@ function VisEnrich() {
         <ul>{ROWS.map(([l, v], i) => <li key={l} style={{ '--i': i }}><em>{l}</em><span className="hwgap">···</span><b>{v}</b></li>)}</ul>
         <div className="hwscan" />
       </div>
-      <div className="hwver"><span className="hwav">PD</span><div><b>Data specialist</b><small>Verified against datasheet</small></div><ShieldCheck size={15} /></div>
+      <div className="hwver"><span className="hwav">PD</span><div><b>Data engineer</b><small>Verified against datasheet</small></div><ShieldCheck size={15} /></div>
     </div>
   )
 }
