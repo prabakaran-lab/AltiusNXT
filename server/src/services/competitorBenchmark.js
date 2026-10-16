@@ -8,7 +8,7 @@ import { CURRENCY_SYMBOLS, isForeignCurrencyPrice, regionSellerClause } from './
 const MAX_SELLERS = 10
 // Sellers priced outside the prospect's currency are dropped only when at least this many in-region
 // sellers remain; below that they are kept and marked as supplementary.
-const MIN_IN_REGION_SELLERS = 3
+export const MIN_IN_REGION_SELLERS = 3
 // How far a seller's price can sit from the group median before it's treated as a different
 // unit/quantity (e.g. single unit vs. a box of 10) rather than a genuinely comparable price,
 // and dropped from the price chart. Wide enough to allow real price spread, narrow enough to
@@ -18,6 +18,7 @@ const MAX_MEDIAN_RATIO = 4
 export function normalizeSellerName(name) {
   return String(name || '')
     .toLowerCase()
+    .replace(/^\s*the\s+/, '')             // "The Home Depot" → "Home Depot"
     .replace(/\([^)]*\)/g, ' ')            // "PGN (PGN Bearings)" → "PGN"; "Bearings Direct (AMPEC)" → "Bearings Direct"
     .replace(/\.(com|com\.au|co\.uk|co|net|store)\b/g, '')
     .replace(/\b(inc|llc|ltd|co|corp|corporation|company)\b/g, '')
@@ -32,8 +33,26 @@ export function isSameSeller(a, b) {
   if (!ka || !kb) return false
   if (ka === kb) return true
   const [short, long] = ka.length <= kb.length ? [ka, kb] : [kb, ka]
-  return short.length >= 3 && long.startsWith(short)
+  if (short.length >= 3 && long.startsWith(short)) return true
+  // The same business written with different extra words ("W.W. Grainger" / "Grainger", "Home Depot" /
+  // "The Home Depot Pro"): the shorter name's distinctive words all appear in the longer one.
+  const ta = sellerTokens(a)
+  const tb = sellerTokens(b)
+  if (!ta.length || !tb.length) return false
+  const [few, many] = ta.length <= tb.length ? [ta, tb] : [tb, ta]
+  if (!few.every((t) => many.includes(t))) return false
+  // Needs at least one word that actually names the business ("industrial safety" alone does not).
+  if (!few.some((t) => !GENERIC_SELLER_WORDS.has(t))) return false
+  return few.length >= 2 || few[0].length >= 7
 }
+
+/** A stand-in the engines write when they cannot name the store ("Unnamed Industrial Safety Supplier", "Various sellers"): not a real seller. */
+export const isPlaceholderSeller = (name) => /\b(unnamed|unknown|unidentified|anonymous|various)\b|^\s*(other|generic|multiple|several)\s/i.test(String(name || ''))
+
+// Words that say nothing about WHICH business a seller is, so "Home Depot" and "The Home Depot" compare equal.
+const SELLER_STOPWORDS = new Set(['the', 'inc', 'llc', 'ltd', 'co', 'corp', 'corporation', 'company', 'store', 'stores', 'shop', 'online', 'usa', 'us', 'com', 'supply', 'supplies', 'direct', 'of', 'and'])
+const GENERIC_SELLER_WORDS = new Set(['safety', 'industrial', 'tools', 'hardware', 'bearing', 'bearings', 'electric', 'electrical', 'building', 'medical', 'welding', 'equipment', 'products', 'office', 'fastener', 'fasteners'])
+const sellerTokens = (name) => nameTokens(name).filter((t) => !SELLER_STOPWORDS.has(t))
 
 const nameTokens = (name) => String(name || '').toLowerCase()
   .replace(/\([^)]*\)/g, ' ')
@@ -440,7 +459,7 @@ export async function benchmarkCompetitors({ manufacturerBrand, manufacturerCode
   for (const s of rawSellers.slice(0, MAX_SELLERS + 4)) {
     const key = normalizeSellerName(s.seller)
     if (!key || seenNames.some((seen) => isSameSeller(seen, s.seller))) continue
-    if (isProspect(s.seller) || isMarketplace(s.seller)) continue
+    if (isProspect(s.seller) || isMarketplace(s.seller) || isPlaceholderSeller(s.seller)) continue
     // Sold-out / unavailable listings are shown for reference in the reference report, never
     // ranked against the prospect's in-stock price.
     if (s.inStock === false) {

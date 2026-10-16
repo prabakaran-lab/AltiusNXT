@@ -9,6 +9,7 @@ import catalogwizDemoRouter from './routes/catalogwizDemo.js'
 import subscribeRouter from './routes/subscribe.js'
 import announceRouter from './routes/announce.js'
 import contactRouter from './routes/contact.js'
+import adminRouter from './routes/admin.js'
 import { startAnnouncementScheduler } from './services/announcements.js'
 
 const app = express()
@@ -33,6 +34,7 @@ app.use('/api', catalogwizDemoRouter)
 app.use('/api', subscribeRouter)
 app.use('/api', announceRouter)
 app.use('/api', contactRouter)
+app.use('/api', adminRouter)
 
 const server = app.listen(config.port, () => {
   console.log(`AltiusNxt AI Readiness API listening on http://localhost:${config.port}`)

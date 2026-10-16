@@ -120,6 +120,6 @@ export async function sendContactMessage({ name, email, company, designation, me
     from: FROM(),
     to: email,
     subject: 'We received your message | AltiusNxt',
-    html: `<p>Hi ${esc(name)},</p><p>Thanks for contacting AltiusNxt. A product data engineer will reply to you shortly.</p><p>AltiusNxt</p>`,
+    html: `<p>Hi ${esc(name)},</p><p>Thanks for contacting AltiusNxt. A Product Data Expert will reply to you shortly.</p><p>AltiusNxt</p>`,
   })
 }

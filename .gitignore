@@ -48,3 +48,6 @@ server/node_modules
 .env
 .env.*
 !.env.example
+
+# Private usage log for the owner's dashboard
+server/data/

@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit'
 import { buildOutreachReportData } from '../services/outreachPipeline.js'
 import { generateOutreachReportPdf } from '../services/reportPdf.js'
 import { sendLeadNotification, sendReportToLead } from '../services/mailer.js'
+import { recordUsage } from '../services/usageStats.js'
 import { isGeminiConfigured, isMailConfigured, config } from '../config.js'
 
 const router = Router()
@@ -80,10 +81,12 @@ async function runJob(job, { lead, url }) {
       product: data.product,
       stats: data.stats,
     }
+    recordUsage({ type: 'report', status: 'done', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: `${lead.firstName} ${lead.lastName}`.trim(), email: lead.email, emailStatus })
   } catch (err) {
     console.error(`lead report generation failed (job ${job.id}, url ${url}, company ${lead.company}):`, err)
     job.status = 'failed'
     job.error = `Could not generate your report: ${err.message}`
+    recordUsage({ type: 'report', status: 'failed', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: `${lead.firstName} ${lead.lastName}`.trim(), email: lead.email, error: err.message })
   }
   job.updatedAt = Date.now()
 }
