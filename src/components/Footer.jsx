@@ -7,6 +7,7 @@ import badgeB2bea from '../assets/awards/b2bea-member-badge.svg'
 import linkedinLogo from '../assets/linkedin.png'
 import './Footer.css'
 import Icon from './ui/Icon.jsx'
+import AdminGate from './AdminGate.jsx'
 
 /* Editable content ---------------------------------------------------- */
 const NAV = [
@@ -191,7 +192,7 @@ export default function Footer() {
 
         {/* 4 · Legal bar */}
         <div className="ft-bottom ft-rise" style={{ '--d': '600ms' }}>
-          <span>© 2026 AltiusNxt Technologies Pvt Ltd</span>
+          <span><AdminGate /> 2026 AltiusNxt Technologies Pvt Ltd</span>
           <ul>
             {LEGAL.map((l) => <li key={l.label}><Link to={l.to}>{l.label}</Link></li>)}
           </ul>
