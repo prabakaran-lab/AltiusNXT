@@ -16,6 +16,9 @@ export const sendContact = (payload) => post('/contact', payload)
 
 export const quickScan = (url) => post('/quick-scan', { url })
 
+export const sendOtp = (payload) => post('/otp/send', payload)
+export const verifyOtp = (payload) => post('/otp/verify', payload)
+
 /**
  * Report generation runs live AI research for several minutes, so the server accepts the request
  * immediately and the report is collected by polling. Resolves with the finished report payload

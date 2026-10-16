@@ -4,7 +4,7 @@ import { TESYS } from '../components/sampleProduct.js'
 import { useSearchParams } from 'react-router-dom'
 import { quickScan, submitLead } from '../services/api.js'
 import LeadFormModal from '../components/LeadFormModal.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ScanOverlay from '../components/ScanOverlay.jsx'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import { AI_READINESS_FAQ, FaqSection, HowSection, LayersSection, LevelsSection, NextSection, Num, ReceiveSection, useReveal } from './ReportSections.jsx'
 import './AIReadinessReport.css'
@@ -29,6 +29,8 @@ export default function AIReadinessReport() {
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
   const [result, setResult] = useState(null)
+  const [verified, setVerified] = useState(null) // { email, token } once the visitor has entered the emailed code
+  const [popup, setPopup] = useState(false) // the scan, score and report popup
 
   const [showLeadForm, setShowLeadForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -36,22 +38,20 @@ export default function AIReadinessReport() {
   const [confirmation, setConfirmation] = useState(null)
   const [progress, setProgress] = useState(null)
   const root = useRef(null)
-  const resultRef = useRef(null)
   useReveal(root)
-
-  useEffect(() => {
-    if (result) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [result])
 
   const runScan = async (targetUrl) => {
     setScanning(true)
     setScanError('')
     setResult(null)
+    setConfirmation(null)
+    setPopup(true)
     try {
       const data = await quickScan(targetUrl)
       setResult(data)
     } catch (err) {
       setScanError(err.message)
+      setPopup(false)
     } finally {
       setScanning(false)
     }
@@ -83,6 +83,7 @@ export default function AIReadinessReport() {
       )
       setConfirmation({ firstName: form.firstName, email: form.email, pdfBase64: data.pdfBase64, emailStatus: data.emailStatus })
     } catch (err) {
+      if (/verify your email/i.test(err.message)) setVerified(null)
       setLeadError(err.message)
       setShowLeadForm(true)
     } finally {
@@ -167,43 +168,16 @@ export default function AIReadinessReport() {
         </div>
       </section>
 
-      {result && (
-        <section className="section bg-white" style={{ paddingTop: 0 }} ref={resultRef}>
-          <div className="wrap">
-            <div className="scan-result">
-              <div className="scan-score" style={{ borderColor: result.score < 50 ? 'var(--orange)' : 'var(--green)' }}>
-                <span className="scan-score-num">{result.score}</span>
-                <span className="scan-score-label">AI readiness score</span>
-              </div>
-              <div className="scan-summary">
-                <h3>{result.headline}</h3>
-                <p style={{ marginBottom: 12 }}>{result.productName}</p>
-                <ul className="scan-gaps">
-                  {(result.topGaps || []).map((gap, i) => (
-                    <li key={i}>{gap}</li>
-                  ))}
-                </ul>
-                {progress ? (
-                  <div className="report-progress" role="status" aria-live="polite">
-                    <span className="report-progress-spinner" aria-hidden="true" />
-                    <div>
-                      <strong>Building your report — {progress.stage}…</strong>
-                      <span>
-                        We query ChatGPT, Claude, Gemini and Perplexity live and benchmark real sellers, so this takes 3–6 minutes.
-                        Keep this tab open. Elapsed: {formatElapsed(progress.elapsedMs)}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <button className="btn btn-primary" type="button" onClick={() => setShowLeadForm(true)} disabled={submitting}>
-                    Get my AI Readiness Report
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+      <ScanOverlay
+        stage={!popup ? null : confirmation ? 'ready' : progress ? 'build' : scanning ? 'scan' : result ? 'result' : null}
+        result={result}
+        url={url}
+        progress={progress}
+        elapsed={formatElapsed(progress?.elapsedMs)}
+        confirmation={confirmation}
+        onGetReport={() => setShowLeadForm(true)}
+        onClose={() => { setPopup(false); setConfirmation(null) }}
+      />
 
       {showLeadForm && (
         <LeadFormModal
@@ -211,16 +185,8 @@ export default function AIReadinessReport() {
           onSubmit={handleLeadSubmit}
           submitting={submitting}
           error={leadError}
-        />
-      )}
-
-      {confirmation && (
-        <ConfirmModal
-          onClose={() => setConfirmation(null)}
-          firstName={confirmation.firstName}
-          email={confirmation.email}
-          pdfBase64={confirmation.pdfBase64}
-          emailStatus={confirmation.emailStatus}
+          verified={verified}
+          onVerified={setVerified}
         />
       )}
 

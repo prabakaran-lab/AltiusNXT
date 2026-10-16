@@ -4,6 +4,8 @@ import rateLimit from 'express-rate-limit'
 import { buildOutreachReportData } from '../services/outreachPipeline.js'
 import { generateOutreachReportPdf } from '../services/reportPdf.js'
 import { sendLeadNotification, sendReportToLead } from '../services/mailer.js'
+import { recordUsage } from '../services/usageStats.js'
+import { isVerified } from '../services/otp.js'
 import { isGeminiConfigured, isMailConfigured, config } from '../config.js'
 
 const router = Router()
@@ -16,7 +18,8 @@ const limiter = rateLimit({
   message: { error: 'Too many report requests from this address in the last hour. Please try again later.' },
 })
 
-const REQUIRED_FIELDS = ['firstName', 'lastName', 'company', 'email', 'url']
+const REQUIRED_FIELDS = ['firstName', 'company', 'email', 'url', 'revenueBracket']
+const REVENUE_VALUES = ['under_5m', '5m_25m', '25m_100m', 'over_100m']
 
 // Report generation runs the live multi-engine research and takes several minutes — longer than
 // browsers, proxies and tunnels will hold a single HTTP request open. So POST /leads only
@@ -63,7 +66,7 @@ async function runJob(job, { lead, url }) {
       setStage('Emailing your report')
       await Promise.all([
         sendLeadNotification({ lead, url, data, pdfBuffer }).then(() => lap('email to govind done')),
-        sendReportToLead({ lead, pdfBuffer }).then(() => lap('email to lead done')),
+        sendReportToLead({ lead, pdfBuffer, data }).then(() => lap('email to lead done')),
       ])
       emailStatus = 'sent'
     } else {
@@ -80,22 +83,36 @@ async function runJob(job, { lead, url }) {
       product: data.product,
       stats: data.stats,
     }
+    recordUsage({ type: 'report', status: 'done', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: `${lead.firstName} ${lead.lastName}`.trim(), email: lead.email, emailStatus })
   } catch (err) {
     console.error(`lead report generation failed (job ${job.id}, url ${url}, company ${lead.company}):`, err)
     job.status = 'failed'
     job.error = `Could not generate your report: ${err.message}`
+    recordUsage({ type: 'report', status: 'failed', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: `${lead.firstName} ${lead.lastName}`.trim(), email: lead.email, error: err.message })
   }
   job.updatedAt = Date.now()
 }
 
 router.post('/leads', limiter, (req, res) => {
-  const body = req.body || {}
+  const body = { ...(req.body || {}) }
+  // The form asks for one "Name"; split it so the report and emails keep using first and last name.
+  if (body.name && !body.firstName) {
+    const parts = String(body.name).trim().split(/\s+/)
+    body.firstName = parts.shift() || ''
+    body.lastName = parts.join(' ')
+  }
   const missing = REQUIRED_FIELDS.filter((f) => !String(body[f] || '').trim())
   if (missing.length) {
     return res.status(400).json({ error: `Missing required field(s): ${missing.join(', ')}` })
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
     return res.status(400).json({ error: 'Please provide a valid email address.' })
+  }
+  if (!REVENUE_VALUES.includes(body.revenueBracket)) {
+    return res.status(400).json({ error: 'Please choose your approximate annual revenue.' })
+  }
+  if (!isVerified(body.email, body.verifyToken)) {
+    return res.status(403).json({ error: 'Please verify your email address first.', code: 'EMAIL_NOT_VERIFIED' })
   }
   if (!/^https?:\/\//i.test(String(body.url))) {
     return res.status(400).json({ error: 'Please provide a valid product page URL (starting with http:// or https://).' })
@@ -106,7 +123,7 @@ router.post('/leads', limiter, (req, res) => {
 
   const lead = {
     firstName: body.firstName,
-    lastName: body.lastName,
+    lastName: body.lastName || '',
     company: body.company,
     companyWebsite: body.companyWebsite || '',
     email: body.email,

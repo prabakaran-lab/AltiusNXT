@@ -1,0 +1,101 @@
+/* Scan popup: frosted light card on a dimmed backdrop, with a CSS 3D scene */
+.so{ position:fixed; inset:0; z-index:2000; display:grid; place-items:center; padding:20px; background:rgba(14,26,46,.42); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); animation:so-in .35s ease both; }
+@keyframes so-in{ from{ opacity:0; } to{ opacity:1; } }
+.so *{ box-sizing:border-box; }
+.so-card{ position:relative; width:min(560px,100%); max-height:94vh; overflow-y:auto; overflow-x:hidden; border-radius:28px; background:linear-gradient(180deg,#fff 0%,#f3f7fc 100%); border:1px solid rgba(255,255,255,.9); box-shadow:0 60px 120px -40px rgba(11,31,58,.6); animation:so-pop .55s cubic-bezier(.2,1.1,.3,1) both; }
+@keyframes so-pop{ from{ opacity:0; transform:translateY(18px) scale(.94); } to{ opacity:1; transform:none; } }
+
+/* ---- the 3D scene ---- */
+.so-scene{ position:relative; height:290px; perspective:900px; perspective-origin:50% 42%; background:radial-gradient(60% 60% at 50% 40%, rgba(255,106,26,.12), transparent 70%), linear-gradient(180deg,#f7faff,#eaf1fa); overflow:hidden; }
+.so-scene::before{ content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(11,31,58,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(11,31,58,.05) 1px,transparent 1px); background-size:34px 34px; -webkit-mask-image:radial-gradient(70% 70% at 50% 50%,#000,transparent); mask-image:radial-gradient(70% 70% at 50% 50%,#000,transparent); }
+.so-floor{ position:absolute; left:50%; bottom:26px; width:210px; height:46px; margin-left:-105px; border-radius:50%; background:radial-gradient(closest-side, rgba(11,31,58,.28), transparent); filter:blur(3px); animation:so-shadow 6s ease-in-out infinite; }
+@keyframes so-shadow{ 50%{ transform:scale(.82); opacity:.7; } }
+.so-world{ position:absolute; left:50%; top:46%; width:0; height:0; transform-style:preserve-3d; transform:rotateX(-18deg); transition:transform .9s cubic-bezier(.5,0,.2,1), opacity .6s; }
+.so.is-done .so-world{ transform:rotateX(-18deg) scale(.15); opacity:0; }
+
+.so-cube{ position:absolute; left:-60px; top:-60px; width:120px; height:120px; transform-style:preserve-3d; animation:so-spin 9s linear infinite, so-bob 3.2s ease-in-out infinite alternate; }
+@keyframes so-spin{ from{ transform:rotateY(0deg) rotateX(14deg); } to{ transform:rotateY(360deg) rotateX(14deg); } }
+@keyframes so-bob{ from{ margin-top:-6px; } to{ margin-top:8px; } }
+.so-face{ position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; gap:9px; padding:18px; border-radius:12px; border:1.5px solid rgba(255,106,26,.55); background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,236,222,.82)); box-shadow:inset 0 0 26px rgba(255,106,26,.16), 0 0 22px rgba(255,106,26,.25); backface-visibility:visible; }
+.so-face.f{ transform:translateZ(60px); } .so-face.b{ transform:rotateY(180deg) translateZ(60px); }
+.so-face.r{ transform:rotateY(90deg) translateZ(60px); } .so-face.l{ transform:rotateY(-90deg) translateZ(60px); }
+.so-face.t{ transform:rotateX(90deg) translateZ(60px); } .so-face.u{ transform:rotateX(-90deg) translateZ(60px); }
+.so-face .bar{ display:block; height:8px; border-radius:4px; background:rgba(11,31,58,.18); } .so-face .b1{ width:80%; } .so-face .b2{ width:56%; } .so-face .b3{ width:68%; }
+.so-face .pill{ display:block; width:44px; height:16px; margin-top:4px; border-radius:99px; background:var(--orange); opacity:.9; }
+
+/* orbiting rings (a gyroscope) */
+.so-ringo{ position:absolute; border-radius:50%; border:1.5px solid rgba(255,106,26,.5); pointer-events:none; }
+.so-ringo::after{ content:""; position:absolute; left:50%; top:-5px; width:10px; height:10px; margin-left:-5px; border-radius:50%; background:#fff; box-shadow:0 0 0 2px var(--orange), 0 0 14px 3px rgba(255,106,26,.8); }
+.so-ringo.r1{ left:-112px; top:-112px; width:224px; height:224px; transform:rotateX(72deg); animation:so-r1 6s linear infinite; }
+.so-ringo.r2{ left:-132px; top:-132px; width:264px; height:264px; border-color:rgba(11,31,58,.28); transform:rotateY(70deg); animation:so-r2 8.5s linear infinite reverse; }
+.so-ringo.r2::after{ background:var(--navy); box-shadow:0 0 0 2px #fff, 0 0 10px 2px rgba(11,31,58,.5); }
+.so-ringo.r3{ left:-96px; top:-96px; width:192px; height:192px; border-style:dashed; border-color:rgba(255,106,26,.35); transform:rotateX(55deg) rotateY(40deg); animation:so-r3 11s linear infinite; }
+@keyframes so-r1{ to{ transform:rotateX(72deg) rotateZ(360deg); } }
+@keyframes so-r2{ to{ transform:rotateY(70deg) rotateZ(360deg); } }
+@keyframes so-r3{ to{ transform:rotateX(55deg) rotateY(40deg) rotateZ(360deg); } }
+
+/* the scanning plane sweeping up and down through the box */
+.so-plane{ position:absolute; left:-100px; top:-100px; width:200px; height:200px; border-radius:14px; transform:rotateX(90deg) translateZ(0); background:linear-gradient(135deg,rgba(255,106,26,.28),rgba(255,106,26,.06)); border:1.5px solid rgba(255,106,26,.85); box-shadow:0 0 30px rgba(255,106,26,.6); animation:so-sweep 2.6s ease-in-out infinite alternate; pointer-events:none; }
+@keyframes so-sweep{ from{ transform:rotateX(90deg) translateZ(-84px); } to{ transform:rotateX(90deg) translateZ(84px); } }
+
+/* floating chips at different depths */
+.so-chip{ position:absolute; padding:5px 10px; border-radius:99px; background:#fff; border:1px solid #ffd9bf; color:var(--navy); font:700 11px/1 var(--font-body); box-shadow:0 10px 18px -10px rgba(11,31,58,.5); white-space:nowrap; }
+.so-chip.c1{ left:-168px; top:-80px; transform:translateZ(60px); animation:so-f1 4.2s ease-in-out infinite alternate; }
+.so-chip.c2{ left:96px; top:-92px; transform:translateZ(-40px); animation:so-f2 5s ease-in-out infinite alternate; }
+.so-chip.c3{ left:110px; top:54px; transform:translateZ(80px); animation:so-f1 4.6s ease-in-out infinite alternate-reverse; }
+.so-chip.c4{ left:-150px; top:60px; transform:translateZ(-20px); animation:so-f2 5.4s ease-in-out infinite alternate-reverse; }
+@keyframes so-f1{ from{ translate:0 -8px; } to{ translate:0 10px; } }
+@keyframes so-f2{ from{ translate:0 10px; } to{ translate:0 -10px; } }
+
+/* done: the score ring takes the stage */
+.so-reveal{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.4) rotateY(-80deg); opacity:0; transition:transform .9s cubic-bezier(.2,1.2,.3,1) .35s, opacity .5s .35s; transform-style:preserve-3d; }
+.so.is-done .so-reveal{ opacity:1; transform:translate(-50%,-50%); animation:so-reveal .9s cubic-bezier(.2,1.2,.3,1) both; }
+@keyframes so-reveal{ from{ opacity:0; transform:translate(-50%,-50%) scale(.4) rotateY(-80deg); } to{ opacity:1; transform:translate(-50%,-50%) scale(1) rotateY(0deg); } }
+.so-ring{ position:relative; }
+.so-ring svg{ width:100%; height:100%; transform:rotate(-90deg); overflow:visible; }
+.so-ring circle{ fill:none; stroke-width:10; }
+.so-ring .trk{ stroke:rgba(11,31,58,.1); }
+.so-ring .bar{ stroke-linecap:round; transition:stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1) .5s; filter:drop-shadow(0 0 8px rgba(255,106,26,.5)); }
+.so-ring .num{ position:absolute; inset:0; display:grid; place-content:center; text-align:center; gap:4px; }
+.so-ring .num b{ font:800 clamp(34px,28%,56px)/1 var(--font-head); color:var(--navy); letter-spacing:-.03em; }
+.so-ring .num small{ font:600 11px/1.2 var(--font-body); color:#6b7a90; }
+
+/* ---- the words ---- */
+.so-copy{ padding:22px 28px 26px; text-align:center; }
+.so-copy h3{ margin:0; font:800 22px/1.2 var(--font-head); color:var(--navy); }
+.so-copy p{ margin:8px auto 0; max-width:36em; font:400 14.5px/1.55 var(--font-body); color:#4a5a72; } .so-copy p b{ color:var(--navy); }
+.so-meter{ height:6px; margin:16px auto 0; max-width:420px; border-radius:3px; background:#e4ebf4; overflow:hidden; }
+.so-meter i{ display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,var(--orange),#ffb27d); transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+.so-checks{ list-style:none; margin:14px auto 0; padding:0; max-width:340px; display:grid; gap:6px; text-align:left; }
+.so-checks li{ display:flex; align-items:center; gap:10px; height:26px; padding:0 10px; border-radius:8px; font:600 13px/1 var(--font-body); color:#9aa7ba; animation:so-li .4s ease both; }
+.so-checks li span{ flex:none; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; border:1.5px solid #cfd8e6; color:#fff; }
+.so-checks li.ok{ color:#4a5a72; } .so-checks li.ok span{ background:#3fd39b; border-color:#3fd39b; }
+.so-checks li.run{ color:var(--navy); background:#fff4ec; } .so-checks li.run span{ border-color:var(--orange); border-top-color:transparent; animation:so-spin2 .8s linear infinite; }
+@keyframes so-li{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+@keyframes so-spin2{ to{ transform:rotate(360deg); } }
+.so-copy small{ display:block; margin-top:12px; font:600 11.5px/1 var(--font-body); color:#8a97ab; letter-spacing:.04em; }
+
+@media (max-width:560px){ .so-scene{ height:250px; transform-origin:50% 0; } .so-world{ transform:rotateX(-18deg) scale(.82); } .so-chip.c1, .so-chip.c4{ left:-120px; } .so-copy{ padding:18px 18px 22px; } }
+@media (prefers-reduced-motion:reduce){
+  .so, .so-card, .so-checks li{ animation:none; }
+  .so-cube, .so-ringo, .so-plane, .so-chip, .so-floor{ animation:none !important; }
+  .so-ring .bar, .so-reveal, .so-world, .so-meter i{ transition:none; }
+}
+
+/* ---- journey stages: close button, result, build and ready ---- */
+.so-x{ position:absolute; top:14px; right:14px; z-index:5; width:34px; height:34px; border:0; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.9); color:#4a5a72; cursor:pointer; box-shadow:0 6px 14px -8px rgba(11,31,58,.5); transition:background .2s, color .2s; }
+.so-x:hover{ background:var(--orange); color:#fff; }
+.so-result{ text-align:left; }
+.so-result h3{ font:800 18px/1.3 var(--font-head); text-align:center; }
+.so-result .pn{ margin:8px 0 0; max-width:none; text-align:center; font:500 13.5px/1.45 var(--font-body); color:#6b7a90; }
+.so-gaps{ list-style:none; margin:14px 0 6px; padding:0; display:grid; gap:7px; }
+.so-gaps li{ position:relative; padding-left:18px; font:400 13.5px/1.5 var(--font-body); color:#4a5a72; }
+.so-gaps li::before{ content:""; position:absolute; left:2px; top:8px; width:6px; height:6px; border-radius:50%; background:var(--orange); }
+.so-cta{ width:100%; margin-top:18px; justify-content:center; gap:8px; }
+.so-result small{ display:block; margin-top:10px; text-align:center; }
+.so-link{ display:block; margin:12px auto 0; border:0; background:none; cursor:pointer; font:700 13px/1 var(--font-body); color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
+.so-ok{ width:150px; height:150px; border-radius:50%; display:grid; place-items:center; color:#fff; background:linear-gradient(135deg,#3fd39b,#1aa579); box-shadow:0 0 0 12px rgba(63,211,155,.18), 0 0 50px rgba(63,211,155,.5); }
+.so-indet{ width:40% !important; animation:so-slide 1.6s ease-in-out infinite; }
+@keyframes so-slide{ from{ margin-left:-40%; } to{ margin-left:100%; } }
+@media (prefers-reduced-motion:reduce){ .so-indet{ animation:none; width:100% !important; } }
+#root .so-cta{ margin-top:20px; }

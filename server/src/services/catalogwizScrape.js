@@ -302,3 +302,80 @@ export async function fetchProductImage(candidates, pageUrl) {
   }
   return null
 }
+
+/** Last-resort product picture: the page is opened in a browser and the product's main picture is photographed exactly as a visitor sees it.
+ *  Used only when none of the page's image addresses could be downloaded (hot-link protection, script-built galleries, CSS backgrounds).
+ *  Returns { dataUrl, sourceUrl } or null. */
+export async function captureProductImage(pageUrl) {
+  let browser
+  try {
+    browser = await launchBrowserFor(pageUrl)
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 25000 })
+    await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {})
+    await page.waitForTimeout(1500)
+    // lazy pictures load as they scroll into view
+    await page.evaluate(async () => { for (let y = 0; y < 1800; y += 450) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 120)) } window.scrollTo(0, 0) }).catch(() => {})
+    await page.waitForTimeout(500)
+
+    const picked = await page.evaluate(() => {
+      const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim()
+      const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+      const BAD = /logo|sprite|icon|badge|banner|payment|visa|mastercard|paypal|flag|facebook|twitter|linkedin|instagram|youtube|avatar|placeholder|blank|spacer|pixel|loading|spinner|star|rating/i
+      const REGION_BAD = 'nav, footer, aside, header:not(:has(h1)), [class*="related" i], [class*="recommend" i], [class*="upsell" i], [class*="cross-sell" i], [class*="carousel" i], [class*="recent" i], [class*="newsletter" i], [class*="cookie" i], [class*="modal" i], [class*="popup" i]'
+      const h1 = [...document.querySelectorAll('h1')].find((h) => clean(h.textContent).length > 2 && !h.closest('nav, footer, aside')) || null
+      const h1Top = h1 ? h1.getBoundingClientRect().top + window.scrollY : 0
+      const titleTokens = new Set(norm(h1?.textContent || document.title).split(' ').filter((t) => t.length > 2))
+      let best = null
+      let bestScore = 0
+      const OVERLAY = '[role="dialog"], [aria-modal="true"], [id*="consent" i], [class*="consent" i], [class*="gdpr" i], [id*="onetrust" i], [class*="onetrust" i], [id*="cookie" i], [class*="cookie" i]'
+      const floating = (el) => { for (let n = el; n && n !== document.body; n = n.parentElement) { const p = getComputedStyle(n).position; if (p === 'fixed' || p === 'sticky') return true } return false }
+      const consider = (el, src) => {
+        const r = el.getBoundingClientRect()
+        if (r.width < 160 || r.height < 160) return
+        if (el.closest(OVERLAY) || floating(el)) return
+        // a picture that did not load (a broken link shows only its alt text) is not a product picture
+        if (el.tagName === 'IMG' && (!el.complete || el.naturalWidth < 50)) return
+        const cs = getComputedStyle(el)
+        if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return
+        const ratio = r.width / r.height
+        const hay = `${el.getAttribute('alt') || ''} ${el.id} ${typeof el.className === 'string' ? el.className : ''} ${src}`
+        let score = Math.min(30, (r.width * r.height) / 10000)
+        if (BAD.test(hay)) score -= 12
+        if (el.closest(REGION_BAD)) score -= 12
+        if (ratio > 4 || ratio < 0.25) score -= 6
+        score += 3 * norm(hay).split(' ').filter((t) => titleTokens.has(t)).length
+        if (/product|main|zoom|primary|gallery|viewer|large|detail|hero|photo|image/i.test(hay)) score += 3
+        if (h1) score += 5 * Math.max(0, 1 - Math.abs(r.top + window.scrollY - h1Top) / 900)
+        if (score > bestScore) { bestScore = score; best = el }
+      }
+      for (const img of document.querySelectorAll('img')) consider(img, img.currentSrc || img.src)
+      for (const el of document.querySelectorAll('div, span, a, figure')) {
+        const bg = getComputedStyle(el).backgroundImage
+        if (bg && bg !== 'none' && /url\(/.test(bg) && !el.children.length) consider(el, bg)
+      }
+      if (!best || bestScore < 4) return false
+      best.setAttribute('data-altiusnxt-photo', '1')
+      // pop-ups, cookie bars and sticky bars must not sit on top of the picture when it is photographed
+      for (const el of document.querySelectorAll('body *')) {
+        if (el === best || el.contains(best) || best.contains(el)) continue
+        const p = getComputedStyle(el).position
+        if (p === 'fixed' || p === 'sticky' || el.matches(OVERLAY)) el.style.setProperty('visibility', 'hidden', 'important')
+      }
+      return true
+    })
+    if (!picked) return null
+    const shot = await (await page.$('[data-altiusnxt-photo="1"]'))?.screenshot({ type: 'png' }).catch(() => null)
+    if (!shot) return null
+    const info = await sharp(shot).metadata()
+    if (!info.width || !info.height || info.width < 120 || info.height < 120) return null
+    const spread = (await sharp(shot).flatten({ background: '#ffffff' }).stats()).channels.slice(0, 3).reduce((a, c) => a + c.stdev, 0) / 3
+    if (spread < 12) return null
+    const jpeg = await sharp(shot).flatten({ background: '#ffffff' }).resize({ width: 720, height: 720, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer()
+    return { dataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`, sourceUrl: pageUrl }
+  } catch {
+    return null
+  } finally {
+    if (browser) await browser.close().catch(() => {})
+  }
+}

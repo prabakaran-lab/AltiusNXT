@@ -85,7 +85,7 @@ export default function Sitemap() {
         keywords={['AltiusNxt sitemap', 'site map']}
         structuredData={[breadcrumb('/sitemap', 'Sitemap')]}
       />
-      <section className="sm">
+      <section className="sitemap-page">
         <div className="sm-wrap">
           <header className="sm-head">
             <p className="sm-eyebrow">Sitemap</p>

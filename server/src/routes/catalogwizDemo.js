@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import rateLimit from 'express-rate-limit'
 import { enrichProductPage } from '../services/catalogwizEnrich.js'
 import { sendDemoRequestNotification } from '../services/catalogwizMail.js'
+import { recordUsage } from '../services/usageStats.js'
 import { isGeminiConfigured, isMailConfigured } from '../config.js'
 
 const router = Router()
@@ -49,11 +50,13 @@ async function runJob(job, { lead, url }) {
     job.result = await enrichProductPage(url, setStage)
     job.status = 'done'
     job.stage = 'Done'
+    recordUsage({ type: 'enrich', status: 'done', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: lead.name, email: lead.email, attrs: job.result.stats?.after, technical: job.result.stats?.technical, image: Boolean(job.result.image), taxonomy: Boolean(job.result.after?.taxonomy) })
     console.log(`[catalogwiz-demo ${job.id.slice(0, 8)}] ${lead.company}: ${job.result.stats.after} attributes (${job.result.stats.technical} technical) in ${Date.now() - t0}ms`)
   } catch (err) {
     console.error(`[catalogwiz-demo ${job.id.slice(0, 8)}] failed for ${url}:`, err.message)
     job.status = 'failed'
     job.error = `We couldn't enrich that page: ${err.message}`
+    recordUsage({ type: 'enrich', status: 'failed', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: lead.name, email: lead.email, error: err.message })
   }
   job.updatedAt = Date.now()
 }

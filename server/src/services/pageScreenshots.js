@@ -83,6 +83,18 @@ async function prepareForShot(page) {
   await page.evaluate(hideOverlaysInPage).catch(() => {})
 }
 
+/** Opens the page and waits for it to settle. A site that never goes quiet within the limit (a slow store, a chat
+ *  widget that keeps polling) is photographed as it has loaded so far, instead of failing the whole capture. */
+async function gotoSettled(page, url) {
+  try {
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 })
+  } catch (err) {
+    if (!/timeout/i.test(String(err?.message))) throw err
+    if (page.url() === 'about:blank') await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    else console.warn(`[screenshot] ${url} did not go quiet within 20s; using the page as loaded so far`)
+  }
+}
+
 /** Whole-page capture (see SHOT_* above): the full page top to bottom. The report template scales the
  *  "current" and "enriched" shots by the same factor so they stay comparable (see page 4 of the template). */
 async function captureFullPageShot(page) {
@@ -112,7 +124,7 @@ export async function captureCurrentPageAndHeader(url) {
     browser = await launchBrowserFor(url)
     const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SHOT_SCALE })
     await installOverlayKiller(page)
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 })
+    await gotoSettled(page, url)
 
     // The browser-rendered text, which includes script-injected content (store-wide notice
     // banners, tabs filled client-side) that a static HTML fetch never sees.
@@ -469,7 +481,7 @@ async function captureDomInjectedMockup({ url, content, getImage }) {
     browser = await launchBrowserFor(url)
     const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: SHOT_SCALE })
     await installOverlayKiller(page)
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 })
+    await gotoSettled(page, url)
     // Same preparation as the "current page" shot, so hidden banners / lazy images match and
     // the injection only ever sees what a visitor sees.
     await prepareForShot(page)
@@ -738,7 +750,32 @@ async function captureDomInjectedMockup({ url, content, getImage }) {
           // table into a sliver, so the new sections go below the whole product row instead, at full width.
           let anchor = ref
           while (anchor.parentElement && anchor.parentElement !== document.body && anchor.getBoundingClientRect().width < window.innerWidth * 0.5) anchor = anchor.parentElement
-          anchor.after(wrap)
+          // The sections belong directly under the product description. When the wide container found above
+          // also holds a "Related products"-style block, they go in front of that block (not after it).
+          const RELATED_TEXT = /^\s*(related|similar|you (may|might) (also )?like|customers (who )?(also )?(viewed|bought)|also (viewed|bought)|frequently bought|recommended|recently viewed|people also|more (from|like)|upsell|cross[- ]?sell)\b/i
+          const RELATED_CLASS = '[class*="related" i], [id*="related" i], [class*="upsell" i], [class*="cross-sell" i], [class*="crosssell" i], [class*="similar-products" i], [class*="recommended" i]'
+          const relatedAfter = (from) => {
+            const hits = []
+            for (const h of document.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+              if (isVisible(h) && !h.contains(from) && precedes(from, h) && textOf(h).length <= 60 && RELATED_TEXT.test(textOf(h))) hits.push(h)
+            }
+            for (const el of document.querySelectorAll(RELATED_CLASS)) {
+              if (isVisible(el) && !el.contains(from) && precedes(from, el) && el.querySelector('img, a')) hits.push(el)
+            }
+            hits.sort((a, b) => (precedes(a, b) ? -1 : 1))
+            return hits[0] || null
+          }
+          const related = relatedAfter(ref)
+          if (related && anchor.contains(related)) {
+            let common = ref
+            while (common && (!common.contains(related) || common.getBoundingClientRect().width < window.innerWidth * 0.5)) common = common.parentElement
+            let branch = related
+            while (common && branch.parentElement && branch.parentElement !== common) branch = branch.parentElement
+            if (common && branch.parentElement === common) {
+              Object.assign(wrap.style, { clear: 'both', width: '100%', flex: '0 0 100%', gridColumn: '1 / -1' })
+              branch.before(wrap)
+            } else anchor.after(wrap)
+          } else anchor.after(wrap)
           out.sections = true
 
           // Everything added must be visible inside the report's frame (c.limitBottom is its bottom edge
