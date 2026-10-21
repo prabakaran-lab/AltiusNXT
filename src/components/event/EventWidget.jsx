@@ -151,7 +151,7 @@ function BookingDialog({ avail, setAvail, loadFailed, reload, onClose }) {
           <div className="evd-brand"><HexMark size={44} /><span>B2B eCommerce<br />World <b>2026</b></span></div>
           <p className="evd-story">Be Found.<br />Be Trusted.<br /><b>Be Recommended.</b></p>
           <ul className="evd-facts">
-            <li><CalendarDays size={17} />Nov 2–3, Indianapolis</li>
+            <li><CalendarDays size={17} />Nov 1–3, Indianapolis</li>
             <li><MapPin size={17} />JW Marriott</li>
             <li><CalendarDays size={17} />Booth 52</li>
           </ul>
@@ -256,7 +256,7 @@ export default function EventWidget() {
       <button ref={btnRef} type="button" className="evb" onClick={() => { setOpen(true); refresh() }} aria-haspopup="dialog"
         aria-label={`B2B eCommerce World 2026, Booth 52. ${leftText}. Book your live audit slot.`}>
         <span className="evb-top"><HexMark size={32} /><span className="evb-name">B2B<br />Ecommerce<br />World 2026</span></span>
-        <span className="evb-when">Nov 2–3<br />Indianapolis</span>
+        <span className="evb-when">Nov 1–3<br />Indianapolis</span>
         <span className="evb-booth"><small>Booth</small><b>52</b></span>
         <span className="evb-slots"><Users size={18} /><b>{left ?? 20}</b><small>{left === 0 ? 'Fully booked' : 'Slots left'}</small></span>
         <span className="evb-go"><ArrowRight size={16} strokeWidth={2.6} /></span>

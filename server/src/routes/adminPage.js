@@ -94,7 +94,7 @@ function render(d){
   $('note').textContent=first?'Counting since '+when(first,d.tz)+'. Only finished runs are counted; a run that is still going is added when it ends.':'Counting starts with the first finished run.'}
 function load(){fetch(BASE+'data',{credentials:'same-origin',cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('x');return r.json()}).then(render).catch(function(){$('meta').textContent='Session ended. Sign in again from the website.'})}
 function tl(t){var p=t.split(':'),h=+p[0];return ((h+11)%12+1)+':'+p[1]+(h<12?' AM':' PM')}
-var DAYS={'2026-11-02':'Mon, Nov 2','2026-11-03':'Tue, Nov 3'};
+var DAYS={'2026-11-01':'Sun, Nov 1','2026-11-02':'Mon, Nov 2','2026-11-03':'Tue, Nov 3'};
 function renderBookings(d){
   $('bk-count').textContent='· '+d.availability.remaining+' of '+d.availability.total+' slots left';
   var tb=$('bookings');tb.textContent='';

@@ -21,14 +21,14 @@ export const EVENT = {
   // Indianapolis is on Eastern Standard Time (UTC-5) on these dates
   utcOffsetHours: -5,
   slotMinutes: 30,
+  // the audit window runs from Nov 1, 4:00 PM to Nov 3, 12:00 PM; each day lists its own 24-hour local start times (shown as "10:00 AM")
   days: [
-    { date: '2026-11-02', label: 'Mon, Nov 2' },
-    { date: '2026-11-03', label: 'Tue, Nov 3' },
+    { date: '2026-11-01', label: 'Sun, Nov 1', times: ['16:00', '16:30', '17:00', '17:30'] },
+    { date: '2026-11-02', label: 'Mon, Nov 2', times: ['10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00'] },
+    { date: '2026-11-03', label: 'Tue, Nov 3', times: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'] },
   ],
-  // 24-hour local start times; shown as "10:00 AM"
-  times: ['10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00'],
 }
-export const TOTAL_SLOTS = EVENT.days.length * EVENT.times.length
+export const TOTAL_SLOTS = EVENT.days.reduce((n, d) => n + d.times.length, 0)
 
 export const timeLabel = (t) => {
   const [h, m] = t.split(':').map(Number)
@@ -76,7 +76,7 @@ const norm = (e) => String(e || '').trim().toLowerCase()
 export function availability() {
   const taken = new Set(active().map((b) => `${b.date} ${b.time}`))
   const days = EVENT.days.map((d) => {
-    const slots = EVENT.times.map((t) => ({ time: t, label: timeLabel(t), available: !taken.has(`${d.date} ${t}`) }))
+    const slots = d.times.map((t) => ({ time: t, label: timeLabel(t), available: !taken.has(`${d.date} ${t}`) }))
     return { date: d.date, label: d.label, remaining: slots.filter((s) => s.available).length, slots }
   })
   return {
@@ -94,7 +94,7 @@ export class BookingError extends Error {
 /** Books one slot. Throws BookingError('...', 'SLOT_TAKEN' | 'ALREADY_BOOKED' | 'FULL' | 'BAD_SLOT'). */
 export function book({ name, email, company, jobTitle = '', website, date, time }) {
   return locked(() => {
-    if (!EVENT.days.some((d) => d.date === date) || !EVENT.times.includes(time)) throw new BookingError('Please choose one of the listed dates and time slots.', 'BAD_SLOT')
+    if (!EVENT.days.find((d) => d.date === date)?.times.includes(time)) throw new BookingError('Please choose one of the listed dates and time slots.', 'BAD_SLOT')
     const live = active()
     if (live.length >= TOTAL_SLOTS) throw new BookingError('All 20 live audit slots are now booked.', 'FULL')
     if (live.some((b) => b.date === date && b.time === time)) throw new BookingError(`The ${timeLabel(time)} slot on ${dayLabel(date)} was just booked by someone else. Please choose another time.`, 'SLOT_TAKEN')
