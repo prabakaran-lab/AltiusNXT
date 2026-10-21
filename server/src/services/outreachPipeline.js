@@ -10,7 +10,7 @@ import {
 } from './gemini.js'
 import { callOpenAIWithSearch, callClaudeWithSearch, withTransientRetry } from './liveEngines.js'
 import { askGeminiTextWithSearch } from './gemini.js'
-import { benchmarkCompetitors, extractPriceSignals, extractPriceFromHtml, countSpecCues, normalizeSellerName, isSameSeller, priceToValue as priceToValueShared, toPerUnit, extractUrls, measureSpecDepthFromUrls, prospectNameMatcher, SPEC_RECHECK_BELOW } from './competitorBenchmark.js'
+import { benchmarkCompetitors, extractPriceSignals, extractPriceFromHtml, countSpecCues, normalizeSellerName, isSameSeller, priceToValue as priceToValueShared, toPerUnit, extractUrls, measureSpecDepthFromUrls, prospectNameMatcher, SPEC_RECHECK_BELOW, MIN_IN_REGION_SELLERS, isPlaceholderSeller } from './competitorBenchmark.js'
 import { extractJsonLdObjects, isBotChallengeText, BOT_BLOCKED_MESSAGE } from './scrapeDo.js'
 import { runCrossEngineResearch, synthesizeCrossEngineFindings } from './crossEngineResearch.js'
 import { testCrawlerAccess } from './crawlerAccess.js'
@@ -582,7 +582,7 @@ export async function buildOutreachReportData({ company, website, productUrl, co
   const isMarketplaceName = (name) => /^(ebay|amazon|alibaba|aliexpress|walmart marketplace|etsy|mercari|craigslist|facebook marketplace)\b/i.test(String(name || '').trim())
   const extraSellers = []
   for (const s of crossEngineFindings.sellers || []) {
-    if (!(s?.seller && s?.price) || s.inStock === false || looksLikeProspect(s.seller) || isMarketplaceName(s.seller)) continue
+    if (!(s?.seller && s?.price) || s.inStock === false || looksLikeProspect(s.seller) || isMarketplaceName(s.seller) || isPlaceholderSeller(s.seller)) continue
     // Same market only: skip sellers the research tagged as another country or priced in another currency.
     if (region.country && (s.inRegion === false || isForeignCurrencyPrice(s.price, region.currencyCode))) continue
     // Same business under a slightly different name ("PGN" / "PGN Bearings") is one seller.
@@ -616,11 +616,26 @@ export async function buildOutreachReportData({ company, website, productUrl, co
   const verifiedAs = (x) => verificationOf?.get(x.seller) || 'unconfirmed'
   if (verification) console.log(`[outreach] price check: ${verification.counts.confirmed} confirmed on the seller's page, ${verification.counts.unconfirmed} unconfirmed, ${verification.counts.dropped} dropped`)
 
-  const pricedEntries = [
+  const pricedEntriesAll = [
     ...(prospectPrice ? [{ seller: company, ...prospectUnit, unit: prospectUnit.packQty > 1 ? 'each' : identity.unitOfSale, isProspect: true }] : []),
     ...benchmark.sellers.filter(stillListed).map((x) => ({ seller: x.seller, priceValue: x.priceValue, price: x.price, unit: x.unit, listedPrice: x.listedPrice, packQty: x.packQty || 1, isProspect: false, supplementary: Boolean(x.supplementary), verification: verifiedAs(x) })),
     ...extraSellersPriced.filter(stillListed).map((x) => ({ ...x, verification: verifiedAs(x) })),
   ]
+  // Region check on the MERGED list: the benchmark search keeps other-region sellers (marked supplementary) only
+  // when it found fewer than three in-region ones on its own. Once the merged list has three or more in-region
+  // sellers, those other-region rows are dropped, so the chart compares like with like.
+  const inRegionCompetitors = pricedEntriesAll.filter((p) => !p.isProspect && !p.supplementary).length
+  const regionChecked = regionIsActive(region) && inRegionCompetitors >= MIN_IN_REGION_SELLERS
+    ? pricedEntriesAll.filter((p) => p.isProspect || !p.supplementary)
+    : pricedEntriesAll
+  // One company, one row: the same business under another spelling ("Home Depot" / "The Home Depot") is merged,
+  // keeping the price that was confirmed on the seller's own page when only one of them was.
+  const pricedEntries = []
+  for (const p of regionChecked) {
+    const i = p.isProspect ? -1 : pricedEntries.findIndex((u) => !u.isProspect && isSameSeller(u.seller, p.seller))
+    if (i === -1) pricedEntries.push(p)
+    else if (p.verification === 'confirmed' && pricedEntries[i].verification !== 'confirmed') pricedEntries[i] = p
+  }
   // A price far from the group's median is a different item or quantity that slipped through (a
   // 25-pack at the single-item price, a bundle, a different product) — not a comparable seller.
   const groupMedian = (() => {

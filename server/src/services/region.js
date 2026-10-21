@@ -101,8 +101,11 @@ const PRICE_MARKERS = [
   [/^\s*(£|GBP)/i, 'GBP'], [/^\s*(€|EUR)/i, 'EUR'], [/^\s*(₹|INR|Rs\.?)/i, 'INR'], [/^\s*(RM|MYR)/i, 'MYR'],
   [/^\s*AED/i, 'AED'], [/^\s*(₱|PHP)/i, 'PHP'], [/^\s*(₦|NGN)/i, 'NGN'], [/^\s*(KSh|KES)/i, 'KES'], [/^\s*(¥|JPY)/i, 'JPY'],
 ]
+// Words a price is often introduced with ("From A$72.95", "Now £12.50"): skipped so the currency marker
+// that follows is still seen — otherwise a foreign price written this way passes the region filter.
+const PRICE_LEAD_WORDS = /^\s*(?:(?:from|starting at|starts at|as low as|approx\.?|about|was|now|only|sale|each|ea\.?|price|msrp|list)\b[:\s]*)+/i
 export function priceCurrencyCode(price) {
-  const p = String(price || '')
+  const p = String(price || '').replace(PRICE_LEAD_WORDS, '')
   return (PRICE_MARKERS.find(([re]) => re.test(p)) || [])[1] || null
 }
 

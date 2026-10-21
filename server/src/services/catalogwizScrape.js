@@ -14,7 +14,11 @@ import { launchBrowserFor } from './browserLaunch.js'
  */
 
 const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
-const stripTags = (s) => clean(String(s || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'"))
+const entities = (s) => String(s || '').replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+  .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+// Some shops publish their structured-data description URL-encoded ("One%20Handed%20Locking"): decoded back to the text the page shows.
+const urlDecoded = (s) => { const t = String(s || ''); if (!/%[0-9a-f]{2}/i.test(t) || (t.match(/%20/g) || []).length < 3) return t; try { return decodeURIComponent(t) } catch { return t.replace(/%20/g, ' ') } }
+const stripTags = (s) => clean(entities(entities(urlDecoded(s)).replace(/<[^>]+>/g, ' ')))
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 /* ---------------------------------------------------------------------------------------------------------
@@ -34,16 +38,33 @@ function extractInPage() {
     canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
   }
 
+  // ---- collapsed sections ("Key Features", "What's in the box" accordions) hold product content: open them so it is read
+  for (const d of document.querySelectorAll('details')) d.open = true
+
   // ---- the product heading: the h1 that best matches the page title
   const titleHay = norm(`${out.meta.ogTitle} ${out.meta.docTitle}`)
   const h1s = [...document.querySelectorAll('h1')].filter((h) => clean(h.textContent).length > 2 && !h.closest('nav, footer, aside'))
   const score = (h) => norm(h.textContent).split(' ').filter((t) => t && titleHay.includes(t)).length
-  const h1 = h1s.sort((a, b) => score(b) - score(a))[0] || null
+  let h1 = h1s.sort((a, b) => score(b) - score(a))[0] || null
+  // a page without an h1 (some shop platforms put the product name in a styled div): the product-name element instead,
+  // never a link (the names in "related products" carousels are links), the one that best matches the page title
+  if (!h1) {
+    const NAME = '[itemprop="name"], [class*="product" i][class*="title" i], [class*="product" i][class*="name" i], [class*="pdp" i][class*="title" i], [class*="DataTitle" i], [class*="item-title" i], [class*="item-name" i], [class*="product_title" i], h2'
+    const names = [...document.querySelectorAll(NAME)].filter((n) => {
+      const t = clean(n.textContent)
+      return t.length >= 6 && t.length <= 220 && !n.closest('a, nav, footer, aside, header, [class*="related" i], [class*="recommend" i], [class*="carousel" i], [class*="breadcrumb" i]') && !n.querySelector('a, h1, h2, h3, img')
+    })
+    const best = names.map((n, i) => ({ n, s: score(n) * 10 - i * 0.01 })).sort((a, b) => b.s - a.s)[0]
+    if (best && best.s > 0) h1 = best.n
+  }
   out.title = h1 ? clean(h1.textContent) : ''
 
   // ---- breadcrumbs (read before anything is hidden)
   const bc = document.querySelector('[class*="breadcrumb" i], [id*="breadcrumb" i], nav[aria-label*="breadcrumb" i], [itemtype*="BreadcrumbList"]')
-  if (bc) out.breadcrumbs = clean(bc.innerText || bc.textContent).split(/\s*(?:>|›|»|→|\n)\s*|\s+\/\s*|\s*\/\s+/).map(clean).filter(Boolean)
+  // one crumb per list item when the trail is a list (its separators are often drawn by CSS, so the text has none)
+  const crumbItems = bc ? [...bc.querySelectorAll('li')].map((li) => clean(li.textContent).replace(/^[\s/\\›»>|→·•–—-]+|[\s/\\›»>|→·•–—-]+$/g, '')).filter(Boolean) : []
+  if (crumbItems.length >= 2) out.breadcrumbs = crumbItems
+  else if (bc) out.breadcrumbs = clean(bc.innerText || bc.textContent).split(/\s*(?:>|›|»|→|\n)\s*|\s+\/\s*|\s*\/\s+/).map(clean).filter(Boolean)
 
   // ---- images: collect candidates with a score, before hiding the page's non-product regions
   const all = [...document.querySelectorAll('*')]
@@ -123,23 +144,44 @@ function extractInPage() {
     const dts = [...dl.querySelectorAll('dt')]
     dts.forEach((dt) => { const dd = dt.nextElementSibling; if (dd?.tagName === 'DD') push(dt.textContent, dd.textContent, 'list') })
   }
+  // ---- feature bullets under a heading such as "Features" / "Product Overview" / "What is in the box"
+  const HEAD = /^(product )?(key )?(features?|benefits?|highlights?|overview|specifications?|details|includes?|what'?s included|what('?s| is) in the box\??|in the box|package contents|applications?|advantages)\b/i
+  const PAIR_LINE = /^([A-Za-z#][^:：]{1,44}?)\s*[:：]\s+\S/
+  const bulletLines = new Set()
+  for (const ul of document.querySelectorAll('ul, ol')) {
+    if (!visible(ul) || !afterH1(ul)) continue
+    // the heading sits just before the list, or before a wrapper around it (accordion / tab panels)
+    let head = ''
+    for (let box = ul, up = 0; box && box !== document.body && up < 3 && !head; box = box.parentElement, up++) {
+      for (let p = box.previousElementSibling, n = 0; p && n < 2 && !head; p = p.previousElementSibling, n++) { const t = clean(p.textContent); if (t.length <= 40 && HEAD.test(t)) head = t.replace(/[:：]\s*$/, '') }
+    }
+    if (!head) continue
+    const all = [...ul.children].map((li) => clean(li.textContent)).filter((t) => t.length >= 2 && t.length <= 220)
+    // a list of mostly "Label: value" rows is a spec list (read as pairs below); otherwise every item is kept as the page shows it
+    if (all.filter((t) => PAIR_LINE.test(t)).length > all.length / 2) continue
+    if (all.length) { out.bullets.push({ label: head, items: all }); all.forEach((t) => bulletLines.add(t)) }
+  }
+  // features written as bold sub-headings with a paragraph under each (no list): the sub-headings, as the page shows them
+  for (const box of document.querySelectorAll('div, section, article')) {
+    if (!visible(box) || !afterH1(box) || box.querySelector('ul, ol, table')) continue
+    const subs = [...box.children].filter((p) => p.tagName === 'P' && p.querySelector('strong, b') && clean(p.textContent) === clean(p.querySelector('strong, b').textContent)).map((p) => clean(p.textContent)).filter((t) => t.length >= 3 && t.length <= 80)
+    if (subs.length < 2) continue
+    let head = ''
+    for (let b = box, up = 0; b && b !== document.body && up < 3 && !head; b = b.parentElement, up++) {
+      for (let p = b.previousElementSibling, n = 0; p && n < 2 && !head; p = p.previousElementSibling, n++) { const t = clean(p.textContent); if (t.length <= 40 && HEAD.test(t)) head = t.replace(/[:：]\s*$/, '') }
+    }
+    if (head && !out.bullets.some((x) => x.label === head)) out.bullets.push({ label: head, items: subs })
+  }
+
+  // a share / social link right after an empty label ("Current Stock:" then "Facebook") is not that label's value
+  const NOT_A_VALUE = /^(facebook|twitter|x|email|e-mail|print|pinterest|linkedin|whatsapp|share|instagram|youtube|tumblr|reddit)$/i
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]
+    if (bulletLines.has(l)) continue
     const m = l.match(/^([A-Za-z#][^:：]{1,44}?)\s*[:：]\s+(\S.{0,200})$/)
     if (m && m[1].split(' ').length <= 6 && !PRICE.test(l)) { push(m[1], m[2], 'text'); continue }
     const lone = l.match(/^([A-Za-z#][^:：]{1,44}?)\s*[:：]$/)
-    if (lone && lines[i + 1] && lines[i + 1].length <= 200 && !/[:：]\s*$|[:：]\s+\S/.test(lines[i + 1]) && !PRICE.test(lines[i + 1])) push(lone[1], lines[i + 1], 'text')
-  }
-
-  // ---- feature bullets under a heading such as "Features" / "Benefits" / "Includes"
-  const HEAD = /^(product )?(key )?(features?|benefits?|highlights?|specifications?|details|includes?|what'?s included|in the box|applications?|advantages)\b/i
-  for (const ul of document.querySelectorAll('ul, ol')) {
-    if (!visible(ul) || !afterH1(ul)) continue
-    let head = ''
-    for (let p = ul.previousElementSibling, n = 0; p && n < 2 && !head; p = p.previousElementSibling, n++) { const t = clean(p.textContent); if (t.length <= 40 && HEAD.test(t)) head = t.replace(/[:：]\s*$/, '') }
-    if (!head) continue
-    const items = [...ul.children].map((li) => clean(li.textContent)).filter((t) => t.length >= 6 && t.length <= 220 && !/^([A-Za-z#][^:：]{1,44}?)\s*[:：]\s+\S/.test(t))
-    if (items.length) out.bullets.push({ label: head, items })
+    if (lone && lines[i + 1] && lines[i + 1].length <= 200 && !NOT_A_VALUE.test(lines[i + 1]) && !bulletLines.has(lines[i + 1]) && !/[:：]\s*$|[:：]\s+\S/.test(lines[i + 1]) && !PRICE.test(lines[i + 1])) push(lone[1], lines[i + 1], 'text')
   }
 
   // ---- the page's own description: the longest prose block after the heading
@@ -197,8 +239,8 @@ const absUrl = (u, base) => {
 }
 
 // Labels that belong to the shop, not to the product.
-const SHOP_LABEL = /^(product )?stock$|^in stock$|^availability$|^qty$|^quantity$|^price\b|^your .*price|^add to\b|^sort\b|^filter\b|^shipping|^ships?\b|^delivery|^email|^password|^search|^sign in|^log ?in|^phone|^fax|^tel\b|^cart\b|^total\b|^subtotal\b|^save\b|^you save|^discount|^sku\/|^reviews?\b|^rating/i
-const ID_LABEL = /\b(part|sku|mpn|model|item|catalog(?:ue)?|style|upc|ean|gtin|isbn|product code|stock code|article)\b/i
+const SHOP_LABEL = /^(product |current )?stock( level)?$|^in stock$|^availability$|^qty$|^quantity$|^price\b|^your .*price|^add to\b|^sort\b|^filter\b|^shipping|^ships?\b|^delivery|^email|^password|^search|^sign in|^log ?in|^phone|^fax|^tel\b|^cart\b|^total\b|^subtotal\b|^save\b|^you save|^discount|^sku\/|^reviews?\b|^rating/i
+const ID_LABEL = /\b(part|sku|mpn|model|item|catalog(?:ue)?|style|upc|ean|gtin|isbn|product code|stock code|supplier code|code|article)\b/i
 
 /** Structured data's own product facts, as attributes. */
 function markupFacts(product) {
@@ -246,9 +288,11 @@ export async function scrapeProductPage(url, onStage = () => {}) {
   const keyOf = (label) => (label.length <= 4 ? label : norm(label))
   const add = (a) => { const k = keyOf(a.label); if (!k || seen.has(k) || SHOP_LABEL.test(a.label)) return; seen.add(k); attributes.push(a) }
   data.pairs.forEach(add)
-  for (const b of data.bullets) add({ label: b.label, value: b.items.join('; ').slice(0, 400), source: 'list' })
+  for (const b of data.bullets) add({ label: b.label, value: b.items.join('; ').slice(0, 1200), source: 'list' })
   markup.forEach((m) => { if (!attributes.some((a) => norm(a.value) === norm(m.value))) add(m) })
-  const crumbs = data.breadcrumbs.filter((c) => !/^home$/i.test(c) && norm(c) !== norm(data.title))
+  // the trail without "Home", placeholder items ("...") and the product's own name (as the heading or the page title gives it)
+  const docName = norm(String(data.meta.ogTitle || data.meta.docTitle).split('|')[0])
+  const crumbs = data.breadcrumbs.filter((c) => !/^home$/i.test(c) && /[a-z0-9]/i.test(c) && norm(c) !== norm(data.title) && !(docName && norm(c) === docName))
   if (crumbs.length) add({ label: 'Category', value: crumbs.join(' > ').slice(0, 160), source: 'breadcrumb' })
 
   const identifiers = attributes.filter((a) => ID_LABEL.test(a.label) && /[0-9]/.test(a.value) && a.value.length <= 40).map((a) => ({ label: a.label, value: a.value }))
@@ -264,7 +308,11 @@ export async function scrapeProductPage(url, onStage = () => {}) {
   const images = imageCandidates.filter((c) => !seenImg.has(c.url) && seenImg.add(c.url)).sort((a, b) => b.score - a.score).map((c) => c.url).slice(0, 8)
 
   const title = data.title
-  const description = clean(stripTags(product?.description) || (norm(data.meta.description) !== norm(title) ? data.meta.description : '') || data.description).slice(0, 900)
+  // the meta description only when it is about this product (some shops use one site-wide slogan on every page)
+  const titleWords = new Set(norm(title).split(' ').filter((w) => w.length > 2))
+  const aboutProduct = (t) => norm(t).split(' ').filter((w) => w.length > 2 && titleWords.has(w)).length >= 2
+  const metaDesc = norm(data.meta.description) !== norm(title) && aboutProduct(data.meta.description) ? data.meta.description : ''
+  const description = clean(stripTags(product?.description) || metaDesc || data.description).slice(0, 900)
   console.log(`[catalogwiz] scraped ${new URL(url).hostname} via ${via || 'unknown'}: ${attributes.length} attributes, ${identifiers.length} identifiers, ${images.length} image candidates`)
   return {
     url,
@@ -301,4 +349,81 @@ export async function fetchProductImage(candidates, pageUrl) {
     }
   }
   return null
+}
+
+/** Last-resort product picture: the page is opened in a browser and the product's main picture is photographed exactly as a visitor sees it.
+ *  Used only when none of the page's image addresses could be downloaded (hot-link protection, script-built galleries, CSS backgrounds).
+ *  Returns { dataUrl, sourceUrl } or null. */
+export async function captureProductImage(pageUrl) {
+  let browser
+  try {
+    browser = await launchBrowserFor(pageUrl)
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+    await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 25000 })
+    await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {})
+    await page.waitForTimeout(1500)
+    // lazy pictures load as they scroll into view
+    await page.evaluate(async () => { for (let y = 0; y < 1800; y += 450) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 120)) } window.scrollTo(0, 0) }).catch(() => {})
+    await page.waitForTimeout(500)
+
+    const picked = await page.evaluate(() => {
+      const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim()
+      const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+      const BAD = /logo|sprite|icon|badge|banner|payment|visa|mastercard|paypal|flag|facebook|twitter|linkedin|instagram|youtube|avatar|placeholder|blank|spacer|pixel|loading|spinner|star|rating/i
+      const REGION_BAD = 'nav, footer, aside, header:not(:has(h1)), [class*="related" i], [class*="recommend" i], [class*="upsell" i], [class*="cross-sell" i], [class*="carousel" i], [class*="recent" i], [class*="newsletter" i], [class*="cookie" i], [class*="modal" i], [class*="popup" i]'
+      const h1 = [...document.querySelectorAll('h1')].find((h) => clean(h.textContent).length > 2 && !h.closest('nav, footer, aside')) || null
+      const h1Top = h1 ? h1.getBoundingClientRect().top + window.scrollY : 0
+      const titleTokens = new Set(norm(h1?.textContent || document.title).split(' ').filter((t) => t.length > 2))
+      let best = null
+      let bestScore = 0
+      const OVERLAY = '[role="dialog"], [aria-modal="true"], [id*="consent" i], [class*="consent" i], [class*="gdpr" i], [id*="onetrust" i], [class*="onetrust" i], [id*="cookie" i], [class*="cookie" i]'
+      const floating = (el) => { for (let n = el; n && n !== document.body; n = n.parentElement) { const p = getComputedStyle(n).position; if (p === 'fixed' || p === 'sticky') return true } return false }
+      const consider = (el, src) => {
+        const r = el.getBoundingClientRect()
+        if (r.width < 160 || r.height < 160) return
+        if (el.closest(OVERLAY) || floating(el)) return
+        // a picture that did not load (a broken link shows only its alt text) is not a product picture
+        if (el.tagName === 'IMG' && (!el.complete || el.naturalWidth < 50)) return
+        const cs = getComputedStyle(el)
+        if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) return
+        const ratio = r.width / r.height
+        const hay = `${el.getAttribute('alt') || ''} ${el.id} ${typeof el.className === 'string' ? el.className : ''} ${src}`
+        let score = Math.min(30, (r.width * r.height) / 10000)
+        if (BAD.test(hay)) score -= 12
+        if (el.closest(REGION_BAD)) score -= 12
+        if (ratio > 4 || ratio < 0.25) score -= 6
+        score += 3 * norm(hay).split(' ').filter((t) => titleTokens.has(t)).length
+        if (/product|main|zoom|primary|gallery|viewer|large|detail|hero|photo|image/i.test(hay)) score += 3
+        if (h1) score += 5 * Math.max(0, 1 - Math.abs(r.top + window.scrollY - h1Top) / 900)
+        if (score > bestScore) { bestScore = score; best = el }
+      }
+      for (const img of document.querySelectorAll('img')) consider(img, img.currentSrc || img.src)
+      for (const el of document.querySelectorAll('div, span, a, figure')) {
+        const bg = getComputedStyle(el).backgroundImage
+        if (bg && bg !== 'none' && /url\(/.test(bg) && !el.children.length) consider(el, bg)
+      }
+      if (!best || bestScore < 4) return false
+      best.setAttribute('data-altiusnxt-photo', '1')
+      // pop-ups, cookie bars and sticky bars must not sit on top of the picture when it is photographed
+      for (const el of document.querySelectorAll('body *')) {
+        if (el === best || el.contains(best) || best.contains(el)) continue
+        const p = getComputedStyle(el).position
+        if (p === 'fixed' || p === 'sticky' || el.matches(OVERLAY)) el.style.setProperty('visibility', 'hidden', 'important')
+      }
+      return true
+    })
+    if (!picked) return null
+    const shot = await (await page.$('[data-altiusnxt-photo="1"]'))?.screenshot({ type: 'png' }).catch(() => null)
+    if (!shot) return null
+    const info = await sharp(shot).metadata()
+    if (!info.width || !info.height || info.width < 120 || info.height < 120) return null
+    const spread = (await sharp(shot).flatten({ background: '#ffffff' }).stats()).channels.slice(0, 3).reduce((a, c) => a + c.stdev, 0) / 3
+    if (spread < 12) return null
+    const jpeg = await sharp(shot).flatten({ background: '#ffffff' }).resize({ width: 720, height: 720, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer()
+    return { dataUrl: `data:image/jpeg;base64,${jpeg.toString('base64')}`, sourceUrl: pageUrl }
+  } catch {
+    return null
+  } finally {
+    if (browser) await browser.close().catch(() => {})
+  }
 }

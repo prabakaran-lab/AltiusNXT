@@ -1,10 +1,10 @@
 import { Router } from 'express'
-import { randomUUID } from 'node:crypto'
 import rateLimit from 'express-rate-limit'
-import { buildOutreachReportData } from '../services/outreachPipeline.js'
-import { generateOutreachReportPdf } from '../services/reportPdf.js'
-import { sendLeadNotification, sendReportToLead } from '../services/mailer.js'
-import { isGeminiConfigured, isMailConfigured, config } from '../config.js'
+import { sendLeadNotification, sendReportRequestAck } from '../services/mailer.js'
+import { recordUsage } from '../services/usageStats.js'
+import { isVerified } from '../services/otp.js'
+import { upsertHubspotContact } from '../services/hubspot.js'
+import { isMailConfigured } from '../config.js'
 
 const router = Router()
 
@@ -16,80 +16,20 @@ const limiter = rateLimit({
   message: { error: 'Too many report requests from this address in the last hour. Please try again later.' },
 })
 
-const REQUIRED_FIELDS = ['firstName', 'lastName', 'company', 'email', 'url']
+const REQUIRED_FIELDS = ['firstName', 'company', 'email', 'url', 'revenueBracket']
+const REVENUE_VALUES = ['under_5m', '5m_25m', '25m_100m', 'over_100m']
 
-// Report generation runs the live multi-engine research and takes several minutes — longer than
-// browsers, proxies and tunnels will hold a single HTTP request open. So POST /leads only
-// validates and enqueues, returning a job id straight away, and the client polls GET /leads/:id
-// until the job finishes. Jobs are kept in memory and expire after JOB_TTL_MS.
-const JOB_TTL_MS = 45 * 60 * 1000
-const jobs = new Map()
-
-function pruneJobs() {
-  const cutoff = Date.now() - JOB_TTL_MS
-  for (const [id, job] of jobs) if (job.updatedAt < cutoff) jobs.delete(id)
-}
-
-async function runJob(job, { lead, url }) {
-  const t0 = Date.now()
-  const lap = (label) => console.log(`[leads ${job.id.slice(0, 8)} timing] ${label}: ${Date.now() - t0}ms`)
-  const setStage = (stage) => { job.stage = stage; job.updatedAt = Date.now() }
-
-  try {
-    setStage('Running live buyer queries on ChatGPT, Claude and Gemini')
-    // Self-serve mode: the visitor already chose this exact product page, so it's analyzed
-    // directly rather than crawled for — see buildOutreachReportData's productUrl branch.
-    const data = await buildOutreachReportData({
-      company: lead.company,
-      productUrl: url,
-      contactName: `${lead.firstName} ${lead.lastName}`.trim(),
-      contactTitle: lead.jobTitle,
-      contactEmail: lead.email,
-      location: '',
-      timezoneLabel: '',
-      senderName: config.outreach.senderName,
-      senderTitle: config.outreach.senderTitle,
-      senderEmail: config.outreach.senderEmail,
-      revenueBracket: lead.revenueBracket,
-    })
-    lap('report data built')
-
-    setStage('Laying out your PDF')
-    const pdfBuffer = await generateOutreachReportPdf(data)
-    lap('pdf done')
-
-    let emailStatus = 'skipped'
-    if (isMailConfigured()) {
-      setStage('Emailing your report')
-      await Promise.all([
-        sendLeadNotification({ lead, url, data, pdfBuffer }).then(() => lap('email to govind done')),
-        sendReportToLead({ lead, pdfBuffer }).then(() => lap('email to lead done')),
-      ])
-      emailStatus = 'sent'
-    } else {
-      console.warn('Email not configured — skipping send. Set GMAIL_USER / GMAIL_APP_PASSWORD to enable.')
-    }
-    lap('total')
-
-    job.status = 'done'
-    job.stage = 'Done'
-    job.result = {
-      ok: true,
-      emailStatus,
-      pdfBase64: pdfBuffer.toString('base64'),
-      product: data.product,
-      stats: data.stats,
-    }
-  } catch (err) {
-    console.error(`lead report generation failed (job ${job.id}, url ${url}, company ${lead.company}):`, err)
-    job.status = 'failed'
-    job.error = `Could not generate your report: ${err.message}`
+// An AI Readiness Report request. The team prepares the full report by hand and reaches out to the visitor shortly, so the
+// request is simply passed on: the team is emailed at once (seconds, not minutes) with the visitor's details and the AI
+// readiness score from the quick scan the visitor already ran on the page. No report is generated here.
+router.post('/leads', limiter, async (req, res) => {
+  const body = { ...(req.body || {}) }
+  // The form asks for one "Name"; split it so the email keeps using first and last name.
+  if (body.name && !body.firstName) {
+    const parts = String(body.name).trim().split(/\s+/)
+    body.firstName = parts.shift() || ''
+    body.lastName = parts.join(' ')
   }
-  job.updatedAt = Date.now()
-}
-
-router.post('/leads', limiter, (req, res) => {
-  const body = req.body || {}
   const missing = REQUIRED_FIELDS.filter((f) => !String(body[f] || '').trim())
   if (missing.length) {
     return res.status(400).json({ error: `Missing required field(s): ${missing.join(', ')}` })
@@ -97,48 +37,59 @@ router.post('/leads', limiter, (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
     return res.status(400).json({ error: 'Please provide a valid email address.' })
   }
+  if (!REVENUE_VALUES.includes(body.revenueBracket)) {
+    return res.status(400).json({ error: 'Please choose your approximate annual revenue.' })
+  }
+  if (!isVerified(body.email, body.verifyToken)) {
+    return res.status(403).json({ error: 'Please verify your email address first.', code: 'EMAIL_NOT_VERIFIED' })
+  }
   if (!/^https?:\/\//i.test(String(body.url))) {
     return res.status(400).json({ error: 'Please provide a valid product page URL (starting with http:// or https://).' })
   }
-  if (!isGeminiConfigured()) {
-    return res.status(503).json({ error: 'The AI analysis engine is not configured yet. Please contact AltiusNxt to enable it.' })
-  }
 
   const lead = {
-    firstName: body.firstName,
-    lastName: body.lastName,
-    company: body.company,
-    companyWebsite: body.companyWebsite || '',
-    email: body.email,
-    jobTitle: body.jobTitle || '',
-    // Sizes the revenue-at-risk estimate; empty ("prefer not to say") → $5M default in revenueRisk.js
-    revenueBracket: body.revenueBracket || '',
+    firstName: String(body.firstName).trim(),
+    lastName: String(body.lastName || '').trim(),
+    company: String(body.company).trim(),
+    companyWebsite: String(body.companyWebsite || '').trim(),
+    email: String(body.email).trim(),
+    jobTitle: String(body.jobTitle || '').trim(),
   }
-  const url = body.url
+  const url = String(body.url).trim()
+  // the score the visitor was shown after the quick scan (0-100), when the page sent it
+  const raw = Number(body.quickScan?.score)
+  const score = Number.isFinite(raw) && raw >= 0 && raw <= 100 ? Math.round(raw) : null
 
-  pruneJobs()
-  const job = { id: randomUUID(), status: 'running', stage: 'Queued', startedAt: Date.now(), updatedAt: Date.now(), result: null, error: null }
-  jobs.set(job.id, job)
-  runJob(job, { lead, url }) // intentionally not awaited
+  // Saved in HubSpot right away, alongside the instant team/visitor emails below, so marketing sees the lead and its
+  // LinkedIn/campaign attribution immediately. Read from the page URL by the form, not re-derived here. Never blocks
+  // or fails the request.
+  upsertHubspotContact({
+    email: lead.email, firstName: lead.firstName, lastName: lead.lastName, company: lead.company,
+    utmSource: body.utm_source, utmMedium: body.utm_medium, utmCampaign: body.utm_campaign, utmContent: body.utm_content,
+  }).catch((err) => console.warn(`HubSpot contact save failed for ${lead.email}:`, err.message))
 
-  res.status(202).json({ ok: true, jobId: job.id, status: job.status })
-})
-
-router.get('/leads/:jobId', (req, res) => {
-  const job = jobs.get(req.params.jobId)
-  if (!job) return res.status(404).json({ error: 'That report request has expired or does not exist. Please submit it again.' })
-  const payload = {
-    jobId: job.id,
-    status: job.status,
-    stage: job.stage,
-    elapsedMs: Date.now() - job.startedAt,
+  const t0 = Date.now()
+  let emailStatus = 'skipped'
+  let error = ''
+  if (isMailConfigured()) {
+    // both at once: the team is notified, and the visitor gets a confirmation that the team will reach out shortly
+    const [team, visitor] = await Promise.allSettled([sendLeadNotification({ lead, url, score }), sendReportRequestAck({ lead, url, score })])
+    if (team.status === 'fulfilled') {
+      emailStatus = 'sent'
+      console.log(`[leads] team notified for ${lead.company} (${url}) in ${Date.now() - t0}ms`)
+    } else {
+      // the visitor still gets their on-page confirmation; the failure is logged and shows on the usage dashboard
+      emailStatus = 'failed'
+      error = team.reason?.message || String(team.reason)
+      console.error(`[leads] team notification failed for ${lead.company} (${lead.email}, ${url}):`, error)
+    }
+    if (visitor.status === 'rejected') console.error(`[leads] confirmation email to ${lead.email} failed:`, visitor.reason?.message || visitor.reason)
+  } else {
+    console.warn('Email not configured — skipping send. Set GMAIL_USER / GMAIL_APP_PASSWORD to enable.')
   }
-  if (job.status === 'done') return res.json({ ...payload, ...job.result })
-  // A failed job is still a successful status lookup. It must NOT be a 5xx: CDNs/tunnels
-  // (Cloudflare included) replace origin 5xx bodies with their own HTML error page, which
-  // would hide the human-readable reason from the visitor.
-  if (job.status === 'failed') return res.json({ ...payload, error: job.error })
-  res.json(payload)
+  recordUsage({ type: 'report', status: emailStatus === 'failed' ? 'failed' : 'done', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: `${lead.firstName} ${lead.lastName}`.trim(), email: lead.email, emailStatus, ...(error ? { error } : {}) })
+
+  res.json({ ok: true, review: true })
 })
 
 export default router

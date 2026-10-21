@@ -27,8 +27,8 @@ export const config = {
     user: process.env.GMAIL_USER || '',
     appPassword: process.env.GMAIL_APP_PASSWORD || '',
     leadNotifyEmail: process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com',
-    // Extra inboxes that get the same team notification as leadNotifyEmail when a visitor runs the CatalogWiz
-    // enrichment demo or generates an AI Readiness Report (comma or semicolon separated).
+    // Extra inboxes that get every team email leadNotifyEmail gets (demo and report alerts, contact form,
+    // new subscribers, outreach bcc). Comma or semicolon separated.
     leadCopyEmails: [...new Set((process.env.LEAD_COPY_EMAILS || '').split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean))]
       .filter((e) => e !== (process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com').trim().toLowerCase()),
   },
@@ -45,6 +45,11 @@ export const config = {
   mistral: {
     apiKey: process.env.MISTRAL_API_KEY || '',
   },
+  // CRM: saves name/email/company and the utm_* fields from the AI Readiness form as a HubSpot contact.
+  // A Private App token (Settings > Integrations > Private Apps) with the "crm.objects.contacts.write" scope.
+  hubspot: {
+    token: process.env.HUBSPOT_PRIVATE_APP_TOKEN || '',
+  },
 }
 
 export const isGeminiConfigured = () => Boolean(config.gemini.apiKey)
@@ -55,3 +60,4 @@ export const isBrightDataConfigured = () => Boolean(config.brightData.apiKey && 
 export const isMailConfigured = () => Boolean(config.mail.user && config.mail.appPassword)
 export const isGooglePlacesConfigured = () => Boolean(config.googlePlaces.apiKey)
 export const isMistralConfigured = () => Boolean(config.mistral.apiKey)
+export const isHubspotConfigured = () => Boolean(config.hubspot.token)
