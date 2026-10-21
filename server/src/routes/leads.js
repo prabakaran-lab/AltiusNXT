@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit'
 import { sendLeadNotification, sendReportRequestAck } from '../services/mailer.js'
 import { recordUsage } from '../services/usageStats.js'
 import { isVerified } from '../services/otp.js'
+import { upsertHubspotContact } from '../services/hubspot.js'
 import { isMailConfigured } from '../config.js'
 
 const router = Router()
@@ -58,6 +59,14 @@ router.post('/leads', limiter, async (req, res) => {
   // the score the visitor was shown after the quick scan (0-100), when the page sent it
   const raw = Number(body.quickScan?.score)
   const score = Number.isFinite(raw) && raw >= 0 && raw <= 100 ? Math.round(raw) : null
+
+  // Saved in HubSpot right away, alongside the instant team/visitor emails below, so marketing sees the lead and its
+  // LinkedIn/campaign attribution immediately. Read from the page URL by the form, not re-derived here. Never blocks
+  // or fails the request.
+  upsertHubspotContact({
+    email: lead.email, firstName: lead.firstName, lastName: lead.lastName, company: lead.company,
+    utmSource: body.utm_source, utmMedium: body.utm_medium, utmCampaign: body.utm_campaign, utmContent: body.utm_content,
+  }).catch((err) => console.warn(`HubSpot contact save failed for ${lead.email}:`, err.message))
 
   const t0 = Date.now()
   let emailStatus = 'skipped'

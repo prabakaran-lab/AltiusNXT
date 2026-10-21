@@ -3,6 +3,7 @@ import { Bot, Check, CircleAlert, FileText, MessagesSquare, Scale, Search, Searc
 import { TESYS } from '../components/sampleProduct.js'
 import { useSearchParams } from 'react-router-dom'
 import { quickScan, requestReport } from '../services/api.js'
+import { trackMailtoClick } from '../services/hubspotTrack.js'
 import LeadFormModal from '../components/LeadFormModal.jsx'
 import ScanOverlay from '../components/ScanOverlay.jsx'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
@@ -72,8 +73,16 @@ export default function AIReadinessReport() {
     setSubmitting(true)
     setLeadError('')
     try {
+      // Read once, at the moment of submission (not on page load), so a UTM link followed by a slow
+      // scan/verify still gets credited correctly. Saved in HubSpot; never shown to the visitor.
+      const utm = {
+        utm_source: searchParams.get('utm_source') || '',
+        utm_medium: searchParams.get('utm_medium') || '',
+        utm_campaign: searchParams.get('utm_campaign') || '',
+        utm_content: searchParams.get('utm_content') || '',
+      }
       // the team reviews the report before it is shared, so the visitor gets a confirmation, not the report itself
-      await requestReport({ ...form, url, quickScan: result, origin: window.location.origin })
+      await requestReport({ ...form, url, quickScan: result, origin: window.location.origin, ...utm })
       setShowLeadForm(false)
       setConfirmation({ firstName: form.firstName || String(form.name || '').trim().split(/\s+/)[0], email: form.email })
     } catch (err) {
@@ -128,7 +137,7 @@ export default function AIReadinessReport() {
               Must be a single product page, not your homepage or a category listing with multiple products on it.
             </p>
             {scanError && <p className="form-error" style={{ marginTop: 14 }}>{scanError}</p>}
-            <p className="arr-more">Want the full scorecard and competitor breakdown? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A">Request the AI Visibility &amp; Competitor Audit</a>.</p>
+            <p className="arr-more">Want the full scorecard and competitor breakdown? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A" onClick={() => trackMailtoClick('competitor_audit_click')}>Request the AI Visibility &amp; Competitor Audit</a>.</p>
           </div>
 
           <div className="arr-chat" role="img" aria-label="Illustration of an AI answer that leaves a distributor out">

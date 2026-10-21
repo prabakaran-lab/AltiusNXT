@@ -3,6 +3,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { ArrowRight, BarChart3, CalendarDays, Check, FileCheck2, FileText, Fingerprint, Link2, ListTree, Mail, MapPin, ScanSearch, ShieldCheck, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
 import QuestionForm from '../components/QuestionForm.jsx'
+import { trackMailtoClick } from '../services/hubspotTrack.js'
 import badgeIso9001 from '../assets/awards/tuv-iso-9001.png'
 import badgeIso27001 from '../assets/awards/tuv-iso-27001.png'
 import badgeB2bea from '../assets/awards/b2bea-member-badge.svg'
@@ -165,7 +166,7 @@ export function LevelsSection() {
               <li><Check size={15} strokeWidth={3} />Price benchmark and recommended page rebuild</li>
               <li><Check size={15} strokeWidth={3} />Your share of AI answers vs. the three distributors AI names most</li>
             </ul>
-            <a className="btn btn-outline" href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A%0ACompany%3A%0AName%20and%20role%3A"><Mail size={16} />Request the full audit</a>
+            <a className="btn btn-outline" href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A%0ACompany%3A%0AName%20and%20role%3A" onClick={() => trackMailtoClick('full_audit_click')}><Mail size={16} />Request the full audit</a>
           </article>
         </div>
       </div>
@@ -292,7 +293,7 @@ export function NextSection() {
             <span className="rp-chip">Option B · Complimentary assessment</span>
             <h3>Three products of your choice</h3>
             <p>Send us three product pages you care about most. No sales figures needed. We show you live how AI search responds to each one today, and what it would have to work with after enrichment. No proposal or commitment required.</p>
-            <a className="btn btn-outline" href="mailto:govind@altiusnxt.com,manoj@altiusnxt.com?subject=Three%20product%20pages%20for%20assessment&body=Product%20page%20URLs%3A%0A1.%0A2.%0A3.">Send three product pages</a>
+            <a className="btn btn-outline" href="mailto:govind@altiusnxt.com,manoj@altiusnxt.com?subject=Three%20product%20pages%20for%20assessment&body=Product%20page%20URLs%3A%0A1.%0A2.%0A3." onClick={() => trackMailtoClick('send_three_pages_click')}>Send three product pages</a>
           </article>
         </div>
         <div className="tr rv">

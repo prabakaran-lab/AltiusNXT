@@ -45,6 +45,11 @@ export const config = {
   mistral: {
     apiKey: process.env.MISTRAL_API_KEY || '',
   },
+  // CRM: saves name/email/company and the utm_* fields from the AI Readiness form as a HubSpot contact.
+  // A Private App token (Settings > Integrations > Private Apps) with the "crm.objects.contacts.write" scope.
+  hubspot: {
+    token: process.env.HUBSPOT_PRIVATE_APP_TOKEN || '',
+  },
 }
 
 export const isGeminiConfigured = () => Boolean(config.gemini.apiKey)
@@ -55,3 +60,4 @@ export const isBrightDataConfigured = () => Boolean(config.brightData.apiKey && 
 export const isMailConfigured = () => Boolean(config.mail.user && config.mail.appPassword)
 export const isGooglePlacesConfigured = () => Boolean(config.googlePlaces.apiKey)
 export const isMistralConfigured = () => Boolean(config.mistral.apiKey)
+export const isHubspotConfigured = () => Boolean(config.hubspot.token)

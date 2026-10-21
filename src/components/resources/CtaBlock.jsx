@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Icon from '../ui/Icon.jsx'
 import { cta } from '../../data/resources.js'
+import { trackMailtoClick } from '../../services/hubspotTrack.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY = { name: '', email: '', phone: '', company: '', requirement: '' }
@@ -26,6 +27,7 @@ export default function CtaBlock() {
       `Name: ${values.name}`, `Email: ${values.email}`, `Phone: ${values.phone}`,
       `Company: ${values.company}`, '', values.requirement,
     ].join('\n')
+    trackMailtoClick('resources_cta_demo_request_click')
     window.location.href = `mailto:${cta.email}?subject=${encodeURIComponent('Free demo request')}&body=${encodeURIComponent(body)}`
     setSent(true)
     setValues(EMPTY)
