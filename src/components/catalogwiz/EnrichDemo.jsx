@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, CircleAlert, ScanLine, Search, Sparkles } from 'lucide-react'
+import { ArrowRight, CircleAlert, ScanLine, Search, Sparkles } from 'lucide-react'
 import { TESYS } from '../sampleProduct.js'
 import { SAMPLES } from '../catalogSamples.js'
 import { CATEGORIES } from '../../pages/attributeLibraryData.js'
 import LiveDemoModal from './LiveDemoModal.jsx'
 import LiveBeforeAfter from './LiveBeforeAfter.jsx'
+import EnrichStory from './EnrichStory.jsx'
+import './EnrichStory.css'
 import { buildSampleResult } from './sampleResult.js'
 import { runLiveEnrichment } from './liveEnrich.js'
 import './EnrichDemo.css'
@@ -42,7 +44,9 @@ const PRODUCTS = CATEGORIES.map((c) => {
 })
 /* A visitor's own page: the server returns the verified result, shown in the same Before / After window as the samples. */
 const liveToProduct = (r) => ({ id: `live-${Date.now()}`, live: true, r })
-const LIVE_STEPS = ['Reading your product page', 'Identifying the product', 'Checking the manufacturer’s published specifications', 'Writing the enriched title, description and attributes']
+// the story a sample plays before its result: the same stages the server reports for a live page
+const SAMPLE_STAGES = ['Reading your product page', 'Identifying the product', 'Checking the manufacturer’s published specifications', 'Writing the enriched title, description and attributes', 'Looking for more verified attributes', 'Placing the product in its taxonomy', 'Preparing the before and after view of your page']
+const SAMPLE_STEP_MS = 1100
 
 export default function EnrichDemo({ children }) {
   const demoRef = useRef(null)
@@ -57,6 +61,7 @@ export default function EnrichDemo({ children }) {
   const [stage, setStage] = useState('')
   const [liveErr, setLiveErr] = useState('')
   const [waited, setWaited] = useState(0)
+  const [sampleRun, setSampleRun] = useState(null) // { name } while a sample's story plays
 
   const p = useMemo(() => (live && pid === live.id ? live : PRODUCTS.find((x) => x.id === pid)) || null, [pid, live])
   // What the Before / After window shows: the live result, or the chosen sample in the same shape.
@@ -76,16 +81,27 @@ export default function EnrichDemo({ children }) {
   }, [phase])
 
   const toDemo = () => requestAnimationFrame(() => demoRef.current?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }))
+  // A sample is enriched the way a live page is shown: the 3D story plays through its stages (quickly, the data is
+  // already verified), then the before / after opens. Reduced motion skips straight to the result.
+  const sampleTimers = useRef([])
+  const clearSample = () => { sampleTimers.current.forEach(clearTimeout); sampleTimers.current = [] }
+  useEffect(() => clearSample, [])
   const run = (id) => {
-    setPhase('idle'); setPid(id)
+    clearSample()
+    setLive(null); setLiveErr('')
+    if (calm) { setSampleRun(null); setPhase('idle'); setPid(id); toDemo(); return }
+    const prod = PRODUCTS.find((x) => x.id === id)
+    setPid(null); setSampleRun({ name: prod?.name || 'sample' }); setStage(SAMPLE_STAGES[0]); setPhase('loading')
     toDemo()
+    SAMPLE_STAGES.forEach((s, i) => { if (i) sampleTimers.current.push(setTimeout(() => setStage(s), i * SAMPLE_STEP_MS)) })
+    sampleTimers.current.push(setTimeout(() => { setSampleRun(null); setPhase('idle'); setPid(id); toDemo() }, SAMPLE_STAGES.length * SAMPLE_STEP_MS))
   }
   // "Check my page": ask who is requesting first, then run the live enrichment on their page.
   const submit = (e) => { e.preventDefault(); if (url.trim()) setAskUrl(url.trim()) }
   const startLive = async (lead) => {
     const target = askUrl
     setAskUrl('')
-    setPid(null); setLive(null); setLiveErr(''); setStage('Sending your request'); setPhase('loading')
+    clearSample(); setSampleRun(null); setPid(null); setLive(null); setLiveErr(''); setStage('Sending your request'); setPhase('loading')
     toDemo()
     try {
       const result = await runLiveEnrichment({ ...lead, url: target }, { onStage: (s) => s && setStage(s) })
@@ -132,25 +148,12 @@ export default function EnrichDemo({ children }) {
             <div className="rd-stage rd-load" role="status">
               <header className="rd-bar">
                 <span className="dots" aria-hidden="true"><i /><i /><i /></span>
-                <span className="url">app.catalogwiz.ai / enrich / <b>your page</b></span>
+                <span className="url">app.catalogwiz.ai / enrich / <b>{sampleRun ? 'sample' : 'your page'}</b></span>
                 <span className="ai"><b>CatalogWiz <em>AI</em></b></span>
                 <em className="st">{waited}s</em>
-                <i className="pg" style={{ transform: `scaleX(${Math.min(0.94, waited / 75)})` }} />
+                <i className="pg" style={{ transform: `scaleX(${sampleRun ? Math.min(1, (SAMPLE_STAGES.indexOf(stage) + 1) / SAMPLE_STAGES.length) : Math.min(0.94, waited / 130)})` }} />
               </header>
-              <div className="rd-loadbody">
-                <h3>Enriching your product page</h3>
-                <p className="rd-loadurl">{askUrl || url}</p>
-                <ol className="rd-steps">
-                  {LIVE_STEPS.map((s, i) => {
-                    const cur = Math.max(0, LIVE_STEPS.indexOf(stage))
-                    const done = stage === 'Looking for more verified attributes' ? true : i < cur
-                    const now = !done && i === cur
-                    return <li key={s} className={done ? 'done' : now ? 'now' : ''}><i>{done ? <Check size={13} strokeWidth={3} /> : now ? <Sparkles size={13} /> : null}</i>{s}</li>
-                  })}
-                </ol>
-                {stage === 'Looking for more verified attributes' && <p className="rd-more"><Sparkles size={13} />Looking for more verified attributes…</p>}
-                <ul className="rd-skel" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <li key={i} style={{ '--i': i }} />)}</ul>
-              </div>
+              <EnrichStory stage={stage} url={sampleRun ? '' : askUrl || url} label={sampleRun ? `the sample listing: ${sampleRun.name}` : undefined} waited={sampleRun ? 0 : waited} />
             </div>
           ) : phase === 'error' ? (
             <div className="rd-empty rd-err" role="alert"><CircleAlert size={22} /><b>We couldn’t enrich that page</b><span>{liveErr.replace(/^We couldn't enrich that page:\s*/i, '')}</span><button type="button" className="btn btn-outline" onClick={retry}>Try another page</button></div>

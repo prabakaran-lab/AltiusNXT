@@ -23,6 +23,7 @@ import communica from '../assets/logos/20-Communica.webp'
 import kruse from '../assets/logos/21-Kruse-Electronic-Components.webp'
 import './AboutPortfolio.css'
 import Icon from '../components/ui/Icon.jsx'
+import { ALL_CATEGORIES } from './attributeLibraryData.js'
 
 export const COMPANIES = [
   { name: 'Conrad', src: conrad },
@@ -48,7 +49,7 @@ export const COMPANIES = [
   { name: 'Kruse Electronic Components', src: kruse },
 ]
 
-const INDUSTRIES = ['Industrial', 'Electrical', 'Tools & hardware', 'Building supplies', 'Automotive', 'Healthcare']
+const INDUSTRIES = ALL_CATEGORIES.map((c) => c.name) // the 23 categories we cover
 const ROW_A = COMPANIES.slice(0, 11)
 const ROW_B = COMPANIES.slice(11)
 
@@ -88,15 +89,15 @@ export default function AboutPortfolio() {
       <div className="apf-wrap">
         <header className="apf-head">
           <p className="apf-eyebrow apf-r" style={{ '--d': '0ms' }}>Our portfolio</p>
-          <h2 id="apf-title" className="apf-r" style={{ '--d': '80ms' }}>Trusted across complex <span>B2B product categories.</span></h2>
+          <h2 id="apf-title" className="apf-r" style={{ '--d': '80ms' }}>Industrial categories <span>we know in depth.</span></h2>
           <p className="apf-lede apf-r" style={{ '--d': '170ms' }}>
-            We support manufacturers, distributors and digital commerce teams across industrial, electrical, tools, hardware,
-            building supplies, automotive, healthcare and other technical product categories.
+            We support manufacturers, distributors and digital commerce teams across 23 industrial and technical product
+            categories, from electrical and fasteners to MRO, safety, medical and more.
           </p>
         </header>
 
         <ul className="apf-ind" aria-label="Industries served">
-          {INDUSTRIES.map((t, i) => <li key={t} className="apf-r" style={{ '--d': `${240 + i * 60}ms` }}>{t}</li>)}
+          {INDUSTRIES.map((t, i) => <li key={t} className="apf-r" style={{ '--d': `${240 + Math.min(i, 12) * 40}ms` }}>{t}</li>)}
         </ul>
         <p className="apf-note apf-r" style={{ '--d': '620ms' }}>Complex catalogs · Technical attributes · Thousands of SKUs</p>
       </div>
@@ -116,10 +117,10 @@ export default function AboutPortfolio() {
       <div className="apf-wrap">
         <div className="apf-proof apf-r" style={{ '--d': '800ms' }}>
           <ul>
-            <li><b>20+</b> years of team expertise</li>
-            <li><b>500+</b> global clients</li>
             <li><b>15M+</b> products enriched</li>
+            <li><b>500+</b> distributors</li>
             <li><b>15+</b> countries</li>
+            <li><b>2007</b> founded</li>
           </ul>
           <a href="#testimonials">See customer success stories <Icon name="arrow-right" /></a>
         </div>

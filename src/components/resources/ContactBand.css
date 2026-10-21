@@ -56,3 +56,22 @@
   .rs-form-grid{ grid-template-columns:1fr; gap:18px; }
   .rs-cta-submit .btn{ width:100%; }
 }
+
+/* COOL-PALETTE */
+
+.rs-contact{
+  background-color:#eef3fa; border-top:1px solid #d9e4f1;
+  background-image:radial-gradient(640px 420px at 100% 0%, rgba(255,106,26,.11), transparent 65%), linear-gradient(rgba(11,31,58,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(11,31,58,.04) 1px, transparent 1px);
+  background-size:auto, 56px 56px, 56px 56px;
+}
+.rs-cta-copy{ color:var(--navy); }
+.rs-cta h2{ color:var(--navy); }
+.rs-cta-lead{ color:#4a5a72; }
+.rs-cta-label{ color:#6b7a90; }
+.rs-cta-services li{ border-color:#cfdcec; color:var(--navy); background:rgba(255,255,255,.75); }
+.rs-cta-contacts{ border-top-color:#d9e4f1; }
+.rs-cta-ico{ background:var(--orange-soft); color:var(--orange-2); }
+.rs-cta-contacts small{ color:#6b7a90; }
+.rs-cta-contacts a{ color:var(--navy); }
+.rs-cta-contacts a:hover{ color:var(--orange-2); }
+.rs-cta-form{ border:1px solid #d9e4f1; box-shadow:0 36px 64px -40px rgba(11,31,58,.4); }

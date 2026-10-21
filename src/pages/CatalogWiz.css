@@ -106,3 +106,14 @@
 @media (max-width:520px){ .cw-agent-cols{ grid-template-columns:1fr; } }
 
 .cwh-give li + li::before{ display:none; }
+
+/* COOL-PALETTE */
+
+.home-page.cw-page > section.cw-ucp:not(.hh):nth-of-type(n){ background:linear-gradient(180deg,#f3f7fc 0%,#e9f0f9 100%); color:var(--navy); border-block:1px solid #d9e4f1; }
+.cw-ucp .cwh-kicker{ color:var(--orange-2); }
+.cw-ucp h2{ color:var(--navy); }
+.cw-ucp-head > p:not(.cwh-kicker){ color:#4a5a72; }
+.cw-ucp-pts li{ border-color:#d9e4f1; background:#fff; box-shadow:0 14px 26px -22px rgba(11,31,58,.4); }
+.cw-ucp-pts .ico{ background:var(--orange-soft); color:var(--orange-2); }
+.cw-ucp-pts b{ color:var(--navy); }
+.cw-ucp-pts p{ color:#53627a; }

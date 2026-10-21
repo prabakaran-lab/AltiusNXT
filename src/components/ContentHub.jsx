@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 import caseScrewman from '../assets/resources/case-screwman.jpg'
 import caseKempston from '../assets/resources/case-kempston.webp'
-import caseRoseScientific from '../assets/resources/case-rose-scientific.png'
+import caseRoseScientific from '../assets/resources/case-rose-scientific.webp'
 import blogDataCleansing from '../assets/resources/blog-data-cleansing.webp'
 import blogEcommercePlatform from '../assets/resources/blog-ecommerce-platform.webp'
 import blogAttributeDevelopment from '../assets/resources/blog-attribute-development.webp'
@@ -171,7 +171,7 @@ export default function ContentHub() {
           <div className="ch-intro">
             <p className="ch-eyebrow ch-rise" style={{ '--d': '0ms' }}>Customer proof &amp; expert insights</p>
             <h2 id="ch-heading" className="ch-rise" style={{ '--d': '70ms' }}>
-              Learn from real outcomes. <span>Build with proven expertise.</span>
+              Results from <span>industrial distributors.</span>
             </h2>
             <p className="ch-lede ch-rise" style={{ '--d': '150ms' }}>
               Explore how manufacturers and distributors improve their product data, ecommerce performance and digital operations — then dive into practical insights from our product-data experts.

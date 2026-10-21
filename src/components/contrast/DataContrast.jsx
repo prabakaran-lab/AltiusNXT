@@ -105,15 +105,15 @@ export default function DataContrast() {
   const take = t >= T_START - 0.4 && t < T_START + 1.6
   const uploading = t >= T_UP && t < T_START + 0.3
   const srcState = (i) => (s.done ? 'ok' : t >= T_UP + i * 0.45 + 0.45 ? 'up' : t >= T_UP + i * 0.45 ? 'now' : t >= T_SRC + i * 0.4 ? 'in' : '')
-  const actText = s.done ? 'Enriched and human verified · ready to publish' : s.enriching ? (s.rows < s.n ? `Extracting “${c.rich.rows[Math.min(s.rows, s.n - 1)][0]}” · ${s.rows + 1} of ${s.n}` : !s.desc ? 'Writing the product description…' : !s.seo ? 'Building the SEO title and meta description…' : 'Generating keywords…') : 'Waiting for supplier data…'
+  const actText = s.done ? 'Enriched and engineer-verified · ready to publish' : s.enriching ? (s.rows < s.n ? `Extracting “${c.rich.rows[Math.min(s.rows, s.n - 1)][0]}” · ${s.rows + 1} of ${s.n}` : !s.desc ? 'Writing the product description…' : !s.seo ? 'Building the SEO title and meta description…' : 'Generating keywords…') : 'Waiting for supplier data…'
 
   return (
     <section className={`dcx${s.done ? ' is-done' : ''}`} ref={rootRef} aria-labelledby="dcx-title">
       <div className="dcx-wrap">
         <header className="dcx-head">
           <p className="dcx-pill">Better data · Better discovery</p>
-          <h2 id="dcx-title">Product data enrichment that gets your products <em>found in AI search.</em></h2>
-          <p className="dcx-sub">Watch an AI buyer search twice: once on an incomplete listing, and once after CatalogWiz AI enriches every attribute and our experts verify it.</p>
+          <h2 id="dcx-title">Product data enrichment that gets your products <em>recommended by AI.</em></h2>
+          <p className="dcx-sub">A buyer asks an AI assistant for a 3-pole motor circuit breaker, 73 A, 690 V ac. Watch the answer change once the listing is enriched and verified.</p>
         </header>
 
         <div className="dcx-tabs" role="tablist" aria-label="Product categories">
@@ -244,8 +244,8 @@ export default function DataContrast() {
               <div className={`dz-ai${s.done ? ' on' : ''}`}>
                 <span className="dz-bot"><Bot size={16} /></span>
                 <div><small>AI buyer answer</small><b>{s.done ? <>“{c.answer.slice(0, s.answer)}{s.answer < c.answer.length && <span className="dcx-caret" />}{s.answer >= c.answer.length && '”'}</> : 'Waiting for enriched data…'}</b></div>
-                <span className="dz-rank">{s.done ? <><Check size={11} strokeWidth={3.6} />Rank #1</> : 'Rank —'}</span>
-                <span className="dz-ver"><ShieldCheck size={13} />{s.done ? 'Human verified' : 'Not verified'}</span>
+                <span className="dz-rank">{s.done ? <><Check size={11} strokeWidth={3.6} />Named with specs</> : 'Not mentioned'}</span>
+                <span className="dz-ver"><ShieldCheck size={13} />{s.done ? 'Engineer-verified' : 'Not verified'}</span>
               </div>
             </article>
           </div>
@@ -253,7 +253,7 @@ export default function DataContrast() {
 
         <aside className="dcx-cta">
           <span className="dcx-cta-ico"><BarChart3 size={24} /></span>
-          <div><h3>Don’t Let Missing Product Data Limit Discovery.</h3><p>CatalogWiz AI enriches product attributes, descriptions, taxonomy, and SEO content, with expert validation for greater accuracy and consistency.</p></div>
+          <div><h3>If AI can’t verify it, AI won’t recommend it.</h3><p>CatalogWiz AI enriches product attributes, descriptions, taxonomy, and SEO content, with every value checked by a product data engineer for accuracy and consistency.</p></div>
           <div className="dcx-cta-btns">
             <Button to="/how-it-works#catalogwiz">See CatalogWiz in Action</Button>
             <Button variant="outline" to="/ai-readiness-report">Get Free AI Readiness Report</Button>

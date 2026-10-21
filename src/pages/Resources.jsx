@@ -7,7 +7,7 @@ import './AboutHero.css'
 import './ResourcesList.css'
 import caseScrewman from '../assets/resources/case-screwman.jpg'
 import caseKempston from '../assets/resources/case-kempston.webp'
-import caseRoseScientific from '../assets/resources/case-rose-scientific.png'
+import caseRoseScientific from '../assets/resources/case-rose-scientific.webp'
 import eventIrx from '../assets/resources/event-irx.jpg'
 import eventToolfair from '../assets/resources/event-toolfair.jpg'
 import eventB2bWorld from '../assets/resources/event-b2b-ecommerce-world.svg'
@@ -15,7 +15,7 @@ import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import eventChemuk from '../assets/resources/event-chemuk.jpg'
 import blogDataCleansing from '../assets/resources/blog-data-cleansing.webp'
 import blogEcommercePlatform from '../assets/resources/blog-ecommerce-platform.webp'
-import blogDataNormalization from '../assets/resources/blog-data-normalization.png'
+import blogDataNormalization from '../assets/resources/blog-data-normalization.webp'
 import blogAttributeDevelopment from '../assets/resources/blog-attribute-development.webp'
 import UiIcon from '../components/ui/Icon.jsx'
 import wpBlogs from '../data/wpBlogs.json'
@@ -50,11 +50,11 @@ const GENERAL_FAQS = [
 ]
 
 const WORKBENCH_FAQS = [
-  { q: 'What is the Catalogwiz Workbench?', a: "AltiusNxt's own product — the workspace where the AI enrichment, taxonomy and attribute development you read about actually happens. Supplier files and existing catalog data come in, AI drafts every attribute, and your team (or ours) reviews and signs off before anything publishes." },
-  { q: 'Is Catalogwiz fully automated, or does a person check it?', a: 'Both, by design. Every AI-drafted attribute carries a confidence score. High-confidence values still pass through a review queue; anything low-confidence or safety-related routes to an AltiusNxt domain expert automatically. Nothing reaches your live catalog without a named person signing off on it.' },
-  { q: 'Why not just let the AI publish directly?', a: "Because AI is fast but not infallible, especially on safety ratings, compliance marks and exact technical tolerances. Catalogwiz keeps AI for speed and scale, and keeps a human in the loop for judgment — the two aren't in competition, they're doing different jobs." },
+  { q: 'What is the CatalogWiz Workbench?', a: "AltiusNxt's own product — the workspace where the AI enrichment, taxonomy and attribute development you read about actually happens. Supplier files and existing catalog data come in, AI drafts every attribute, and your team (or ours) reviews and signs off before anything publishes." },
+  { q: 'Is CatalogWiz fully automated, or does a person check it?', a: 'Both, by design. Every AI-drafted attribute carries a confidence score. High-confidence values still pass through a review queue; anything low-confidence or safety-related routes to an AltiusNxt domain expert automatically. Nothing reaches your live catalog without a named person signing off on it.' },
+  { q: 'Why not just let the AI publish directly?', a: "Because AI is fast but not infallible, especially on safety ratings, compliance marks and exact technical tolerances. CatalogWiz keeps AI for speed and scale, and keeps a human in the loop for judgment — the two aren't in competition, they're doing different jobs." },
   { q: 'Who actually reviews the AI-drafted content?', a: 'Your own category managers for the specs they already know, and AltiusNxt domain experts for the technical or safety-critical values that need outside verification — the same review-and-sign-off workflow shown throughout the Workbench.' },
-  { q: 'Does the AI Readiness Report use the same technology as Catalogwiz?', a: 'Yes — the free AI Readiness Report and the deeper AI Discoverability Audit run on the same live-engine-query and page-analysis approach that powers Catalogwiz, so what you see in the report reflects how the product actually behaves.' },
+  { q: 'Does the AI Readiness Report use the same technology as CatalogWiz?', a: 'Yes — the free AI Readiness Report and the deeper AI Discoverability Audit run on the same live-engine-query and page-analysis approach that powers Catalogwiz, so what you see in the report reflects how the product actually behaves.' },
 ]
 
 const TABS = [
@@ -149,8 +149,8 @@ export default function Resources() {
   return (
     <>
       <PageSeo
-        title="Product Data Guides, Case Studies & Events | AltiusNxt"
-        description="Guides on product data enrichment, PIM, catalog management and AI search, plus case studies from manufacturers and distributors worldwide."
+        title="Product Data & AI Search Guides for Distributors | AltiusNxt"
+        description="Practical guides from AltiusNxt’s product data engineers on enrichment, taxonomy, schema markup, AI search visibility and agentic commerce, plus case studies from industrial distributors."
         keywords={['product data enrichment guide', 'what is product data enrichment', 'product data cleansing vs enrichment', 'PIM data onboarding', 'product data normalization']}
         structuredData={[breadcrumb('/resources', 'Resources')]}
       />
@@ -159,10 +159,10 @@ export default function Resources() {
         <div className="ah-wrap">
           <div className="ah-copy">
             <p className="ah-eyebrow ah-r" style={{ '--d': '0ms' }}>Resources</p>
-            <h1 id="res-title" className="ah-r" style={{ '--d': '80ms' }}>Better product data, <span>explained.</span></h1>
+            <h1 id="res-title" className="ah-r" style={{ '--d': '80ms' }}>Product data and AI search, <span>explained for distributors.</span></h1>
             <p className="ah-lede ah-r" style={{ '--d': '170ms' }}>
-              Practical guides on product data enrichment, catalog management, PIM, AI search and UCP, plus case studies
-              from manufacturers and distributors in 15+ countries.
+              Practical guides from AltiusNxt’s product data engineers on enrichment, taxonomy, schema markup, AI search visibility
+              and agentic commerce (UCP and ACP), plus case studies from industrial distributors in 15+ countries.
             </p>
             <form className="res-search ah-r" style={{ '--d': '260ms' }} onSubmit={(e) => e.preventDefault()}>
               <span className="res-search-icon"><Icon name="search" /></span>
@@ -284,7 +284,7 @@ export default function Resources() {
       {active === 'faqs' && (
         <section className="section bg-white">
           <div className="wrap">
-            <h2 className="measure" style={{ marginBottom: 20 }}>Catalogwiz Workbench — Human-in-the-Loop + AI</h2>
+            <h2 className="measure" style={{ marginBottom: 20 }}>CatalogWiz Workbench — Human-in-the-Loop + AI</h2>
             <div className="faq-list" style={{ marginBottom: 48 }}>
               {WORKBENCH_FAQS.map((f) => <FaqItem key={f.q} {...f} />)}
             </div>
@@ -295,7 +295,6 @@ export default function Resources() {
           </div>
         </section>
       )}
-
     </>
   )
 }

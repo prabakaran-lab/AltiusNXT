@@ -341,3 +341,22 @@
 .tr-event,.tr-certs{ justify-content:flex-start; }
 .tr-certs li > span{ height:clamp(130px,11vw,160px); }
 .tr-certs img{ max-height:116px; }
+
+/* the FAQ column now holds a contact form, so it scrolls with the page instead of sticking */
+.rp-faqgrid .rp-head{ position:static; }
+.rp-faqgrid .hq-help{ margin-top:26px; max-width:520px; }
+
+/* COOL-PALETTE */
+
+.rp-why{ background:linear-gradient(180deg,#f3f7fc 0%,#e9f0f9 100%); color:var(--navy); border-block:1px solid #d9e4f1; }
+.rp-why .rp-eb{ color:var(--orange-2); }
+.rp-why h2{ color:var(--navy); }
+.rp-why-head > p{ color:#4a5a72; }
+.rp-why-steps li{ border-color:#d9e4f1; background:#fff; box-shadow:0 14px 26px -22px rgba(11,31,58,.4); }
+.rp-why-steps li + li::before{ background:rgba(255,106,26,.45); }
+.rp-why-steps .ico{ background:var(--orange-soft); color:var(--orange-2); }
+.rp-why-steps .n{ color:rgba(11,31,58,.28); }
+.rp-why-steps b{ color:var(--navy); }
+.rp-why-steps p{ color:#53627a; }
+.rp-why-cta small{ color:#53627a; }
+.rp-sec.rp-dark{ background:linear-gradient(180deg,#f3f7fc 0%,#e9f0f9 100%); color:var(--navy); }

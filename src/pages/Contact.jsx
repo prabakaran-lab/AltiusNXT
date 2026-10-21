@@ -8,11 +8,16 @@ const OFFICES = [
   { id: 'us', name: 'United States', addr: ['31700 West Thirteen Mile Road, Suite 205', 'Farmington Hills, MI 48334'], phones: [['', '+1 313 486 9697', '+13134869697']] },
   { id: 'in', name: 'India', addr: ['56-C, Bharathi Park, 2nd Cross', 'Saibaba Colony, Coimbatore, Tamil Nadu 641011'], phones: [['Sales', '+91 9952317740', '+919952317740'], ['Careers', '+91 7708182828', '+917708182828']] },
 ]
-const EMPTY = { name: '', email: '', company: '', designation: '', message: '', website: '' }
+// hpField: the honeypot. Named away from common words like "website" / "url" / "company" on purpose —
+// Chrome and other browsers can autofill a hidden field from a saved address/business profile based on
+// its name alone, even with autocomplete="off", which silently triggered the honeypot for real visitors
+// (the form said "Message sent" but nothing was ever saved or emailed). An unrecognizable name isn't a
+// known autofill category, so nothing fills it.
+const EMPTY = { name: '', email: '', company: '', designation: '', message: '', hpField: '' }
 
 export default function Contact() {
   const ref = useRef(null)
-  const [f, setF] = useState(() => ({ ...EMPTY, message: new URLSearchParams(window.location.search).get('message') || '' }))
+  const [f, setF] = useState(() => ({ ...EMPTY, message: (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('message')) || '' }))
   const [state, setState] = useState('idle') // idle | sending | sent | error
   const [err, setErr] = useState('')
   const [seen, setSeen] = useState(false)
@@ -41,7 +46,7 @@ export default function Contact() {
   return (
     <div className={`ct${seen ? ' seen' : ''}`} ref={ref}>
       <PageSeo
-        title="Contact AltiusNxt | Talk to a Product Data Expert"
+        title="Contact AltiusNxt | Talk to a Product Data Engineer"
         description="Talk to a product data expert about product data enrichment, catalog management and CatalogWiz. Offices in the USA and India."
         keywords={['contact AltiusNxt', 'product data expert', 'product data enrichment services', 'catalog management services', 'CatalogWiz demo']}
         structuredData={[breadcrumb('/contact', 'Contact')]}
@@ -50,7 +55,7 @@ export default function Contact() {
         <div className="ct-wrap">
           <p className="ct-eyebrow">Contact</p>
           <h1>Let&rsquo;s talk about your <em>product data.</em></h1>
-          <p className="ct-lead">Tell us what you are working on. A Product Data Expert will reply with a clear answer, with no sales pressure.</p>
+          <p className="ct-lead">Tell us what you are working on. A product data engineer will reply within one business day with a clear answer and no sales pressure.</p>
           <ul className="ct-quick">
             <li><Clock size={15} />Reply within one business day</li>
             <li><Check size={15} strokeWidth={3} />No obligation</li>
@@ -66,7 +71,7 @@ export default function Contact() {
               <div className="ct-done" role="status">
                 <span className="tick"><Check size={26} strokeWidth={3.2} /></span>
                 <h2>Message sent</h2>
-                <p>Thank you. We have emailed you a confirmation and a Product Data Expert will reply shortly.</p>
+                <p>Thank you. We have emailed you a confirmation and a product data engineer will reply shortly.</p>
                 <button type="button" className="btn btn-outline" onClick={() => setState('idle')}>Send another message</button>
               </div>
             ) : (
@@ -81,7 +86,7 @@ export default function Contact() {
                   <label><span>Designation</span><input name="designation" autoComplete="organization-title" value={f.designation} onChange={set('designation')} placeholder="Head of eCommerce" /></label>
                 </div>
                 <label><span>How can we help? <i>*</i></span><textarea name="message" rows={6} required minLength={10} value={f.message} onChange={set('message')} placeholder="Tell us about your catalog, channels and what you would like to improve." /></label>
-                <input className="ct-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.website} onChange={set('website')} />
+                <input className="ct-hp" name="hp_field" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.hpField} onChange={set('hpField')} />
                 <div className="ct-actions">
                   <button type="submit" className="btn btn-primary" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : <>Send message <Send size={16} /></>}</button>
                   <small>By sending, you agree to our <a href="/privacy-policy">Privacy Policy</a>.</small>

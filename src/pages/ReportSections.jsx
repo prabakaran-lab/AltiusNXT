@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { ArrowRight, BarChart3, CalendarDays, Check, FileCheck2, FileText, Fingerprint, Link2, ListTree, Mail, MapPin, ScanSearch, ShieldCheck, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
+import QuestionForm from '../components/QuestionForm.jsx'
+import { trackMailtoClick } from '../services/hubspotTrack.js'
 import badgeIso9001 from '../assets/awards/tuv-iso-9001.png'
 import badgeIso27001 from '../assets/awards/tuv-iso-27001.png'
 import badgeB2bea from '../assets/awards/b2bea-member-badge.svg'
@@ -29,7 +31,7 @@ export function useReveal(rootRef) {
 /* Counts up from zero once its parent `.rv` has revealed. */
 export function Num({ to, delay = 0 }) {
   const [n, setN] = useState(0)
-  const [calm] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const [calm] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [el, setEl] = useState(null)
   useEffect(() => {
     if (!el || calm) return undefined
@@ -53,7 +55,7 @@ export function Num({ to, delay = 0 }) {
 
 const PAGES = [
   ['Summary', 'The headline finding and three key numbers'],
-  ['AI search results', 'Six buyer queries on four AI engines, and who got named'],
+  ['AI search results', 'Six buyer queries on four AI engines, and which competitors got named'],
   ['The five gaps', 'What is missing on your page, ranked by impact.'],
   ['Current and enriched page', 'Side-by-side mock-up, before and after'],
   ['Commercial impact', 'Price comparison and an illustrative cost of doing nothing'],
@@ -139,7 +141,7 @@ export function LevelsSection() {
       <div className="rp-wrap">
         <header className="rp-head rv">
           <span className="rp-eb">Two levels of detail</span>
-          <h2 id="rp-lvl">Start free. <em>Go deeper by email.</em></h2>
+          <h2 id="rp-lvl">Start free. <em>Go deeper with a full audit.</em></h2>
           <p>The report you get after pasting your URL is written in plain language for decision-makers. For the technical scoring behind it, ask us for the detailed audit.</p>
         </header>
         <div className="lv-grid">
@@ -155,16 +157,16 @@ export function LevelsSection() {
             <a className="btn btn-primary" href="#arr-top">Get my free report <ArrowRight size={16} /></a>
           </article>
           <article className="lv-card hot rv" style={{ '--d': 2 }}>
-            <span className="rp-chip">By email request</span>
-            <h3>Detailed AI Visibility Audit (on request)</h3>
+            <span className="rp-chip">From $X</span>
+            <h3>AI Visibility &amp; Competitor Audit</h3>
             <p>The scoring behind your report: how well AI can find, understand and recommend your product.</p>
             <ul>
               <li><Check size={15} strokeWidth={3} />15-point scorecard across Find, Understand and Recommend</li>
-              <li><Check size={15} strokeWidth={3} />AI query logs</li>
+              <li><Check size={15} strokeWidth={3} />100+ buyer questions across your top categories</li>
               <li><Check size={15} strokeWidth={3} />Price benchmark and recommended page rebuild</li>
-              <li><Check size={15} strokeWidth={3} />Page snapshot and full attribute map on request</li>
+              <li><Check size={15} strokeWidth={3} />Your share of AI answers vs. the three distributors AI names most</li>
             </ul>
-            <a className="btn btn-outline" href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A%0ACompany%3A%0AName%20and%20role%3A"><Mail size={16} />Email us for the detailed audit</a>
+            <a className="btn btn-outline" href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A%0ACompany%3A%0AName%20and%20role%3A" onClick={() => trackMailtoClick('full_audit_click')}><Mail size={16} />Request the full audit</a>
           </article>
         </div>
       </div>
@@ -185,7 +187,7 @@ const LAYERS = [
 const ENGINES = ['ChatGPT', 'Claude', 'Gemini', 'Perplexity']
 
 export function LayersSection() {
-  const [active, setActive] = useState(() => ('IntersectionObserver' in window ? 0 : 7))
+  const [active, setActive] = useState(() => (typeof window === 'undefined' || 'IntersectionObserver' in window ? 0 : 7))
   const stepRefs = useRef([])
 
   useEffect(() => {
@@ -205,7 +207,7 @@ export function LayersSection() {
       <div className="rp-wrap">
         <header className="rp-head rv">
           <span className="rp-eb">The framework</span>
-          <h2 id="rp-lay">The 7 layers that make a product page <em>AI-ready.</em></h2>
+          <h2 id="rp-lay">The AltiusNxt 7-Layer AI Readiness Framework <em>for product pages.</em></h2>
           <p>AI search engines and shopping assistants only recommend products they can identify, read, trust and compare. Scroll to watch one real product page get built from the bottom up, and see where your five gaps map onto these layers.</p>
         </header>
 
@@ -278,7 +280,7 @@ export function NextSection() {
       <div className="rp-wrap">
         <header className="rp-head rp-center rv">
           <span className="rp-eb">Recommended next steps</span>
-          <h2 id="rp-next">Two ways to go <em>through the findings.</em></h2>
+          <h2 id="rp-next">Three ways <em>to go further.</em></h2>
         </header>
         <div className="lv-grid">
           <article className="lv-card rv">
@@ -291,7 +293,7 @@ export function NextSection() {
             <span className="rp-chip">Option B · Complimentary assessment</span>
             <h3>Three products of your choice</h3>
             <p>Send us three product pages you care about most. No sales figures needed. We show you live how AI search responds to each one today, and what it would have to work with after enrichment. No proposal or commitment required.</p>
-            <a className="btn btn-outline" href="mailto:govind@altiusnxt.com,manoj@altiusnxt.com?subject=Three%20product%20pages%20for%20assessment&body=Product%20page%20URLs%3A%0A1.%0A2.%0A3.">Send three product pages</a>
+            <a className="btn btn-outline" href="mailto:govind@altiusnxt.com,manoj@altiusnxt.com?subject=Three%20product%20pages%20for%20assessment&body=Product%20page%20URLs%3A%0A1.%0A2.%0A3." onClick={() => trackMailtoClick('send_three_pages_click')}>Send three product pages</a>
           </article>
         </div>
         <div className="tr rv">
@@ -332,7 +334,7 @@ export const AI_READINESS_FAQ = [
   ['Do you need access to my website?', 'No. We use your live public product page, the manufacturer’s catalog and public seller listings.'],
   ['Will I get the same answers if I ask AI myself?', 'Maybe not. AI answers vary between runs and engines, so the report is a snapshot. We keep the full transcripts and can re-run any query live with you.'],
   ['Is a person involved?', 'Yes. AI runs the tests, and a product data expert verifies and approves every report before we send it to you.'],
-  ["Does the report cover UCP?", "Yes. We flag the product details AI shopping agents using Google's Universal Commerce Protocol (UCP) need, such as identifiers, attributes, price and stock."],
+  ["Does the report cover UCP and ACP?", "Yes. We flag the product details AI shopping agents using Google's UCP or OpenAI's ACP need, such as identifiers, attributes, price and stock."],
 ]
 
 export function FaqSection() {
@@ -343,6 +345,7 @@ export function FaqSection() {
           <span className="rp-eb">FAQ</span>
           <h2 id="rp-faq">Answers before <em>you get started.</em></h2>
           <p>Short answers on what we test, what you receive and what it costs.</p>
+          <QuestionForm />
         </header>
         <div className="rp-faqs">
           {AI_READINESS_FAQ.map(([q, a], i) => (

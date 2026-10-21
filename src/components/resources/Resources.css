@@ -74,3 +74,13 @@
   .rs-card{ transition:none; }
   .rs-card:hover{ transform:none; }
 }
+
+/* COOL-PALETTE */
+
+.rs-hero{ background:#eef3fa; color:var(--navy); border-bottom:1px solid #d9e4f1; }
+.rs-hero h1{ color:var(--navy); }
+.rs-hero-sub{ color:#4a5a72; }
+.rs-hero-meta, .rs-hero-meta span{ color:var(--navy); }
+.rs-crumbs{ color:#6b7a90; }
+.rs-crumbs a{ color:#4a5a72; }
+.rs-crumbs a:hover{ color:var(--orange-2); }

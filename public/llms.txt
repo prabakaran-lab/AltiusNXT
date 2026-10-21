@@ -1,0 +1,48 @@
+# AltiusNxt
+
+> AltiusNxt is a product data engineering partner for industrial distributors, suppliers and manufacturers. Since 2007, its product data engineers have enriched 15M+ products for 500+ distributors in 15+ countries. They build, enrich and verify catalogs value by value, then test them on ChatGPT, Claude, Gemini, Perplexity and Google so buyers and AI can find them. CatalogWiz is AltiusNxt's AI enrichment platform. Offices: Farmington Hills, MI (USA) and Coimbatore (India). Certified to ISO 9001 and ISO 27001 by TÜV Austria.
+
+## Key pages
+
+- [CatalogWiz](https://www.altiusnxt.com/catalogwiz): AI product data enrichment: supplier files in, verified product data out. Every value is checked by an AltiusNxt product data engineer against the manufacturer source.
+- [Free AI Readiness Report](https://www.altiusnxt.com/ai-readiness-report): Paste one product page. We ask ChatGPT, Claude, Gemini and Perplexity the questions buyers ask, show who they recommend, and an engineer approves the six-page report.
+- [About AltiusNxt](https://www.altiusnxt.com/about-us): Company story since 2007, product categories covered, certifications (ISO 9001, ISO 27001) and clients.
+- [Resources](https://www.altiusnxt.com/resources): Guides, case studies and events on product data and AI search for distributors.
+- [Product Schema Studio](https://www.altiusnxt.com/product-schema-markup): Product schema markup (JSON-LD) examples for B2B product categories.
+- [Category Attribute Library](https://www.altiusnxt.com/category-attributes): The attributes every industrial product record needs, per category.
+- [Contact](https://www.altiusnxt.com/contact): Talk to a product data engineer.
+
+## Case studies
+
+- [Rose Scientific, Canada – From Static Site to Dynamic eCommerce Powerhouse](https://www.altiusnxt.com/resources/case-studies/rose-scientific-canada)
+- [The Screwman tightens its business presence with a new e-store](https://www.altiusnxt.com/resources/case-studies/the-screwman)
+- [Data enrichment improves Kempston Controls' website traffic](https://www.altiusnxt.com/resources/case-studies/kempston-controls)
+
+## Blog
+
+- [Elevating Your eCommerce Strategy with Product Attribute Development](https://www.altiusnxt.com/resources/blog/product-attribute-development)
+- [How Data Normalization Boosts eCommerce Efficiency for Industrial Distributors and Retailers](https://www.altiusnxt.com/resources/blog/data-normalization-2025)
+- [Unlocking eCommerce Success: How to Implement a Platform That Converts](https://www.altiusnxt.com/resources/blog/implement-ecommerce-platform-that-converts)
+- [Why Product Data Cleansing is a Game Changer for eCommerce Stores](https://www.altiusnxt.com/resources/blog/product-data-cleansing-game-changer)
+- [How Product Content Enrichment Will Drive Your Sales Growth in 2025](https://www.altiusnxt.com/resources/blog/how-product-content-enrichment-will-drive-your-sales-growth-in-2025)
+- [Unlock E-Commerce Success: How Taxonomy Hierarchy Can Skyrocket Your Sales](https://www.altiusnxt.com/resources/blog/unlock-e-commerce-success-how-taxonomy-hierarchy-can-skyrocket-your-sales)
+- [What Is Product Data Enrichment and Why It’s Essential for Your Business?](https://www.altiusnxt.com/resources/blog/what-is-product-data-enrichment-and-why-its-essential-for-your-business)
+- [What is Product Information Management (PIM) for eCommerce?](https://www.altiusnxt.com/resources/blog/what-is-product-information-management-pim-for-ecommerce)
+- [8 Ways a Product Information Management (PIM) System Will Save You Time](https://www.altiusnxt.com/resources/blog/8-ways-a-product-information-management-pim-system-will-save-you-time)
+- [5 Essential Strategies to Keep Visitors on Your Website and eCommerce](https://www.altiusnxt.com/resources/blog/5-essential-strategies-to-keep-visitors-on-your-website-and-ecommerce)
+- [Why Outsourcing Your E-Commerce Product Content Can Revolutionize Your Business Operations](https://www.altiusnxt.com/resources/blog/outsourcing-ecommerce-content)
+- [Transform Your eCommerce Strategy with AltiusNxt Technologies' Product Data Enrichment Services](https://www.altiusnxt.com/resources/blog/transform-your-ecommerce-strategy-with-altiusnxt-technologies-product-data-enrichment-services)
+- [Challenges of eCommerce Catalog Management](https://www.altiusnxt.com/resources/blog/challenges-of-ecommerce-catalog-management)
+
+## Events
+
+- [IRX 2025 – 13th & 14th May](https://www.altiusnxt.com/resources/events/irx-2025)
+- [TOOLFAIR HARROGATE 2025 – 15th & 16th May](https://www.altiusnxt.com/resources/events/toolfair-harrogate-2025)
+- [CHEMUK 2025 – 21st & 22nd May](https://www.altiusnxt.com/resources/events/chemuk-2025)
+
+## Optional
+
+- [Sitemap (HTML)](https://www.altiusnxt.com/sitemap)
+- [Sitemap (XML)](https://www.altiusnxt.com/sitemap.xml)
+- [Privacy Policy](https://www.altiusnxt.com/privacy-policy)
+- [Terms of Use](https://www.altiusnxt.com/terms)

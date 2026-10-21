@@ -82,7 +82,7 @@ export default function Industries() {
         <header className="ind-head">
           <p className="ind-eyebrow">Taxonomy &amp; schema, per category</p>
           <h2 id="ind-title">Every category gets its own <em>taxonomy and attribute schema.</em></h2>
-          <p className="ind-sub">CatalogWiz places each product in the right branch of your category tree, then fills the attribute set that buyers in that category actually filter by.</p>
+          <p className="ind-sub">CatalogWiz places each product in the right branch of your category tree, mapped to ETIM, UNSPSC or eCl@ss where you need it. Then our engineers fill the attributes buyers in that category filter by.</p>
         </header>
 
         <ul className="ind-cats" role="tablist" aria-label="Product categories">
@@ -179,7 +179,7 @@ export default function Industries() {
               <footer className={`ixa-foot${done ? ' on' : ''}${nVals > 0 ? ' run' : ''}`}>
                 <span><Check size={12} strokeWidth={3.4} />Taxonomy mapped</span>
                 <span><Check size={12} strokeWidth={3.4} />{n} attributes standardised</span>
-                <span><Check size={12} strokeWidth={3.4} />Human verified</span>
+                <span><Check size={12} strokeWidth={3.4} />Engineer verified</span>
                 <small>{nVals}/{n} fields · {pct}% complete</small>
               </footer>
             </div>

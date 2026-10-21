@@ -1,7 +1,11 @@
 import { useEffect } from 'react'
+import { setHead } from '../../ssrHead.js'
 
 /* Sets document.title and the meta description for the current page, restoring the previous values on unmount. */
 export default function useDocumentMeta(title, description, keywords) {
+  // Render-time, for the build-time prerender (see ssrHead.js) — useEffect below never runs server-side.
+  setHead({ title: `${title} | AltiusNxt`, description: description || '', keywords: (keywords || []).join(', ') })
+
   useEffect(() => {
     const previousTitle = document.title
     let tag = document.querySelector('meta[name="description"]')

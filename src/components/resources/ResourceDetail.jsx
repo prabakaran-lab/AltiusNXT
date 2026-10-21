@@ -5,6 +5,8 @@ import ImagePlaceholder from './ImagePlaceholder.jsx'
 import SectionBlocks from './SectionBlocks.jsx'
 import CtaBlock from './CtaBlock.jsx'
 import useDocumentMeta from './useDocumentMeta.js'
+import useBreadcrumbSeo from './useBreadcrumbSeo.js'
+import { setHead, addStructuredData } from '../../ssrHead.js'
 import { calendarUrl, readingMinutes, tocFor } from './toc.js'
 import { sanitizeArticle } from './sanitize.js'
 import { LinkedInMark, XMark } from './BrandMarks.jsx'
@@ -188,9 +190,17 @@ function Strip({ item, minutes }) {
 
 /* Canonical link, Open Graph tags and Article JSON-LD for imported posts (these have a real publish date). */
 function useArticleSeo(item) {
+  // Render-time, for the build-time prerender (see ssrHead.js) — the useEffect below never runs
+  // server-side. Mirrors exactly what that effect sets, so the static HTML and the hydrated page agree.
+  if (item.published) {
+    const url = `https://www.altiusnxt.com/resources/blog/${item.slug}`
+    setHead({ canonical: url, ogType: 'article', ogImage: item.image })
+    addStructuredData({ '@context': 'https://schema.org', '@type': 'BlogPosting', headline: item.title, image: item.image, datePublished: item.published, dateModified: item.updated, description: item.seoDescription || item.summary, mainEntityOfPage: url, author: { '@type': 'Organization', name: 'AltiusNxt' }, publisher: { '@type': 'Organization', name: 'AltiusNxt' } })
+  }
+
   useEffect(() => {
     if (!item.published) return undefined
-    const url = `${window.location.origin}/resources/blog/${item.slug}`
+    const url = `https://www.altiusnxt.com/resources/blog/${item.slug}`
     const made = []
     const add = (tag, attrs) => {
       const el = document.createElement(tag)
@@ -206,6 +216,11 @@ function useArticleSeo(item) {
       document.head.appendChild(el)
       made.push(el)
     })
+    const twitterCard = document.createElement('meta')
+    twitterCard.setAttribute('name', 'twitter:card')
+    twitterCard.setAttribute('content', 'summary_large_image')
+    document.head.appendChild(twitterCard)
+    made.push(twitterCard)
     add('script', { type: 'application/ld+json', text: JSON.stringify({ '@context': 'https://schema.org', '@type': 'BlogPosting', headline: item.title, image: item.image, datePublished: item.published, dateModified: item.updated, description: item.seoDescription || item.summary, mainEntityOfPage: url, author: { '@type': 'Organization', name: 'AltiusNxt' }, publisher: { '@type': 'Organization', name: 'AltiusNxt' } }) })
     return () => made.forEach((el) => el.remove())
   }, [item])
@@ -216,6 +231,7 @@ export default function ResourceDetail({ item, items, section }) {
   const article = useMemo(() => (item.html ? sanitizeArticle(item.html) : null), [item])
   useDocumentMeta((item.seoTitle || item.title).replace(/\s*[|-]\s*AltiusNxt$/i, ''), item.seoDescription || item.summary, [item.title, section?.label, 'product data enrichment', 'AltiusNxt'].filter(Boolean))
   useArticleSeo(item)
+  useBreadcrumbSeo([['Resources', '/resources'], ...(section ? [[section.label, section.base]] : []), [item.title]])
   const index = items.findIndex((i) => i.id === item.id)
   const toc = article ? article.toc : tocFor(item.sections)
   const isEvent = item.type === 'event'

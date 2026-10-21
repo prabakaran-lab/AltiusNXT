@@ -1,11 +1,11 @@
 import eventIrx from '../assets/resources/event-irx.jpg'
 import eventToolfair from '../assets/resources/event-toolfair.jpg'
 import eventChemuk from '../assets/resources/event-chemuk.jpg'
-import caseRose from '../assets/resources/case-rose-scientific.png'
+import caseRose from '../assets/resources/case-rose-scientific.webp'
 import caseScrewman from '../assets/resources/case-screwman.jpg'
 import caseKempston from '../assets/resources/case-kempston.webp'
 import blogAttribute from '../assets/resources/blog-attribute-development.webp'
-import blogNormalization from '../assets/resources/blog-data-normalization.png'
+import blogNormalization from '../assets/resources/blog-data-normalization.webp'
 import blogPlatform from '../assets/resources/blog-ecommerce-platform.webp'
 import blogCleansing from '../assets/resources/blog-data-cleansing.webp'
 import wpBlogs from './wpBlogs.json'
@@ -27,9 +27,14 @@ const table = (rows) => ({ type: 'table', rows })
 const quote = (text, author, role) => ({ type: 'quote', text, author, role })
 const banner = (text) => ({ type: 'banner-text', text })
 
-const TAGLINE = 'From onboarding to advanced features, get clarity on how Altius NXT drives your success.'
+// Each page's standfirst is the first sentence of its own summary (no shared placeholder line).
+const own = (items) => items.map((it) => {
+  const first = ((it.summary || '').match(/^[\s\S]*?[.!?](?=\s|$)/) || [''])[0].trim()
+  return { ...it, subtitle: first.length > 40 ? first : it.subtitle }
+})
+const TAGLINE = ''
 
-export const events = [
+export const events = own([
   {
     id: 'event-irx-2025',
     image: eventIrx,
@@ -104,7 +109,7 @@ export const events = [
     summary: 'We are delighted to announce that we will be exhibiting at the CHEMUK 2025 expo running on the 21st & 22nd May 2025 at the NEC in Birmingham. We would like to invite you to come along and meet with the team at the show.',
     sections: [
       banner('Event banner: CHEMUK 2025 Group of Events | AltiusNxt. "AltiusNxt: Expert catalog product data solutions for Digital Commerce & Transformation." 1 Expo 5 Show Zones, 21st & 22nd May 2025, NEC, Birmingham, UK. Visit us on Stand A144. Show zones: Chemicals Supply Show, Chemicals Management Show, Process & Chemical Engineering Show, Chemical Laboratory Show, Formulated Product Manufacturer Show.'),
-      h2('Visit AltiusNXT Technologies Pvt Ltd On Stand A144 At The CHEMUK 2025 EXPO'),
+      h2('Visit AltiusNxt Technologies Pvt Ltd On Stand A144 At The CHEMUK 2025 EXPO'),
       p('We are delighted to announce that we will be exhibiting at the CHEMUK 2025 expo running on the 21st & 22nd May 2025 at the NEC in Birmingham. We would like to invite you to come along and meet with the team at the show.'),
       p('Are inconsistent, inaccurate, or incomplete product data hindering your sales and digital growth? Are you facing challenges with poor product discoverability and low conversion rates? AltiusNxt offers expert catalog solutions to enhance accuracy, visibility, and performance, streamlining operations and maximizing revenue through improved customer experiences.'),
       h3('Services we offer:'),
@@ -113,14 +118,14 @@ export const events = [
         lead('Ecommerce Platform Implementation', 'Build high-performing online stores'),
         lead('PIM Implementation', 'Centralize & manage product data effectively'),
       ]),
-      p('If you would like to arrange a 1-2-1 meeting at the show, please reply to this email with your preferred day and time, and we will get back to you.'),
+      p('If you would like to arrange a 1-2-1 meeting at the show, please contact us with your preferred day and time, and we will get back to you.'),
       p('You can register to receive your CHEMUK 2025 2 Day Visitor E-Pass through the website or using the quick link below.'),
       p('To Know More: www.chemicalukexpo.com'),
     ],
   },
-]
+])
 
-export const caseStudies = [
+export const caseStudies = own([
   {
     id: 'case-rose-scientific',
     image: caseRose,
@@ -196,7 +201,7 @@ export const caseStudies = [
       h2('Introduction'),
       p('For nearly four decades, The Screwman has specialized in fasteners and hand tools, offering customers the convenience of an extensive product range and swift delivery services. The company\'s main products include fasteners like hexagon bolts, washers, clamps, knobs, rivets, screws, anchors, studs, pins, and much more. Its other hardware varieties include abrasives, hammers, torque wrenches, vices, brushware, power tools, steel ropes, drill bits, spanners, chisels, and others.'),
       p('The Screwman distributes a wide range of South African products, directly imports goods, and acts as an agent for foreign manufacturers.'),
-      table([['Platform', 'Magento'], ['Timescale', '12 Weeks'], ['Launch Date', 'May 2023'], ['Live Link', 'Click Here']]),
+      table([['Platform', 'Magento'], ['Timescale', 'Close to two years'], ['Launch Date', 'May 2023'], ['Live Link', 'Click Here']]),
       h2('The Challenge: Outdated Technology Hindering Growth'),
       p('While the offline sales of the company are steady, the online age demands the company to expand its horizons, and the challenges faced by the company in this realm include:'),
       ul([
@@ -266,7 +271,7 @@ export const caseStudies = [
       p('The positive suggestions by AltiusNxt Technologies enabled Kempston Controls to overcome its challenges, which resulted in:'),
       ul([
         lead('Improved Website Traffic', "Through strategic Product Attribute Development, the company's online store experienced a significant boost in visitor engagement and traffic."),
-        lead('Increased Sales', "Through strategic Product Attribute Development, the company's online store experienced a significant boost in visitor engagement and traffic."),
+        lead('Increased Sales', 'Kempston Controls reports about 23% revenue growth, across a catalog of 50,000+ SKUs.'),
         lead('Enhanced Customer Satisfaction', 'Data enrichment resulted in increased sales inquiries and gauging customer satisfaction.'),
       ]),
       h2('Customer Testimonial'),
@@ -274,9 +279,9 @@ export const caseStudies = [
       quote("In the age of web search and Googling, we must provide proper data to the customers who view our website to make a buying decision. Be it small purchases or large, customers tend to go online and check the website for technical specs of the products required. If the data is outdated, incomplete, or inaccurate, it could risk losing customers and falling behind, which is exactly what we aim to prevent. Altius has assisted us in enriching SKU data for over 50,000 products, and we're highly pleased with the outcome. The improved data reinforces our position as a reliable authority on the products we offer. With the new data, we have roughly seen an increase of 23% in revenue from last year to this year. Keep in mind that there is a mix of factors, along with rich Altius data, that enabled this.", 'Mark Jansen', 'Digital Marketing Manager, Kempston Controls, UK'),
     ],
   },
-]
+])
 
-export const blogs = [
+export const blogs = own([
   {
     id: 'blog-product-attribute-development',
     image: blogAttribute,
@@ -315,11 +320,11 @@ export const blogs = [
       h2('The AltiusNxt Advantage: Proven Results'),
       p('Our innovative approach has delivered measurable success:'),
       ul([
-        '30% revenue growth for Kempston Controls in the UK.',
-        '90% of inquiries and 30%+ conversions are attributed to enriched data attributed to enriched data.',
+        'About 23% revenue growth for Kempston Controls in the UK (client-reported).',
+        '90% of inquiries and 30%+ conversions are attributed to enriched data.',
         'Improved product discoverability and enhanced customer satisfaction for industrial distributors.',
       ]),
-      p('With over 20 years of expertise serving 5000+ SMBs and Fortune 500 clients, AltiusNxt is uniquely positioned to transform your product data management.'),
+      p('Since 2007, AltiusNxt has served 500+ distributors in 15+ countries, which puts it in a strong position to transform your product data management.'),
       h2('Operational Efficiency Through Product Attributes'),
       p('Our well-developed Product Attributes Development systems streamline operations much like an efficient control panel for circuit breakers:'),
       ul([
@@ -558,11 +563,11 @@ export const blogs = [
       p("If you want to grow your eCommerce store globally—especially dealing with industrial products—there is no better time to clean up your data. Let AltiusNxt help you optimize your product information for improved efficiency, reduced errors, and greater customer satisfaction. Reach out today to unlock your business's full potential!"),
     ],
   },
-]
+])
 
 /* Blogs imported from the WordPress export (scripts/extract-wp-blogs.mjs). They render from `html` (sanitized at view time)
    instead of `sections`; `image` is the original WordPress featured-image URL. */
-blogs.push(...wpBlogs.map((b) => ({ ...b, subtitle: TAGLINE, sections: [] })))
+blogs.push(...own(wpBlogs.map((b) => ({ ...b, subtitle: TAGLINE, sections: [] }))))
 
 /* Shared CTA / contact block — from the PDF's "Common Footer / Contact Details" (not a page). */
 export const cta = {

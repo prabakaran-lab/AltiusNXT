@@ -5,17 +5,17 @@ import './HomeHero.css'
 function HeroContent() {
   return (
     <div className="hh-copy">
-      <p className="hh-kicker">CatalogWiz AI × Human Expertise</p>
-      <h1 id="hh-h">AI-Powered Product Data Enrichment.<br /><em>Human-Verified Accuracy.</em></h1>
-      <p className="hh-sub">CatalogWiz AI fills the gaps in your product catalog, and every value is human-verified by our product data experts before it goes live. The result: complete, accurate product content that ranks on Google, sells on your store and is ready for AI search and AI shopping agents.</p>
+      <p className="hh-kicker">Industrial product data · Engineered for AI search</p>
+      <h1 id="hh-h">Industrial product data enrichment.<br /><em>Verified by engineers. Found by AI.</em></h1>
+      <p className="hh-sub">Incomplete supplier data means buyers and AI assistants pick another seller. AltiusNxt’s product data engineers, with 15+ years in industrial catalogs, enrich every SKU with CatalogWiz AI, check every value against the manufacturer source, and test the result on ChatGPT, Claude, Gemini, Perplexity and Google.</p>
       <div className="hh-actions">
-        <Button to="/ai-readiness-report">Get Free AI Readiness Report</Button>
-        <Button variant="outline" icon="play" iconPosition="start" to="/how-it-works#catalogwiz">See CatalogWiz in Action</Button>
+        <Button to="/ai-readiness-report">Get my free AI Readiness Report</Button>
+        <Button variant="outline" icon="mail" iconPosition="start" to="/contact">Talk to a Product Data Engineer</Button>
       </div>
       <ul className="hh-trust">
-        <li><Icon name="award" size={17} />Since 2007</li>
+        <li><Icon name="award" size={17} />Since 2007 · 15M+ products enriched</li>
         <li><Icon name="factory" size={17} />Clients in 15+ countries</li>
-        <li><Icon name="users" size={17} />Human-verified product data</li>
+        <li><Icon name="users" size={17} />ISO 9001 &amp; ISO 27001 (TÜV Austria)</li>
       </ul>
     </div>
   )

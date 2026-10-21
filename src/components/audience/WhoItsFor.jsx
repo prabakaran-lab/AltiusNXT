@@ -87,7 +87,7 @@ function VisEcom() {
         <div className="wf-seo"><Sparkles size={11} />Structured title · specs · SEO</div>
       </div>
       <div className="wf-metrics">
-        <div className="m"><small>AI search rank</small><span className="swap"><b className="a">#47</b><b className="b">#1</b></span></div>
+        <div className="m"><small>AI answer</small><span className="swap"><b className="a">Not named</b><b className="b">Named</b></span></div>
         <div className="m"><small>Page completeness</small><div className="bars"><i style={{ '--h': '30%' }} /><i style={{ '--h': '52%' }} /><i style={{ '--h': '78%' }} /><i style={{ '--h': '98%' }} /></div></div>
       </div>
     </div>
@@ -95,9 +95,9 @@ function VisEcom() {
 }
 
 const CARDS = [
-  { id: 'mfr', tag: 'Manufacturers', title: 'Clean, consistent data for every channel.', pts: ['One master record for every product', 'Share the same data with distributors and marketplaces', 'Fewer data-quality complaints from partners'], to: '/how-it-works#catalogwiz', cta: 'See how it works', vis: () => <VisMaker /> },
-  { id: 'dist', tag: 'Distributors', title: 'Thousands of supplier SKUs, enriched fast.', pts: ['Normalise messy supplier files', 'Fill missing attributes from datasheets', 'Human-verified before it goes live'], to: '/how-it-works#catalogwiz', cta: 'See the workflow', vis: (go) => <VisDistributor go={go} /> },
-  { id: 'ecom', tag: 'Ecommerce teams', title: 'Product pages that rank and convert.', pts: ['Structured titles, specs and SEO', 'Ready for AI search and buyer questions', 'Publish to Shopify, WooCommerce, Magento'], to: '/ai-readiness-report', cta: 'Get a free AI Readiness Report', vis: () => <VisEcom /> },
+  { id: 'mfr', tag: 'Manufacturers', title: 'One verified master record per product.', pts: ['One master record for every product', 'Shared with every distributor and marketplace', 'Your specs read the same everywhere AI looks'], to: '/how-it-works#catalogwiz', cta: 'See how it works', vis: () => <VisMaker /> },
+  { id: 'dist', tag: 'Distributors', title: 'Thousands of supplier SKUs with three specs each?', pts: ['Normalise messy supplier files', 'Fill missing attributes from datasheets', 'Every value verified before it goes live'], to: '/how-it-works#catalogwiz', cta: 'See the workflow', vis: (go) => <VisDistributor go={go} /> },
+  { id: 'ecom', tag: 'Ecommerce teams', title: 'Product pages Google and AI can read and cite.', pts: ['Spec tables, schema and structured titles', 'Answers to buyer questions on the page', 'Publish to Shopify, WooCommerce, Magento'], to: '/ai-readiness-report', cta: 'Get a free AI Readiness Report', vis: () => <VisEcom /> },
 ]
 
 export default function WhoItsFor() {
@@ -118,8 +118,8 @@ export default function WhoItsFor() {
       <div className="wf-wrap">
         <header className="wf-head">
           <p className="wf-eyebrow">Who it is for</p>
-          <h2 id="wf-title">Built for teams that sell <em>technical products.</em></h2>
-          <p className="wf-sub">Whether you make the product, distribute it, or sell it online, CatalogWiz turns messy supplier data into content buyers and AI search can trust.</p>
+          <h2 id="wf-title">Built for industrial <em>distributors, suppliers and manufacturers.</em></h2>
+          <p className="wf-sub">Whether you make the product, distribute it, or sell it online, AltiusNxt’s engineers turn messy supplier data into content buyers and AI search can trust.</p>
         </header>
         <div className="wf-grid">
           {CARDS.map((c, i) => (

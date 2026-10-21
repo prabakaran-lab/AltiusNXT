@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon.jsx'
 import ImagePlaceholder from '../../components/resources/ImagePlaceholder.jsx'
 import useDocumentMeta from '../../components/resources/useDocumentMeta.js'
+import useBreadcrumbSeo from '../../components/resources/useBreadcrumbSeo.js'
 import { sections } from '../../data/resources.js'
 
 const CARDS = [
@@ -14,6 +15,7 @@ const KEYWORDS = ['product data enrichment guide', 'product data case studies', 
 
 export default function ResourcesOverviewPage() {
   useDocumentMeta('Product Data Guides, Case Studies & Events', 'Events, case studies and blog posts from AltiusNxt on product data enrichment, attributes and eCommerce.', KEYWORDS)
+  useBreadcrumbSeo([['Resources']])
   return (
     <>
       <section className="rs-hero" aria-labelledby="rs-over-title">

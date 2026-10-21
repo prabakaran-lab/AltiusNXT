@@ -19,7 +19,7 @@ const LOOP = LAYERS.length * STEP + HOLD
 const ld = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  name: 'The 7 layers of AI-ready product data',
+  name: 'The AltiusNxt 7-Layer AI Readiness Framework',
   itemListElement: LAYERS.map((l) => ({ '@type': 'ListItem', position: l.n, name: l.t, description: `${l.d} ${l.q}` })),
 }
 
@@ -63,7 +63,7 @@ export default function AiLayers() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <div className="sl-wrap">
         <header className="sl-head">
-          <p className="sl-eyebrow">AI-ready product data</p>
+          <p className="sl-eyebrow">The AltiusNxt 7-Layer AI Readiness Framework</p>
           <h2 id="sl-title">The 7 layers that make a product page <em>AI-ready.</em></h2>
           <p className="sl-sub">AI search engines and shopping assistants only recommend products they can identify, read, trust and compare. CatalogWiz builds that foundation from the bottom up.</p>
         </header>

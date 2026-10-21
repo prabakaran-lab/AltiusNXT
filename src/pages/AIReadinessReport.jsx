@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Bot, Check, CircleAlert, FileText, MessagesSquare, Scale, Search, SearchX, ShoppingCart, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
 import { useSearchParams } from 'react-router-dom'
-import { quickScan, submitLead } from '../services/api.js'
+import { quickScan, requestReport } from '../services/api.js'
+import { trackMailtoClick } from '../services/hubspotTrack.js'
 import LeadFormModal from '../components/LeadFormModal.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ScanOverlay from '../components/ScanOverlay.jsx'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import { AI_READINESS_FAQ, FaqSection, HowSection, LayersSection, LevelsSection, NextSection, Num, ReceiveSection, useReveal } from './ReportSections.jsx'
 import './AIReadinessReport.css'
@@ -19,7 +20,7 @@ const STORY = [
 const WHY_STEPS = [
   { t: 'Find', d: 'The agent looks for products that match what the buyer asked for. If it cannot read your page, you are not in the results.', Ico: Search },
   { t: 'Compare', d: 'It compares specs, part numbers, price and stock side by side. Missing or inconsistent details drop you out.', Ico: Scale },
-  { t: 'Check out', d: 'It buys from the page it trusts most. The report shows what to fix so that page is yours.', Ico: ShoppingCart },
+  { t: 'Choose', d: 'Who does AI name, and why them? The report shows what to fix so that seller is you.', Ico: ShoppingCart },
 ]
 const ENGINES = ['ChatGPT', 'Claude', 'Gemini', 'Perplexity']
 
@@ -29,6 +30,8 @@ export default function AIReadinessReport() {
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
   const [result, setResult] = useState(null)
+  const [verified, setVerified] = useState(null) // { email, token } once the visitor has entered the emailed code
+  const [popup, setPopup] = useState(false) // the scan, score and report popup
 
   const [showLeadForm, setShowLeadForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -36,22 +39,20 @@ export default function AIReadinessReport() {
   const [confirmation, setConfirmation] = useState(null)
   const [progress, setProgress] = useState(null)
   const root = useRef(null)
-  const resultRef = useRef(null)
   useReveal(root)
-
-  useEffect(() => {
-    if (result) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [result])
 
   const runScan = async (targetUrl) => {
     setScanning(true)
     setScanError('')
     setResult(null)
+    setConfirmation(null)
+    setPopup(true)
     try {
       const data = await quickScan(targetUrl)
       setResult(data)
     } catch (err) {
       setScanError(err.message)
+      setPopup(false)
     } finally {
       setScanning(false)
     }
@@ -72,17 +73,20 @@ export default function AIReadinessReport() {
     setSubmitting(true)
     setLeadError('')
     try {
-      const data = await submitLead(
-        { ...form, url, quickScan: result, origin: window.location.origin },
-        {
-          onProgress: (p) => {
-            setShowLeadForm(false)
-            setProgress(p)
-          },
-        },
-      )
-      setConfirmation({ firstName: form.firstName, email: form.email, pdfBase64: data.pdfBase64, emailStatus: data.emailStatus })
+      // Read once, at the moment of submission (not on page load), so a UTM link followed by a slow
+      // scan/verify still gets credited correctly. Saved in HubSpot; never shown to the visitor.
+      const utm = {
+        utm_source: searchParams.get('utm_source') || '',
+        utm_medium: searchParams.get('utm_medium') || '',
+        utm_campaign: searchParams.get('utm_campaign') || '',
+        utm_content: searchParams.get('utm_content') || '',
+      }
+      // the team reviews the report before it is shared, so the visitor gets a confirmation, not the report itself
+      await requestReport({ ...form, url, quickScan: result, origin: window.location.origin, ...utm })
+      setShowLeadForm(false)
+      setConfirmation({ firstName: form.firstName || String(form.name || '').trim().split(/\s+/)[0], email: form.email })
     } catch (err) {
+      if (/verify your email/i.test(err.message)) setVerified(null)
       setLeadError(err.message)
       setShowLeadForm(true)
     } finally {
@@ -99,12 +103,13 @@ export default function AIReadinessReport() {
   return (
     <div ref={root} className="arr-page">
       <PageSeo
-        title="Free AI Readiness Report | Check Your AI Search Visibility"
-        description="Is ChatGPT recommending your products? Get a free, expert-verified AI Readiness Report for one product page, with a 6-page fix plan by email."
+        title="Free AI Readiness Report | Does ChatGPT Recommend You?"
+        description="Paste one product page. We test it on ChatGPT, Claude, Gemini and Perplexity, show who they recommend instead, and an engineer approves your free report."
         keywords={['AI search visibility', 'AI readiness report', 'product visibility in ChatGPT', 'generative engine optimization eCommerce', 'AI shopping assistant optimization', 'GEO audit']}
         structuredData={[
           breadcrumb('/ai-readiness-report', 'Free AI Readiness Report'),
           { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: AI_READINESS_FAQ.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) },
+          { '@context': 'https://schema.org', '@type': 'Service', name: 'AI Readiness Report', serviceType: 'AI search visibility audit', provider: { '@type': 'Organization', name: 'AltiusNxt Technologies' }, description: 'A free, engineer-approved report on how ChatGPT, Claude, Gemini and Perplexity read and recommend one product page.', areaServed: 'Worldwide' },
         ]}
       />
       <section className="arr-hero" id="arr-top" aria-labelledby="arr-title">
@@ -113,7 +118,7 @@ export default function AIReadinessReport() {
           <div className="arr-copy">
             <p className="arr-eyebrow">Free AI Readiness Report · Expert-verified and approved · One product page</p>
             <h1 id="arr-title">AI is answering your buyers. <em>Is it naming you?</em></h1>
-            <p className="arr-lead">Get your free AI Readiness Report. Paste one product page and we test it on ChatGPT, Claude, Gemini and Perplexity. A product data expert verifies and approves every report, so you see the real gaps stopping AI search from recommending your product.</p>
+            <p className="arr-lead">Paste one product page. We ask ChatGPT, Claude, Gemini and Perplexity the questions your buyers ask, show you which sellers they recommend instead, and a product data expert verifies and approves your six-page report with the fixes in priority order.</p>
             <form className="url-form" onSubmit={handleScan}>
               <label htmlFor="scan-url" className="visually-hidden">Product page URL</label>
               <input
@@ -133,7 +138,7 @@ export default function AIReadinessReport() {
               Must be a single product page, not your homepage or a category listing with multiple products on it.
             </p>
             {scanError && <p className="form-error" style={{ marginTop: 14 }}>{scanError}</p>}
-            <p className="arr-more">Want the full scorecard, showing how well AI can find, understand and recommend your product? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A">Email us for the detailed audit</a>.</p>
+            <p className="arr-more">Want the full scorecard and competitor breakdown? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A" onClick={() => trackMailtoClick('competitor_audit_click')}>Request the AI Visibility &amp; Competitor Audit</a>.</p>
           </div>
 
           <div className="arr-chat" role="img" aria-label="Illustration of an AI answer that leaves a distributor out">
@@ -167,43 +172,16 @@ export default function AIReadinessReport() {
         </div>
       </section>
 
-      {result && (
-        <section className="section bg-white" style={{ paddingTop: 0 }} ref={resultRef}>
-          <div className="wrap">
-            <div className="scan-result">
-              <div className="scan-score" style={{ borderColor: result.score < 50 ? 'var(--orange)' : 'var(--green)' }}>
-                <span className="scan-score-num">{result.score}</span>
-                <span className="scan-score-label">AI readiness score</span>
-              </div>
-              <div className="scan-summary">
-                <h3>{result.headline}</h3>
-                <p style={{ marginBottom: 12 }}>{result.productName}</p>
-                <ul className="scan-gaps">
-                  {(result.topGaps || []).map((gap, i) => (
-                    <li key={i}>{gap}</li>
-                  ))}
-                </ul>
-                {progress ? (
-                  <div className="report-progress" role="status" aria-live="polite">
-                    <span className="report-progress-spinner" aria-hidden="true" />
-                    <div>
-                      <strong>Building your report — {progress.stage}…</strong>
-                      <span>
-                        We query ChatGPT, Claude, Gemini and Perplexity live and benchmark real sellers, so this takes 3–6 minutes.
-                        Keep this tab open. Elapsed: {formatElapsed(progress.elapsedMs)}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <button className="btn btn-primary" type="button" onClick={() => setShowLeadForm(true)} disabled={submitting}>
-                    Get my AI Readiness Report
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+      <ScanOverlay
+        stage={!popup ? null : confirmation ? 'ready' : progress ? 'build' : scanning ? 'scan' : result ? 'result' : null}
+        result={result}
+        url={url}
+        progress={progress}
+        elapsed={formatElapsed(progress?.elapsedMs)}
+        confirmation={confirmation}
+        onGetReport={() => setShowLeadForm(true)}
+        onClose={() => { setPopup(false); setConfirmation(null) }}
+      />
 
       {showLeadForm && (
         <LeadFormModal
@@ -211,16 +189,8 @@ export default function AIReadinessReport() {
           onSubmit={handleLeadSubmit}
           submitting={submitting}
           error={leadError}
-        />
-      )}
-
-      {confirmation && (
-        <ConfirmModal
-          onClose={() => setConfirmation(null)}
-          firstName={confirmation.firstName}
-          email={confirmation.email}
-          pdfBase64={confirmation.pdfBase64}
-          emailStatus={confirmation.emailStatus}
+          verified={verified}
+          onVerified={setVerified}
         />
       )}
 
@@ -232,7 +202,7 @@ export default function AIReadinessReport() {
           <div className="rp-why-head">
             <span className="rp-eb">Why this matters now</span>
             <h2 id="rp-why">AI is moving from recommending <em>to buying.</em></h2>
-            <p>With Google's Universal Commerce Protocol (UCP), AI shopping agents can find, compare and check out products for your buyers. If AI cannot read your product page today, it will not choose it tomorrow. Your free, expert-verified AI Readiness Report shows where you stand.</p>
+            <p>Buyers already ask AI assistants which distributor stocks a part. Google's UCP and OpenAI's ACP now let AI agents compare and check out too. Agents pick the seller whose data they can verify. Your free report shows whether that is you today.</p>
           </div>
           <ol className="rp-why-steps" aria-label="How an AI shopping agent buys">
             {WHY_STEPS.map(({ t, d, Ico }, i) => (
@@ -261,21 +231,7 @@ export default function AIReadinessReport() {
             <p className="arr-eyebrow">Ready to check your product data?</p>
             <h2 id="arr-final-t">See how AI-ready your <em>product content really is.</em></h2>
             <p>Start with one product page and discover where your data is complete, where AI may struggle to verify it, and what enrichment could improve.</p>
-            <form className="url-form" onSubmit={handleScan}>
-              <label htmlFor="scan-url-2" className="visually-hidden">Product page URL</label>
-              <input
-                id="scan-url-2"
-                name="url"
-                type="url"
-                placeholder="Paste one product page URL"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                required
-              />
-              <button className="btn btn-primary" type="submit" disabled={scanning}>
-                {scanning ? 'Scanning…' : 'Get my free report'}
-              </button>
-            </form>
+            <a className="btn btn-primary" href="#arr-top" onClick={(e) => { e.preventDefault(); document.getElementById('arr-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => document.getElementById('scan-url')?.focus({ preventScroll: true }), 600) }}>Get my free report</a>
             <p className="arr-fine">One product page. Actionable findings. No obligation.</p>
             </div>
 

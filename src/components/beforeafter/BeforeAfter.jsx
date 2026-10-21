@@ -58,7 +58,7 @@ export default function BeforeAfter() {
         <header className="ba-head">
           <p className="ba-eyebrow">Before &amp; after CatalogWiz</p>
           <h2 id="ba-title">Same supplier file. <em>A product page buyers can trust.</em></h2>
-          <p className="ba-sub">Watch one raw supplier listing become a complete, human-verified product page.</p>
+          <p className="ba-sub">Watch one raw supplier listing become a complete product page, verified by a product data engineer.</p>
         </header>
 
         <div className="bx-board" role="img" aria-label={`Animated example: a supplier file with ${GIVEN} of ${TOTAL} product details becomes a product page with all ${TOTAL}, verified by a data specialist.`}>
@@ -110,7 +110,7 @@ export default function BeforeAfter() {
                   <p className="bx-meta">
                     <span className={n >= 9 ? 'on' : ''}>{PRODUCT.maker}</span>
                     <span>SKU {PRODUCT.sku}</span>
-                    <span className={done ? 'on ok' : ''}><BadgeCheck size={13} />Human-verified</span>
+                    <span className={done ? 'on ok' : ''}><BadgeCheck size={13} />Engineer-verified</span>
                   </p>
                   <p className={`bx-desc${n >= 12 ? ' on' : ''}`}>{n >= 12 ? PRODUCT.description : 'Motor circuit breaker 73A.'}</p>
                 </div>
@@ -129,7 +129,7 @@ export default function BeforeAfter() {
         <ul className="ba-points">
           <li><Check size={14} strokeWidth={3} /><b>5 of 17 → 17 of 17</b> details filled from the datasheet</li>
           <li><Check size={14} strokeWidth={3} /><b>Structured</b> title, taxonomy, description and SEO</li>
-          <li><Check size={14} strokeWidth={3} /><b>Human verified</b> before it goes live</li>
+          <li><Check size={14} strokeWidth={3} /><b>Engineer-verified</b> against the manufacturer source</li>
         </ul>
         <p className="ba-foot">Illustrative sample data · sample product TELGV3P73</p>
       </div>

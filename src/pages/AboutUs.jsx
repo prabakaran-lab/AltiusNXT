@@ -15,8 +15,8 @@ export default function AboutUs() {
   return (
     <>
       <PageSeo
-        title="About AltiusNxt | Product Data Enrichment Company Since 2007"
-        description="AltiusNxt is a product data enrichment company. Since 2007 we have enriched 15M+ products for 500+ manufacturers and distributors in 15+ countries."
+        title="About AltiusNxt | Industrial Product Data Engineers Since 2007"
+        description="Since 2007, AltiusNxt has enriched 15M+ products for industrial distributors and manufacturers in 15+ countries. Offices in Michigan, USA and Coimbatore, India."
         keywords={['product data management company', 'product data enrichment company', 'catalog management services', 'product information management services']}
         structuredData={[breadcrumb('/about-us', 'About Us')]}
       />
@@ -26,16 +26,16 @@ export default function AboutUs() {
           <div className="ah-copy">
             <p className="ah-eyebrow ah-r" style={{ '--d': '0ms' }}>About AltiusNxt · Since 2007</p>
             <h1 id="ah-title" className="ah-r" style={{ '--d': '80ms' }}>
-              The product data partner <span>for B2B industrial distributors.</span>
+              Product data engineers <span>for industrial distribution.</span>
             </h1>
             <p className="ah-lede ah-r" style={{ '--d': '170ms' }}>
-              For nearly two decades, AltiusNxt has helped B2B industrial distributors in 15+ countries, from Fortune 500
-              companies to mid-sized and small businesses, turn messy supplier data into accurate, human-verified product
-              content. With 15M+ products enriched for 500+ distributors since 2007, we make complex technical catalogues
-              easier to find on Google, easier to buy from on every channel, and visible in all LLMs.
+              Since 2007, AltiusNxt has enriched more than 15 million products for industrial distributors, suppliers and
+              manufacturers in 15+ countries, from enterprise distributors to family-owned distributors. Our product data engineers,
+              with 15+ years in industrial catalogs, verify every value we deliver. Today we also test how ChatGPT, Gemini,
+              Claude, Perplexity and Google read your products, and fix what stops them recommending you.
             </p>
             <dl className="ah-stats">
-              {[['20+', 'Years of team expertise'], ['500+', 'Global clients'], ['15M+', 'Products enriched'], ['15+', 'Countries']].map(([n, l], i) => (
+              {[['2007', 'Founded'], ['15M+', 'Products enriched'], ['500+', 'Distributors'], ['15+', 'Countries']].map(([n, l], i) => (
                 <div key={l} className="ah-r" style={{ '--d': `${260 + i * 90}ms` }}><dd>{n}</dd><dt>{l}</dt></div>
               ))}
             </dl>

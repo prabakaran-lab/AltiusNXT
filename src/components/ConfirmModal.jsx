@@ -1,6 +1,6 @@
 import Modal from './Modal.jsx'
 
-function downloadPdf(pdfBase64) {
+export function downloadPdf(pdfBase64) {
   const bytes = atob(pdfBase64)
   const arr = new Uint8Array(bytes.length)
   for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)

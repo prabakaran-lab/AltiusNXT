@@ -2,6 +2,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon.jsx'
 import ResourceCard from '../../components/resources/ResourceCard.jsx'
 import useDocumentMeta from '../../components/resources/useDocumentMeta.js'
+import useBreadcrumbSeo from '../../components/resources/useBreadcrumbSeo.js'
 import { sections } from '../../data/resources.js'
 import { orderedItems } from './ordering.js'
 
@@ -10,6 +11,7 @@ export default function ResourceListingPage({ sectionKey }) {
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
   useDocumentMeta(section.label, `${section.blurb} AltiusNxt ${section.label.toLowerCase()}.`, [section.label.toLowerCase(), 'product data enrichment', 'catalog management', 'eCommerce product data'])
+  useBreadcrumbSeo([['Resources', '/resources'], [section.label]])
 
   const term = query.trim().toLowerCase()
   const visible = orderedItems(section).filter((i) => !term || i.title.toLowerCase().includes(term))

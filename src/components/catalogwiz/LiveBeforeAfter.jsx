@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BadgeCheck, Check, ImageOff, Minus, Search, ShoppingCart } from 'lucide-react'
+import ShotCompare from './ShotCompare.jsx'
+import SampleStore from './SampleStore.jsx'
 import './LiveBeforeAfter.css'
 
 /* The visitor's own product page, before and after CatalogWiz, as two different pages of the same store.
@@ -81,6 +83,8 @@ export default function LiveBeforeAfter({ r }) {
   const [seen, setSeen] = useState(false)
   const [mode, setMode] = useState(() => (prefersReducedMotion() ? 'after' : 'before'))
   const [hs, setHs] = useState({ raw: 0, rich: 0 })
+  // pictures of the visitor's real page (before as it is, after with the enrichment placed into it), when the server could take them
+  const shots = r.snapshots?.before && r.snapshots?.after ? r.snapshots : null
   const after = mode === 'after'
 
   const attrs = r.after.attributes
@@ -138,8 +142,8 @@ export default function LiveBeforeAfter({ r }) {
     measure()
     if (!('ResizeObserver' in window)) return undefined
     const ro = new ResizeObserver(measure)
-    ro.observe(rawRef.current)
-    ro.observe(richRef.current)
+    if (rawRef.current) ro.observe(rawRef.current)
+    if (richRef.current) ro.observe(richRef.current)
     return () => ro.disconnect()
   }, [])
   const pageH = after ? hs.rich : hs.raw
@@ -195,6 +199,12 @@ export default function LiveBeforeAfter({ r }) {
         <div className={`lba-stage${after ? ' is-after' : ''}`}>
           <div className="lba-bar"><i /><i /><i /><span title={shownUrl}>{shownUrl}</span></div>
 
+          {shots ? (
+            <ShotCompare shots={shots} mode={mode} host={r.host} />
+          ) : r.sample ? (
+            /* a sample has no real page to photograph: a store page is drawn for it, shown the same way */
+            <ShotCompare mode={mode} host={r.host} beforeNode={<SampleStore r={r} variant="before" />} afterNode={<SampleStore r={r} variant="after" />} />
+          ) : (
           <div className="lba-pages" style={pageH ? { height: pageH } : undefined}>
             {/* BEFORE: the supplier's own page, plain, with only what they provided */}
             <div className="lba-pg raw" ref={rawRef}>
@@ -287,6 +297,7 @@ export default function LiveBeforeAfter({ r }) {
               </section>
             </div>
           </div>
+          )}
         </div>
 
         <ul className="lba-points">

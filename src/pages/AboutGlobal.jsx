@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
 import { MAP_SVG } from './globalMap.js'
 import './AboutGlobal.css'
 import Icon from '../components/ui/Icon.jsx'
@@ -70,7 +70,7 @@ export default function AboutGlobal() {
             From our offices in the United States and India, we have delivered product data enrichment projects for
             manufacturers and distributors in 15+ countries.
           </p>
-          <p className="ag-statement ag-r" style={{ '--d': '250ms' }}>One connected team. 15+ countries. Human-verified product data.</p>
+          <p className="ag-statement ag-r" style={{ '--d': '250ms' }}>One connected team. 15+ countries. Engineer-verified product data.</p>
           <Link className="ag-btn ag-r" style={{ '--d': '320ms' }} to="/contact#contact-form">Get in Touch <Icon name="arrow-right" /></Link>
         </div>
 
@@ -78,7 +78,7 @@ export default function AboutGlobal() {
         <div className="ag-map-col">
           <div className="ag-map" dangerouslySetInnerHTML={{ __html: MAP_SVG }} />
 
-          <p className="ag-clients">Clients in: USA, Canada, UK, Ireland, Netherland, Belgium, France, Germany, Lithuania, Malta, UAE, South Africa, Kenya, Singapore, Australia and New Zealand.</p>
+          <p className="ag-clients">Clients in: USA, Canada, UK, Ireland, Netherlands, Belgium, France, Germany, Lithuania, Malta, UAE, South Africa, Kenya, Singapore, Australia and New Zealand.</p>
 
           <div className={`ag-final${step >= 4 ? ' on' : ''}`}>
             <p><b>Connected delivery network</b><span>Offices in USA &amp; India · Clients in 15+ countries</span></p>

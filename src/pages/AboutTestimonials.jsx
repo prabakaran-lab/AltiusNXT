@@ -84,7 +84,7 @@ export default function AboutTestimonials() {
       <div className="atm-wrap">
         <header className="atm-head">
           <p className="atm-eyebrow atm-r" style={{ '--d': '0ms' }}>Client testimonials</p>
-          <h2 id="atm-title" className="atm-r" style={{ '--d': '80ms' }}>Real results. <span>Real relationships.</span></h2>
+          <h2 id="atm-title" className="atm-r" style={{ '--d': '80ms' }}>Real results from <span>industrial distributors.</span></h2>
           <p className="atm-lede atm-r" style={{ '--d': '170ms' }}>
             Hear from manufacturers and distributors who trusted AltiusNxt with product data enrichment, PIM onboarding and eCommerce builds.
           </p>
