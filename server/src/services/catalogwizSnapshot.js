@@ -81,10 +81,13 @@ function placeEnrichment(e) {
   const el = (tag, css, text) => { const n = document.createElement(tag); if (css) n.style.cssText = css; if (text != null) n.textContent = text; return n }
   const badge = (t, bg = ORANGE) => el('span', `display:inline-block;margin-left:10px;padding:2px 9px;border-radius:999px;font:700 11px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.02em;text-transform:none;vertical-align:middle;white-space:nowrap;color:#fff;background:${bg};box-shadow:0 2px 6px -2px rgba(234,88,12,.5);`, t)
   // the last text of an element replaced, so its links, spans and styling stay as the site made them
+  // separators ("/", "›", "»"...) and hidden decoration are kept as they are; only the label text changes
+  const SEP = /^[\s/\\›»>|→·•\-–—]+$/
+  const isSep = (t) => SEP.test(t.nodeValue) || t.parentElement?.closest('[aria-hidden="true"]')
   const setText = (node, text) => {
     const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT)
     const texts = []
-    for (let t = walker.nextNode(); t; t = walker.nextNode()) if (clean(t.nodeValue)) texts.push(t)
+    for (let t = walker.nextNode(); t; t = walker.nextNode()) if (clean(t.nodeValue) && !isSep(t)) texts.push(t)
     if (!texts.length) { node.textContent = text; return }
     texts.forEach((t, i) => { t.nodeValue = i === texts.length - 1 ? text : '' })
   }
@@ -126,7 +129,11 @@ function placeEnrichment(e) {
         li.classList.remove('is-active', 'active', 'current')
         li.removeAttribute('aria-current')
         setText(li, level)
-        if (!before.has(norm(level))) { const inner = li.querySelector('a, span') || li; mark(inner) }
+        // the highlight goes on the level's own label (its link, or its text element), never on the separator
+        const label = li.querySelector('a') || [...li.querySelectorAll('span')].reverse().find((s) => clean(s.textContent) && !SEP.test(s.textContent) && !s.closest('[aria-hidden="true"]')) || li
+        if (!before.has(norm(level))) mark(label)
+        // the full level name is shown, even where the site shortens breadcrumb links ("Grinding & Finishin...")
+        for (const n of [label, li]) { n.style.setProperty('max-width', 'none', 'important'); n.style.setProperty('text-overflow', 'clip', 'important'); n.style.setProperty('overflow', 'visible', 'important') }
         parent.insertBefore(li, ref)
         lastLevel = li
       }
@@ -223,7 +230,28 @@ function placeEnrichment(e) {
     })
     table.appendChild(body); sec.appendChild(table)
   }
-  anchor.after(sec)
+  // The enrichment belongs to this product, so it always goes ABOVE the shop's other-products sections ("Related products",
+  // "You may also like", "Recently viewed"...), even when those sit inside the same block as the product.
+  const RELATED_TEXT = /^(related|similar|recommended|you (may|might) also|customers (also|who)|frequently bought|recently viewed|also (bought|viewed)|people also|more from|complete the|have you considered|other products)/i
+  const RELATED_SEL = '[class*="related" i], [id*="related" i], [class*="recommend" i], [class*="upsell" i], [class*="cross-sell" i], [class*="crosssell" i], [class*="also-bought" i], [class*="recently-viewed" i], [class*="you-may" i]'
+  const h1Text = clean(h1.textContent)
+  // the related section's own wrapper: grow from its heading only while the wrapper still starts at that heading, so a larger
+  // block that also holds the page's own product information above it is never taken for the related section
+  const outermost = (n) => {
+    const top = n.getBoundingClientRect().top
+    let x = n
+    while (x.parentElement && x.parentElement !== document.body && !x.parentElement.contains(h1) && !clean(x.parentElement.textContent).includes(h1Text)
+      && x.parentElement.getBoundingClientRect().top >= top - 80) x = x.parentElement
+    return x
+  }
+  const below = (n) => n.getClientRects().length && n.getBoundingClientRect().top > h1Bottom && !n.closest('footer, nav, header, [data-catalogwiz]') && !n.contains(h1)
+  const related = [
+    ...[...document.querySelectorAll('h2, h3, h4, [role="heading"]')].filter((hd) => RELATED_TEXT.test(clean(hd.textContent)) && clean(hd.textContent).length < 60),
+    ...document.querySelectorAll(RELATED_SEL),
+  ].filter(below).map(outermost).filter((n) => !n.contains(h1) && n !== document.body)
+    .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]
+  if (related && related.getBoundingClientRect().top < anchor.getBoundingClientRect().bottom + 4) related.before(sec)
+  else anchor.after(sec)
   const r = sec.getBoundingClientRect()
   // the window glides to the first enriched block below the product: the replaced description, else the new section
   const d = descBox?.getBoundingClientRect()

@@ -14,7 +14,7 @@ const REVENUE_BRACKETS = [
 
 /* Two steps in one modal:
    1. details  Name, Company, Email, Approximate annual revenue (all required) -> "Send verification code"
-   2. code     the visitor types the 6-digit code emailed to them -> verified -> the report request is sent (the team reviews it and shares it within 6-12 business hours)
+   2. code     the visitor types the 6-digit code emailed to them -> verified -> the report request is sent (the team reviews it and reaches out to the visitor shortly)
    `verified` ({ email, token }) is kept by the page, so if the build fails and this opens again the visitor is not asked twice. */
 export default function LeadFormModal({ onClose, onSubmit, submitting, error, verified, onVerified }) {
   const [form, setForm] = useState(EMPTY)
@@ -79,8 +79,8 @@ export default function LeadFormModal({ onClose, onSubmit, submitting, error, ve
       {step === 'details' ? (
         <>
           <p className="modal-sub">
-            Enter your details and verify your email. We run ChatGPT, Claude and Gemini the way buyers ask, our team reviews
-            the findings, and we share your full report by email within 6–12 business hours.
+            Enter your details and verify your email. Our product data team reviews how ChatGPT, Claude and Gemini see your
+            product page, and will be reaching out to you shortly with your report.
           </p>
           <form className="lead-form" onSubmit={handleDetails}>
             <div className="field">

@@ -62,7 +62,7 @@ function extractInPage() {
   // ---- breadcrumbs (read before anything is hidden)
   const bc = document.querySelector('[class*="breadcrumb" i], [id*="breadcrumb" i], nav[aria-label*="breadcrumb" i], [itemtype*="BreadcrumbList"]')
   // one crumb per list item when the trail is a list (its separators are often drawn by CSS, so the text has none)
-  const crumbItems = bc ? [...bc.querySelectorAll('li')].map((li) => clean(li.textContent)).filter(Boolean) : []
+  const crumbItems = bc ? [...bc.querySelectorAll('li')].map((li) => clean(li.textContent).replace(/^[\s/\\›»>|→·•–—-]+|[\s/\\›»>|→·•–—-]+$/g, '')).filter(Boolean) : []
   if (crumbItems.length >= 2) out.breadcrumbs = crumbItems
   else if (bc) out.breadcrumbs = clean(bc.innerText || bc.textContent).split(/\s*(?:>|›|»|→|\n)\s*|\s+\/\s*|\s*\/\s+/).map(clean).filter(Boolean)
 

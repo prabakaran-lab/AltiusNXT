@@ -8,7 +8,7 @@ import './ScanOverlay.css'
    scan    the five-scene story (ScanStory) while the product page is scanned
    result  the box dissolves, the score ring draws itself and the score counts up, with the gaps and the report button
    build   the 3D scene again while the full report is generated
-   ready   the report request is received: the team reviews it and shares it within 6-12 business hours */
+   ready   the report request is received: the team reaches out to the visitor shortly */
 
 const FACES = ['f', 'b', 'r', 'l', 't', 'u']
 const R = 70
@@ -117,8 +117,8 @@ export default function ScanOverlay({ stage, result, url = '', progress, confirm
             <>
               <h3>Request received</h3>
               <p>
-                Thanks{confirmation.firstName ? `, ${confirmation.firstName}` : ''}. Our team will review your request and share the full
-                AI Readiness Report with <b>{confirmation.email}</b> within <b>6–12 business hours</b>.
+                Thank you{confirmation.firstName ? `, ${confirmation.firstName}` : ''}. We have received your request, and our team will be
+                reaching out to you shortly at <b>{confirmation.email}</b>. A confirmation has been sent to your inbox.
               </p>
               <button type="button" className="btn btn-primary so-cta" onClick={onClose}>Done</button>
             </>

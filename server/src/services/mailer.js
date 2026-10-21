@@ -19,29 +19,25 @@ function getTransporter() {
 
 const FROM = () => `"Govind · AltiusNxt" <${config.mail.user}>`
 
-export async function sendLeadNotification({ lead, url, data, pdfBuffer, failure }) {
+/** Tells the team about an AI Readiness Report request, the moment it is made: a notification only, with the AI readiness score. */
+export async function sendLeadNotification({ lead, url, score }) {
   const t = getTransporter()
   if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
 
-  const subject = `${failure ? 'ACTION NEEDED: report could not be generated' : 'Review and send'} — AI Readiness Report for ${lead.company || lead.email}`
-  const statsLine = data?.stats
-    ? `<li>Live result: cited in ${data.stats.citedCount} of ${data.stats.totalQueries} AI answers naming "${data.product?.name || ''}" — price rank ${data.stats.priceRank} of ${data.stats.sellerCount} sellers found</li>`
-    : ''
+  const subject = `New AI Readiness Report request — ${lead.company || lead.email}${score != null ? ` (score ${score}/100)` : ''}`
+  const statsLine = `<li>AI readiness score: <strong>${score != null ? `${score} / 100` : 'not available'}</strong></li>`
   const html = `
     <h2>New AI Readiness Report request</h2>
-    <p><strong>${lead.firstName} ${lead.lastName}</strong> — ${lead.company}</p>
+    <p><strong>${esc(lead.firstName)} ${esc(lead.lastName)}</strong> — ${esc(lead.company)}</p>
     <ul>
-      <li>Company website: ${lead.companyWebsite || '—'}</li>
-      <li>Work email: ${lead.email}</li>
-      <li>Job Title: ${lead.jobTitle || '—'}</li>
-      <li>Scanned URL: <a href="${url}">${url}</a></li>
+      <li>Company website: ${esc(lead.companyWebsite) || '—'}</li>
+      <li>Work email: ${esc(lead.email)}</li>
+      <li>Job Title: ${esc(lead.jobTitle) || '—'}</li>
+      <li>Scanned URL: <a href="${esc(url)}">${esc(url)}</a></li>
       ${statsLine}
     </ul>
-    ${failure
-    ? `<p><strong>The report could not be generated automatically</strong> (${failure}). Please prepare it by hand.</p>`
-    : '<p>The full report is attached as a PDF. It has <strong>not</strong> been sent to the visitor.</p>'}
-    <p>The visitor was told the team will review the request and share the full report within <strong>6–12 business hours</strong>.
-    Please review it and send it to <a href="mailto:${lead.email}">${lead.email}</a> (reply to this email to reach them).</p>
+    <p>The visitor was told our team will be reaching out shortly, and has received a confirmation email.
+    Reply to this email to reach them at <a href="mailto:${esc(lead.email)}">${esc(lead.email)}</a>.</p>
   `
 
   await t.sendMail({
@@ -50,7 +46,6 @@ export async function sendLeadNotification({ lead, url, data, pdfBuffer, failure
     replyTo: lead.email,
     subject,
     html,
-    attachments: pdfBuffer ? [{ filename: 'AltiusNxt-AI-Readiness-Report.pdf', content: pdfBuffer }] : [],
   })
 }
 
@@ -190,6 +185,52 @@ export async function sendContactMessage({ name, email, company, designation, me
   })
 }
 
+/** Thanks the visitor for an AI Readiness Report request and tells them the team will be in touch shortly. */
+export async function sendReportRequestAck({ lead, url, score }) {
+  const t = getTransporter()
+  if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
+  const FONT = "'Segoe UI',Helvetica,Arial,sans-serif"
+  const first = String(lead.firstName || '').trim() || 'there'
+  const hasScore = Number.isFinite(score)
+  const sender = config.outreach.senderName
+  const senderTitle = config.outreach.senderTitle
+  let host = ''
+  try { host = new URL(url).hostname.replace(/^www\./, '') } catch { /* shown as the full address */ }
+
+  const { html, attachments } = renderEmail({
+    hero: hasScore ? { png: await ringPng({ value: score, max: 100, caption: 'OUT OF 100' }), size: 150 } : { png: await shieldPng(), size: 150 },
+    preheader: 'We have received your AI Readiness Report request. Our team will be reaching out to you shortly.',
+    kicker: 'AI Readiness Report',
+    heading: 'Thank you, we have received your request',
+    reason: 'You are getting this email because you requested an AI Readiness Report on our website.',
+    bodyHtml: `
+      ${para(`Hi ${esc(first)},`)}
+      ${para(`Thank you for requesting an AI Readiness Report${lead.company ? ` for <strong style="color:#0b1f3a">${esc(lead.company)}</strong>` : ''}. We have received your request, and a member of our product data team will be reaching out to you shortly.`)}
+      ${card(`
+        ${label('Your request')}
+        <div style="font:600 14.5px/1.5 ${FONT};color:#0b1f3a;word-break:break-all"><a href="${esc(url)}" style="color:#e8590c;text-decoration:none">${esc(host || url)}</a></div>
+        ${hasScore ? `<div style="margin-top:10px;font:400 13.5px/1.5 ${FONT};color:#5b6b82">AI readiness score from your quick scan: <strong style="color:#0b1f3a">${score} / 100</strong></div>` : ''}`)}
+      ${label('What happens next')}
+      ${steps([
+        ['Our specialists review your page', 'A product data engineer looks at how ChatGPT, Claude, Gemini and Perplexity read and recommend your product.'],
+        ['We prepare your findings', 'The gaps that hold your page back in AI search, and the fixes in priority order.'],
+        ['We reach out to you', 'Our team will contact you at this email address to share your report and answer any questions.'],
+      ])}
+      ${para('If you have any questions in the meantime, simply reply to this email.')}
+      ${para(`Kind regards,<br><strong style="color:#0b1f3a">${esc(sender)}</strong>${senderTitle ? `<br><span style="color:#5b6b82">${esc(senderTitle)}, AltiusNxt</span>` : '<br><span style="color:#5b6b82">AltiusNxt</span>'}`)}`,
+  })
+
+  await t.sendMail({
+    from: FROM(),
+    to: lead.email,
+    replyTo: config.outreach.senderEmail || config.mail.leadNotifyEmail,
+    subject: 'We have received your AI Readiness Report request | AltiusNxt',
+    text: `Hi ${first},\n\nThank you for requesting an AI Readiness Report${lead.company ? ` for ${lead.company}` : ''}. We have received your request, and a member of our product data team will be reaching out to you shortly.\n\nProduct page: ${url}${hasScore ? `\nAI readiness score from your quick scan: ${score} / 100` : ''}\n\nIf you have any questions in the meantime, simply reply to this email.\n\nKind regards,\n${sender}${senderTitle ? `\n${senderTitle}, AltiusNxt` : '\nAltiusNxt'}`,
+    html,
+    attachments,
+  })
+}
+
 export async function sendOtpEmail({ to, name, code }) {
   const t = getTransporter()
   if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
@@ -211,8 +252,8 @@ export async function sendOtpEmail({ to, name, code }) {
       ${label('What happens next')}
       ${steps([
         ['Enter the code on the page', 'It takes a few seconds.'],
-        ['We build your report', 'Live answers from ChatGPT, Claude, Gemini and Perplexity. It takes a few minutes, and you can close the tab if you need to.'],
-        ['The PDF lands in your inbox', 'We email it to you, and you can download it on the page too.'],
+        ['We receive your request', 'Our product data team reviews how AI engines read your product page.'],
+        ['We reach out to you', 'Our team will be in touch shortly at this email address with your report.'],
       ])}
       <p style="margin:0 0 10px;font:400 13px/1.6 ${FONT};color:#7b8798">Did not ask for this? You can safely ignore this email. Nothing happens unless the code is entered.</p>`,
   })
@@ -220,7 +261,7 @@ export async function sendOtpEmail({ to, name, code }) {
     from: FROM(),
     to,
     subject: 'Confirm your email for your AltiusNxt AI Readiness Report',
-    text: `Hi ${first},\n\nYour AltiusNxt verification code is ${code}. It is valid for 10 minutes and works once.\n\nEnter it on the page to confirm your email and get your AI Readiness Report. We then build the report (a few minutes) and email you the PDF.\n\nIf you did not ask for it, you can ignore this email.\n\nAltiusNxt`,
+    text: `Hi ${first},\n\nYour AltiusNxt verification code is ${code}. It is valid for 10 minutes and works once.\n\nEnter it on the page to confirm your email and request your AI Readiness Report. Our team will then be in touch shortly.\n\nIf you did not ask for it, you can ignore this email.\n\nAltiusNxt`,
     html,
     attachments,
   })
