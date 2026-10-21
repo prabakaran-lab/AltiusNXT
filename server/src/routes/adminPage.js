@@ -22,12 +22,14 @@ button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(
 table{width:100%;border-collapse:collapse;font-size:13.5px}th{color:var(--mut);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
 .tw{overflow-x:auto}.ok{color:var(--gr)}.bad{color:var(--rd)}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
 .sec{margin-top:18px}.empty{color:var(--mut);padding:8px 0}.lg{text-transform:none;letter-spacing:0;font-weight:400}.d1{background:var(--or)}.d2{background:var(--bl);margin-left:12px}.mt12{margin-top:12px}.mt10{margin-top:10px}.num{font-size:22px;font-weight:700}
+.bkh{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}.bkh h2{margin:0}a.btn{color:var(--tx);text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px}a.btn:hover{border-color:var(--or)}.cx{padding:4px 10px;font-size:12.5px}.mutd{color:var(--mut)}
 </style></head><body><div class="w">
 <header><h1>Usage<small id="meta">Loading…</small></h1><div><button id="refresh" type="button">Refresh</button> <button id="out" type="button">Sign out</button></div></header>
 <div class="g g2" id="kpis"></div>
 <div class="c sec"><h2>Last 30 days <span class="lg"><span class="dot d1"></span>Product pages enriched <span class="dot d2"></span>Reports generated</span></h2><div id="chart"></div></div>
 <div class="g g3 sec" id="mid"></div>
 <div class="c sec"><h2>Recent activity</h2><div class="tw"><table><thead><tr><th>When</th><th>Feature</th><th>Result</th><th>Time</th><th>Product page</th><th>Who</th></tr></thead><tbody id="recent"></tbody></table></div></div>
+<div class="c sec"><div class="bkh"><h2>Live audit bookings · B2B eCommerce World 2026 <span class="lg" id="bk-count"></span></h2><a class="btn" id="bk-csv" href="#">Download CSV</a></div><div class="tw"><table><thead><tr><th>Ref</th><th>Slot (EST)</th><th>Name</th><th>Company</th><th>Work email</th><th>Website</th><th>Booked</th><th>Status</th><th></th></tr></thead><tbody id="bookings"></tbody></table></div></div>
 <p class="sub" id="note"></p>
 </div>
 <script nonce="${nonce}">
@@ -91,9 +93,26 @@ function render(d){
   var first=[d.totals.enrich.firstAt,d.totals.report.firstAt].filter(Boolean).sort()[0];
   $('note').textContent=first?'Counting since '+when(first,d.tz)+'. Only finished runs are counted; a run that is still going is added when it ends.':'Counting starts with the first finished run.'}
 function load(){fetch(BASE+'data',{credentials:'same-origin',cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('x');return r.json()}).then(render).catch(function(){$('meta').textContent='Session ended. Sign in again from the website.'})}
-$('refresh').addEventListener('click',load);
+function tl(t){var p=t.split(':'),h=+p[0];return ((h+11)%12+1)+':'+p[1]+(h<12?' AM':' PM')}
+var DAYS={'2026-11-02':'Mon, Nov 2','2026-11-03':'Tue, Nov 3'};
+function renderBookings(d){
+  $('bk-count').textContent='· '+d.availability.remaining+' of '+d.availability.total+' slots left';
+  var tb=$('bookings');tb.textContent='';
+  if(!d.bookings.length){var tr0=el('tr');var td0=el('td','empty','No bookings yet.');td0.colSpan=9;tr0.appendChild(td0);tb.appendChild(tr0);return}
+  d.bookings.forEach(function(b){
+    var tr=el('tr',b.status==='confirmed'?'':'mutd');
+    tr.appendChild(el('td','',b.ref));tr.appendChild(el('td','',(DAYS[b.date]||b.date)+' · '+tl(b.time)));
+    tr.appendChild(el('td','',b.name+(b.jobTitle?' · '+b.jobTitle:'')));tr.appendChild(el('td','',b.company));tr.appendChild(el('td','',b.email));tr.appendChild(el('td','',b.website));
+    tr.appendChild(el('td','',when(b.createdAt,'Asia/Kolkata')));
+    tr.appendChild(el('td',b.status==='confirmed'?'ok':'bad',b.status==='confirmed'?'Confirmed':'Cancelled'));
+    var act=el('td');
+    if(b.status==='confirmed'){var x=el('button','cx','Cancel');x.type='button';x.addEventListener('click',function(){if(!confirm('Cancel booking '+b.ref+' ('+b.name+', '+(DAYS[b.date]||b.date)+' '+tl(b.time)+')? The slot becomes free again.'))return;fetch(BASE+'bookings/'+b.id+'/cancel',{method:'POST',credentials:'same-origin'}).then(function(){loadBookings()})});act.appendChild(x)}
+    tr.appendChild(act);tb.appendChild(tr)})}
+function loadBookings(){fetch(BASE+'bookings',{credentials:'same-origin',cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('x');return r.json()}).then(renderBookings).catch(function(){})}
+$('bk-csv').href=BASE+'bookings.csv';
+$('refresh').addEventListener('click',function(){load();loadBookings()});
 $('out').addEventListener('click',function(){fetch(BASE+'logout',{method:'POST',credentials:'same-origin'}).finally(function(){location.replace('/')})});
-load();setInterval(load,60000);
+load();loadBookings();setInterval(function(){load();loadBookings()},60000);
 })();
 </script></body></html>`
 }

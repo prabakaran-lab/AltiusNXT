@@ -3,6 +3,7 @@ import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
 import BackToTop from './components/BackToTop.jsx'
+import EventWidget from './components/event/EventWidget.jsx'
 import Motion from './components/Motion.jsx'
 import Home from './pages/Home.jsx'
 import CatalogWiz from './pages/CatalogWiz.jsx'
@@ -61,6 +62,7 @@ export default function App() {
       </main>
       <Footer />
       <BackToTop />
+      <EventWidget />
       <Motion />
     </>
   )

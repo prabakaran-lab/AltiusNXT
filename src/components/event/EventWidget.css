@@ -1,0 +1,149 @@
+/* B2B eCommerce World 2026: the event badge + "Book your Live Audit Slot" dialog (EventWidget.jsx).
+   Navy and the brand orange. The badge is fixed to the right edge of the window, vertically centred (clear of the header
+   and of the back-to-top button at the bottom right); on phones it becomes a small round button at the bottom left.
+   The dialog's left panel sits on the Indianapolis skyline (public/assets/event/indianapolis-panel.webp, which carries its own navy fade and arc). */
+
+.evb, .evd-overlay{
+  --ink:#0b1a38; --ink-2:#12254a; --or:#ff6a1a; --or-2:#f05a0c; --or-l:#ff8a2a; --line:#dfe3ec; --mut:#5d667b; --mut-2:#98a0b3; --bad:#d93d42;
+}
+
+/* ---------- the badge ---------- */
+.evb{ position:fixed; right:0; top:50%; z-index:95; width:84px; display:flex; flex-direction:column; align-items:center; gap:10px; padding:14px 8px 12px; cursor:pointer;
+  border:1.5px solid rgba(255,122,26,.75); border-right:0; border-radius:16px 0 0 16px; background:linear-gradient(180deg, var(--ink-2), var(--ink)); color:#fff; font-family:var(--font-body);
+  transform:translateY(-50%); box-shadow:0 18px 40px -16px rgba(8,16,40,.65), 0 0 22px -6px rgba(255,106,26,.55);
+  transition:transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s; animation:evb-in .7s cubic-bezier(.22,1,.36,1) 1.2s both; }
+@keyframes evb-in{ from{ opacity:0; transform:translate(24px, -50%); } }
+.evb:hover, .evb:focus-visible{ transform:translate(-4px, -50%); box-shadow:0 22px 44px -16px rgba(8,16,40,.75), 0 0 30px -4px rgba(255,106,26,.7); }
+.evb:focus-visible{ outline:2px solid #fff; outline-offset:3px; }
+.evb-top{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+.evb-name{ font:700 9.5px/1.25 var(--font-body); text-align:center; color:#fff; }
+.evb-when{ font:600 8.5px/1.3 var(--font-body); text-align:center; color:var(--or-l); letter-spacing:.02em; }
+.evb-booth{ width:64px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0 6px; border-radius:10px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); }
+.evb-booth small{ font:700 8.5px/1 var(--font-body); letter-spacing:.16em; text-transform:uppercase; color:#c9d2e8; }
+.evb-booth b{ font:800 20px/1 var(--font-head); color:var(--or-l); }
+.evb-slots{ display:flex; flex-direction:column; align-items:center; gap:2px; padding-top:2px; }
+.evb-slots svg{ color:var(--or-l); margin-bottom:2px; }
+.evb-slots b{ font:800 17px/1 var(--font-head); color:#fff; font-variant-numeric:tabular-nums; }
+.evb-slots small{ font:700 8.5px/1.1 var(--font-body); letter-spacing:.08em; text-transform:uppercase; color:#e7ecf6; }
+.evb-go{ display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:var(--or); color:#fff; box-shadow:0 8px 16px -6px rgba(255,106,26,.9); transition:transform .3s; }
+.evb:hover .evb-go{ transform:translateX(2px) scale(1.06); }
+.evb-go{ animation:evb-pulse 2.8s ease-in-out 2.5s infinite; }
+@keyframes evb-pulse{ 0%, 100%{ box-shadow:0 8px 16px -6px rgba(255,106,26,.9), 0 0 0 0 rgba(255,106,26,.45); } 50%{ box-shadow:0 8px 16px -6px rgba(255,106,26,.9), 0 0 0 7px rgba(255,106,26,0); } }
+
+/* ---------- the dialog ---------- */
+.evd-overlay{ position:fixed; inset:0; z-index:2200; display:grid; place-items:center; padding:16px; background:rgba(8,13,32,.55); backdrop-filter:blur(4px); animation:evd-fade .2s ease both; }
+@keyframes evd-fade{ from{ opacity:0; } }
+.evd{ width:min(960px, 100%); max-height:calc(100dvh - 32px); display:grid; grid-template-columns:356px minmax(0, 1fr); grid-template-rows:minmax(0, 1fr); overflow:hidden; border-radius:20px; background:#fff;
+  box-shadow:0 40px 90px -30px rgba(8,14,40,.6); font-family:var(--font-body); color:var(--ink); animation:evd-rise .35s cubic-bezier(.22,1,.36,1) both; }
+@keyframes evd-rise{ from{ opacity:0; transform:translateY(14px) scale(.985); } }
+
+/* left: the event, over the skyline */
+.evd-side{ position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:18px; padding:28px 28px 24px; color:#fff; overflow:hidden;
+  background:var(--sky) center top -40px / cover no-repeat, #0b1a38; }
+.evd-pill{ padding:6px 12px; border-radius:99px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.14); font:600 11px/1 var(--font-body); letter-spacing:.02em; color:#fff; }
+.evd-brand{ display:flex; align-items:center; gap:12px; max-width:100%; font:800 13.5px/1.3 var(--font-head); letter-spacing:.06em; text-transform:uppercase; } .evd-brand svg{ flex:none; width:36px; height:36px; } .evd-brand span{ min-width:0; } .evd-brand b{ color:var(--or-l); }
+.evd-story{ margin:0; font:800 19px/1.3 var(--font-head); letter-spacing:-.01em; color:#fff; } .evd-story b{ color:var(--or-l); }
+.evd-facts{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:10px; }
+.evd-facts li{ display:flex; align-items:center; gap:10px; font:500 13px/1.3 var(--font-body); color:#fff; text-shadow:0 1px 8px rgba(8,16,40,.5); } .evd-facts svg{ color:var(--or-l); flex:none; width:16px; height:16px; }
+.evd-slots{ position:relative; margin-top:auto; width:100%; display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:14px; background:#fff; color:var(--ink); box-shadow:0 16px 30px -14px rgba(8,16,40,.6); }
+.evd-slots-ic{ flex:none; display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#fff1e6; color:var(--or); }
+.evd-slots > span:nth-child(2){ display:flex; flex-direction:column; gap:3px; min-width:0; } .evd-slots b{ font:700 14px/1.2 var(--font-body); } .evd-slots small{ font:500 11.5px/1.2 var(--font-body); color:var(--mut); }
+.evd-slots-go{ flex:none; margin-left:auto; display:grid; place-items:center; width:28px; height:28px; border-radius:50%; background:var(--or); color:#fff; }
+
+/* right: the booking */
+.evd-main{ position:relative; min-height:0; min-width:0; max-height:inherit; display:flex; flex-direction:column; background:#fff; }
+.evd-x{ position:absolute; top:18px; right:18px; z-index:2; display:grid; place-items:center; width:36px; height:36px; border:0; border-radius:10px; background:none; color:var(--ink); cursor:pointer; transition:background .2s; }
+.evd-x:hover{ background:#f0f2f7; } .evd-x:focus-visible{ outline:2px solid var(--or); outline-offset:1px; }
+.evd-body{ flex:1; min-height:0; overflow-y:auto; padding:32px 34px 26px; }
+@media (min-width:721px){ .evd{ min-height:min(610px, calc(100dvh - 32px)); } .evd-body{ display:flex; flex-direction:column; } .evd-body::before, .evd-body::after{ content:''; flex:1 0 0; } }
+.evd-eb{ margin:0; font:800 13px/1 var(--font-body); letter-spacing:.2em; text-transform:uppercase; color:var(--or); }
+.evd-main h2{ margin:8px 0 0; font:800 34px/1.1 var(--font-head); letter-spacing:-.02em; color:var(--ink); }
+.evd-sub{ margin:10px 0 0; max-width:420px; font:400 14.5px/1.55 var(--font-body); color:#4a5468; }
+.evd-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 22px; margin-top:22px; }
+.evd-span{ grid-column:1 / -1; }
+.evf{ display:flex; flex-direction:column; gap:7px; min-width:0; }
+.evf label{ font:600 13px/1.2 var(--font-body); color:var(--ink); } .evf label i{ margin-left:3px; font-style:normal; color:var(--or); }
+.evf-box{ position:relative; }
+.evf-box > svg:first-child{ position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#7d879c; pointer-events:none; }
+.evf-box input, .evf-box select{ width:100%; height:44px; padding:0 14px 0 42px; border-radius:10px; border:1px solid var(--line); background:#fff; font:500 13.5px/1 var(--font-body); color:var(--ink);
+  transition:border-color .2s, box-shadow .2s; appearance:none; -webkit-appearance:none; }
+.evf-box.sel select{ padding-right:38px; cursor:pointer; } .evf-box select.ph{ color:#8f97aa; }
+.evf-chev{ position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#6b7488; pointer-events:none; }
+.evf-box input::placeholder{ color:#a2a9ba; }
+.evf-box input:hover, .evf-box select:hover{ border-color:#c8cedb; }
+.evf-box input:focus, .evf-box select:focus{ outline:none; border-color:var(--or); box-shadow:0 0 0 3px rgba(255,106,26,.15); }
+.evf-box:focus-within > svg:first-child{ color:var(--or); }
+.evf.bad .evf-box input, .evf.bad .evf-box select{ border-color:var(--bad); box-shadow:0 0 0 3px rgba(217,61,66,.1); }
+.evf-err{ margin:-2px 0 0; font:600 11.5px/1.2 var(--font-body); color:var(--bad); } .evf-err:empty{ display:none; }
+.evd-hp{ position:absolute !important; left:-9999px !important; width:1px; height:1px; opacity:0; }
+.evd-load{ margin:10px 0 0; font:500 12.5px/1.4 var(--font-body); color:var(--mut); } .evd-load button{ border:0; background:none; padding:0; cursor:pointer; font:700 12.5px/1 var(--font-body); color:var(--or-2); text-decoration:underline; }
+.evd-error{ margin:16px 0 0; padding:10px 12px; border-radius:10px; background:#fdecec; border:1px solid #f5c9cb; font:600 12.5px/1.45 var(--font-body); color:#a3262b; }
+.evd-full{ margin:20px 0 0; font:500 14.5px/1.6 var(--font-body); color:var(--ink); } .evd-full a{ color:var(--or-2); font-weight:700; }
+
+.evd-cta{ width:100%; height:50px; margin-top:22px; display:inline-flex; align-items:center; justify-content:center; gap:10px; border:0; border-radius:12px; cursor:pointer; color:#fff;
+  background:linear-gradient(100deg, #ff7a1a, var(--or-2)); font:700 15px/1 var(--font-body); box-shadow:0 14px 26px -12px rgba(240,90,12,.8); transition:filter .2s, transform .15s; }
+.evd-cta svg{ transition:transform .25s; } .evd-cta:hover:not(:disabled){ filter:brightness(1.06); } .evd-cta:hover:not(:disabled) svg{ transform:translateX(4px); }
+.evd-cta:active:not(:disabled){ transform:translateY(1px); } .evd-cta:disabled{ opacity:.75; cursor:progress; }
+.evd-cta:focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
+.evd-actions{ position:sticky; bottom:-26px; z-index:1; margin:0 -34px -26px; padding:0 34px 26px; background:linear-gradient(180deg, rgba(255,255,255,0), #fff 18px); }
+.evd-fine{ margin:12px 0 0; text-align:center; font:500 12px/1.4 var(--font-body); color:var(--mut); }
+
+/* confirmation */
+.evd-done{ display:flex; flex-direction:column; align-items:flex-start; }
+.evd-ok{ display:grid; place-items:center; width:48px; height:48px; margin-bottom:16px; border-radius:50%; background:linear-gradient(135deg, #34d399, #16a34a); color:#fff; box-shadow:0 0 0 8px rgba(22,163,74,.1); animation:evd-pop .45s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes evd-pop{ from{ transform:scale(.4); opacity:0; } }
+.evd-sum{ width:100%; margin:20px 0 0; padding:14px 16px; list-style:none; display:flex; flex-direction:column; gap:10px; border-radius:12px; background:#f7f8fb; border:1px solid #e7eaf1; }
+.evd-sum li{ display:flex; gap:14px; font:500 14px/1.4 var(--font-body); } .evd-sum span{ flex:none; width:84px; font:700 10.5px/1.9 var(--font-body); letter-spacing:.12em; text-transform:uppercase; color:var(--mut-2); } .evd-sum b{ font-weight:700; }
+.evd-note{ margin:14px 0 0; font:500 13px/1.5 var(--font-body); color:var(--mut); } .evd-note b{ color:var(--ink); }
+.evd-done-actions{ display:flex; gap:12px; width:100%; margin-top:22px; } .evd-done-actions .evd-cta{ flex:1; margin:0; }
+.evd-ghost{ display:inline-flex; align-items:center; justify-content:center; gap:8px; height:50px; padding:0 18px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--ink);
+  font:700 13.5px/1 var(--font-body); text-decoration:none; transition:border-color .2s; } .evd-ghost:hover{ border-color:var(--or); } .evd-ghost svg{ color:var(--or); }
+
+/* smaller laptop screens: tighter spacing so the whole form still fits */
+@media (max-height:760px) and (min-width:721px){
+  .evd-body{ padding:24px 30px 20px; } .evd-actions{ bottom:-20px; margin:0 -30px -20px; padding:0 30px 20px; } .evd-main h2{ font-size:28px; } .evd-sub{ font-size:13.5px; margin-top:6px; }
+  .evd-grid{ margin-top:16px; gap:10px 20px; } .evf-box input, .evf-box select{ height:40px; } .evd-cta{ height:46px; margin-top:16px; }
+  .evd-side{ gap:16px; padding:24px 26px 22px; } .evd-story{ font-size:19px; } .evd-facts{ gap:9px; }
+}
+/* tablets: a narrower event panel */
+@media (max-width:900px) and (min-width:721px){ .evd{ grid-template-columns:280px minmax(0, 1fr); } .evd-side{ background-position:center top 0; } .evd-side{ padding:24px 22px; } .evd-brand{ font-size:14px; } .evd-story{ font-size:19px; } .evd-grid{ gap:12px 14px; } }
+
+/* phones: the badge is a small round button at the bottom left; the dialog is a sheet whose form alone scrolls */
+@media (max-width:720px){
+  .evb{ top:auto; right:auto; left:12px; bottom:clamp(16px, 2.4vw, 32px); width:54px; height:54px; padding:0; gap:0; justify-content:center; border-radius:50%; border:1.5px solid rgba(255,122,26,.8); transform:none; animation-name:evb-up; }
+  @keyframes evb-up{ from{ opacity:0; transform:translateY(16px); } }
+  .evb:hover, .evb:focus-visible{ transform:none; }
+  .evb-name, .evb-when, .evb-booth, .evb-go, .evb-slots svg, .evb-slots small{ display:none; }
+  .evb-slots{ position:absolute; top:-6px; right:-8px; padding:0; }
+  .evb-slots b{ display:grid; place-items:center; min-width:22px; height:22px; padding:0 5px; border-radius:99px; background:var(--or); color:#fff; font-size:11.5px; box-shadow:0 0 0 2px #fff; }
+
+  /* a floating card with a gap on every side, not an edge-to-edge sheet */
+  .evd-overlay{ padding:14px; place-items:center; }
+  .evd{ width:100%; max-width:460px; max-height:calc(100dvh - 28px); grid-template-columns:1fr; grid-template-rows:auto minmax(0, 1fr); border-radius:18px; animation-name:evd-sheet; }
+  @keyframes evd-sheet{ from{ transform:translateY(40px); opacity:0; } }
+  /* the event becomes a short banner above the form */
+  .evd-side{ gap:10px; padding:18px 20px 16px; border-radius:18px 18px 0 0; background:linear-gradient(90deg, rgba(11,26,56,.96) 0%, rgba(11,26,56,.78) 55%, rgba(11,26,56,.35) 100%), var(--sky) center 80% / cover no-repeat, var(--ink); }
+  .evd-pill, .evd-story, .evd-slots, .evd-facts li:nth-child(3){ display:none; }
+  .evd-brand{ font-size:13px; gap:10px; } .evd-brand svg{ width:32px; height:32px; }
+  .evd-facts{ flex-direction:row; flex-wrap:wrap; gap:6px 14px; } .evd-facts li{ font-size:12.5px; gap:6px; } .evd-facts svg{ width:14px; height:14px; }
+  .evd-x{ top:12px; right:12px; color:#fff; background:rgba(255,255,255,.12); }
+  .evd-main{ max-height:none; }
+  .evd-body{ padding:20px 20px 0; }
+  .evd-actions{ bottom:0; margin:0 -20px; padding:4px 20px 16px; border-top:1px solid #edf0f5; background:#fff; } .evd-actions .evd-cta{ margin-top:12px; } .evd-fine{ margin-top:8px; }
+  .evd-main h2{ font-size:26px; } .evd-sub{ font-size:13.5px; }
+  .evd-grid{ gap:12px 12px; margin-top:16px; }
+}
+@media (max-height:560px) and (min-width:721px){
+  .evb{ top:auto; right:auto; left:12px; bottom:clamp(16px, 2.4vw, 32px); width:54px; height:54px; padding:0; gap:0; justify-content:center; border-radius:50%; border:1.5px solid rgba(255,122,26,.8); transform:none; animation-name:evb-up; }
+  @keyframes evb-up{ from{ opacity:0; transform:translateY(16px); } }
+  .evb:hover, .evb:focus-visible{ transform:none; }
+  .evb-name, .evb-when, .evb-booth, .evb-go, .evb-slots svg, .evb-slots small{ display:none; }
+  .evb-slots{ position:absolute; top:-6px; right:-8px; padding:0; }
+  .evb-slots b{ display:grid; place-items:center; min-width:22px; height:22px; padding:0 5px; border-radius:99px; background:var(--or); color:#fff; font-size:11.5px; box-shadow:0 0 0 2px #fff; }
+
+}
+@media (max-width:480px){ .evd-grid{ grid-template-columns:1fr; } }
+@media (prefers-reduced-motion:reduce){
+  .evb, .evb-go, .evd-overlay, .evd, .evd-ok{ animation:none !important; }
+  .evb, .evd-cta svg{ transition:none; }
+}

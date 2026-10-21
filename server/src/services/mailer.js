@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer'
 import { config, isMailConfigured } from '../config.js'
 import { renderEmail, card, label, button, steps, metrics, findings, p as para } from './emailTemplate.js'
 import { ringPng, shieldPng } from './emailArt.js'
+import { EVENT, dayLabel, timeLabel, slotStart } from './eventBookings.js'
 
 let transporter = null
 function getTransporter() {
@@ -228,6 +229,95 @@ export async function sendReportRequestAck({ lead, url, score }) {
     text: `Hi ${first},\n\nThank you for requesting an AI Readiness Report${lead.company ? ` for ${lead.company}` : ''}. We have received your request, and a member of our product data team will be reaching out to you shortly.\n\nProduct page: ${url}${hasScore ? `\nAI readiness score from your quick scan: ${score} / 100` : ''}\n\nIf you have any questions in the meantime, simply reply to this email.\n\nKind regards,\n${sender}${senderTitle ? `\n${senderTitle}, AltiusNxt` : '\nAltiusNxt'}`,
     html,
     attachments,
+  })
+}
+
+/* ---- B2B eCommerce World 2026: live audit bookings ---- */
+
+const slotText = (b) => `${dayLabel(b.date)}, 2026 at ${timeLabel(b.time)} ${EVENT.tzLabel}`
+
+/** A calendar invite (.ics) for the booked 30-minute slot, so the visitor can add it to their calendar in one click. */
+function bookingIcs(b) {
+  const start = slotStart(b.date, b.time)
+  const end = new Date(start.getTime() + EVENT.slotMinutes * 60000)
+  const stamp = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  const line = (s) => String(s).replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\r?\n/g, '\\n')
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AltiusNxt//Live Audit//EN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+    `UID:${b.id}@altiusnxt.com`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
+    `SUMMARY:${line(`AltiusNxt live AI-readiness audit (${EVENT.booth})`)}`,
+    `LOCATION:${line(`${EVENT.name}, ${EVENT.booth}, ${EVENT.venue}`)}`,
+    `DESCRIPTION:${line(`Your live audit with AltiusNxt at ${EVENT.name}. Reference ${b.ref}. Website: ${b.website}`)}`,
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n')
+}
+
+/** Tells the team about a new live audit booking. */
+export async function sendEventBookingNotification({ booking: b, remaining }) {
+  const t = getTransporter()
+  if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
+  const html = `
+    <h2>New live audit booking: ${esc(EVENT.name)}</h2>
+    <p><strong>${esc(b.name)}</strong>${b.jobTitle ? ` (${esc(b.jobTitle)})` : ''} at <strong>${esc(b.company)}</strong></p>
+    <ul>
+      <li>Slot: <strong>${esc(slotText(b))}</strong> at ${esc(EVENT.booth)}, ${esc(EVENT.venue)}</li>
+      <li>Work email: <a href="mailto:${esc(b.email)}">${esc(b.email)}</a></li>
+      <li>Website: <a href="${esc(b.website)}">${esc(b.website)}</a></li>
+      <li>Reference: ${esc(b.ref)}</li>
+      <li>Slots left: ${remaining} of 20</li>
+    </ul>
+    <p>The visitor has received a confirmation email with a calendar invite. Reply to this email to reach them.</p>`
+  await t.sendMail({
+    from: FROM(),
+    to: [config.mail.leadNotifyEmail, ...config.mail.leadCopyEmails],
+    replyTo: b.email,
+    subject: `Live audit booked — ${b.company}, ${dayLabel(b.date)} ${timeLabel(b.time)} ${EVENT.tzLabel} (${remaining} of 20 left)`,
+    html,
+  })
+}
+
+/** Confirms a live audit booking to the visitor, with the calendar invite attached. */
+export async function sendEventBookingConfirmation({ booking: b }) {
+  const t = getTransporter()
+  if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
+  const FONT = "'Segoe UI',Helvetica,Arial,sans-serif"
+  const first = String(b.name || '').trim().split(/\s+/)[0] || 'there'
+  const row = (k, v) => `<tr><td style="padding:6px 0;font:600 12px/1.4 ${FONT};letter-spacing:.06em;text-transform:uppercase;color:#7b8798;width:120px">${k}</td><td style="padding:6px 0;font:600 14.5px/1.5 ${FONT};color:#0b1f3a">${v}</td></tr>`
+  const { html, attachments } = renderEmail({
+    hero: { png: await shieldPng(), size: 150 },
+    preheader: `Your live audit is booked for ${slotText(b)} at ${EVENT.booth}, ${EVENT.venue}.`,
+    kicker: `${EVENT.name} · ${EVENT.booth}`,
+    heading: 'Your live audit is booked',
+    reason: `You are getting this email because you booked a live audit with AltiusNxt for ${EVENT.name}.`,
+    bodyHtml: `
+      ${para(`Hi ${esc(first)},`)}
+      ${para(`Thank you for booking a live AI-readiness audit with AltiusNxt at <strong style="color:#0b1f3a">${esc(EVENT.name)}</strong>. Your slot is confirmed, and we look forward to meeting you at the booth.`)}
+      ${card(`
+        ${label('Your booking')}
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          ${row('When', esc(slotText(b)))}
+          ${row('Where', `${esc(EVENT.booth)}, ${esc(EVENT.venue)}`)}
+          ${row('Duration', `${EVENT.slotMinutes} minutes`)}
+          ${row('Website', esc(b.website))}
+          ${row('Reference', esc(b.ref))}
+        </table>`)}
+      ${label('What to expect')}
+      ${steps([
+        ['We audit your site live', 'A product data engineer checks how ChatGPT, Claude, Gemini and Perplexity find, read and recommend your products.'],
+        ['You see the gaps', 'Missing attributes, weak product data and what stops AI from recommending you.'],
+        ['You leave with next steps', 'The fixes that matter most, in priority order.'],
+      ])}
+      ${para('The calendar invite is attached. If you need to change your slot, simply reply to this email.')}
+      ${para(`Kind regards,<br><strong style="color:#0b1f3a">${esc(config.outreach.senderName)}</strong>${config.outreach.senderTitle ? `<br><span style="color:#5b6b82">${esc(config.outreach.senderTitle)}, AltiusNxt</span>` : '<br><span style="color:#5b6b82">AltiusNxt</span>'}`)}`,
+  })
+  await t.sendMail({
+    from: FROM(),
+    to: b.email,
+    replyTo: config.outreach.senderEmail || config.mail.leadNotifyEmail,
+    subject: `Your live audit is booked: ${dayLabel(b.date)} at ${timeLabel(b.time)} ${EVENT.tzLabel} | ${EVENT.name}`,
+    text: `Hi ${first},\n\nThank you for booking a live AI-readiness audit with AltiusNxt at ${EVENT.name}. Your slot is confirmed.\n\nWhen: ${slotText(b)}\nWhere: ${EVENT.booth}, ${EVENT.venue}\nDuration: ${EVENT.slotMinutes} minutes\nWebsite: ${b.website}\nReference: ${b.ref}\n\nThe calendar invite is attached. If you need to change your slot, simply reply to this email.\n\nKind regards,\n${config.outreach.senderName}\nAltiusNxt`,
+    html,
+    attachments: [...attachments, { filename: 'altiusnxt-live-audit.ics', content: bookingIcs(b), contentType: 'text/calendar; charset=utf-8; method=PUBLISH' }],
   })
 }
 

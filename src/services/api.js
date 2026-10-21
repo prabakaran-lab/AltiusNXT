@@ -25,3 +25,13 @@ export async function requestReport(payload) {
   return post('/leads', payload)
 }
 
+
+// B2B eCommerce World 2026 live audit bookings (the floating event widget)
+export const getEventSlots = () => request('/event-audit/slots', { cache: 'no-store' })
+export async function bookEventAudit(payload) {
+  const res = await fetch(`${BASE}/api/event-audit/book`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+  const data = await res.json().catch(() => ({}))
+  // a taken slot comes back with the fresh availability, so the form can update itself
+  if (!res.ok) throw Object.assign(new Error(data.error || `Request failed (${res.status})`), { code: data.code, availability: data.availability })
+  return data
+}

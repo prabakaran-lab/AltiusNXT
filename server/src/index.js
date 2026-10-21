@@ -11,6 +11,7 @@ import announceRouter from './routes/announce.js'
 import contactRouter from './routes/contact.js'
 import otpRouter from './routes/otp.js'
 import adminRouter from './routes/admin.js'
+import eventBookingRouter from './routes/eventBooking.js'
 import { startAnnouncementScheduler } from './services/announcements.js'
 
 const app = express()
@@ -36,6 +37,7 @@ app.use('/api', subscribeRouter)
 app.use('/api', announceRouter)
 app.use('/api', contactRouter)
 app.use('/api', otpRouter)
+app.use('/api', eventBookingRouter)
 app.use('/api', adminRouter)
 
 const server = app.listen(config.port, () => {

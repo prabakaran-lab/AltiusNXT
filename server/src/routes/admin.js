@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import rateLimit from 'express-rate-limit'
 import { summarize } from '../services/usageStats.js'
 import { renderDashboard } from './adminPage.js'
+import { availability, allBookings, cancel, BookingError, timeLabel } from '../services/eventBookings.js'
 
 /**
  * The owner's private usage dashboard.
@@ -95,6 +96,20 @@ router.use((req, res, next) => {
     return res.type('html').send(renderDashboard(nonce, `/api/${c.secretPath}/`))
   }
   if (req.method === 'GET' && sub === 'data') return res.json(summarize({ tz: c.tz }))
+  // B2B eCommerce World 2026 live audit bookings: the list, a CSV download, and cancelling one (which frees its slot)
+  if (req.method === 'GET' && sub === 'bookings') return res.json({ availability: availability(), bookings: allBookings() })
+  if (req.method === 'GET' && sub === 'bookings.csv') {
+    const cols = ['ref', 'status', 'date', 'time', 'name', 'email', 'company', 'jobTitle', 'website', 'createdAt', 'cancelledAt']
+    const cell = (v) => { const s = String(v ?? ''); return /^[=+\-@]/.test(s) ? `"'${s.replace(/"/g, '""')}"` : `"${s.replace(/"/g, '""')}"` }
+    const csv = [cols.join(','), ...allBookings().map((b) => cols.map((k) => cell(k === 'time' ? `${timeLabel(b.time)} EST` : b[k])).join(','))].join('\r\n')
+    res.set('Content-Disposition', 'attachment; filename="b2b-ecommerce-world-2026-live-audits.csv"')
+    return res.type('text/csv').send(`﻿${csv}`)
+  }
+  const cancelMatch = sub.match(/^bookings\/([0-9a-f-]{36})\/cancel$/)
+  if (req.method === 'POST' && cancelMatch) {
+    return cancel(cancelMatch[1]).then((b) => res.json({ ok: true, booking: b, availability: availability() }))
+      .catch((err) => res.status(err instanceof BookingError ? 404 : 500).json({ error: err.message }))
+  }
   if (req.method === 'POST' && sub === 'logout') {
     res.clearCookie(COOKIE, { path: '/api/' })
     return res.json({ ok: true })
