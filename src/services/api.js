@@ -25,6 +25,12 @@ export const verifyOtp = (payload) => post('/otp/verify', payload)
  * (same shape the synchronous endpoint used to return). `onProgress` receives
  * { stage, elapsedMs } on every poll.
  */
+/** Requests the full AI Readiness Report. The team reviews it and sends it within 6-12 business hours,
+ *  so this returns as soon as the request is accepted (the report is prepared on the server). */
+export async function requestReport(payload) {
+  return post('/leads', payload)
+}
+
 export async function submitLead(payload, { onProgress, intervalMs = 4000, timeoutMs = 15 * 60 * 1000 } = {}) {
   const { jobId } = await post('/leads', payload)
   const started = Date.now()

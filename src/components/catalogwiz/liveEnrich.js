@@ -17,9 +17,18 @@ export async function runLiveEnrichment(payload, { onStage, intervalMs = 2500, t
     body: JSON.stringify(payload),
   })
   const started = Date.now()
+  let misses = 0
   for (;;) {
     await new Promise((r) => setTimeout(r, intervalMs))
-    const job = await request(`/catalogwiz-demo/${jobId}`)
+    let job
+    try {
+      job = await request(`/catalogwiz-demo/${jobId}`)
+      misses = 0
+    } catch (err) {
+      // the server can be briefly unreachable (a restart or deploy); the job resumes on its own, so keep waiting a while
+      if (++misses <= 12 && Date.now() - started < timeoutMs) continue
+      throw err
+    }
     onStage?.(job.stage)
     if (job.status === 'done') return job.result
     if (job.status === 'failed') throw new Error(job.error || 'We could not enrich that page. Please try another product page.')

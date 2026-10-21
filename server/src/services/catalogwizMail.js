@@ -48,7 +48,7 @@ export async function sendSubscriberNotification({ email, source, provider }) {
 
   await t.sendMail({
     from: `"AltiusNxt website" <${config.mail.user}>`,
-    to: config.mail.leadNotifyEmail,
+    to: [config.mail.leadNotifyEmail, ...config.mail.leadCopyEmails],
     subject: `New newsletter subscriber — ${email}`,
     html: `
       <h2>New newsletter subscriber</h2>

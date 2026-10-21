@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Download, X } from 'lucide-react'
-import { downloadPdf } from './ConfirmModal.jsx'
+import { Check, X } from 'lucide-react'
 import ReportBuild from './ReportBuild.jsx'
 import ScanStory from './ScanStory.jsx'
 import './ScanOverlay.css'
@@ -9,7 +8,7 @@ import './ScanOverlay.css'
    scan    the five-scene story (ScanStory) while the product page is scanned
    result  the box dissolves, the score ring draws itself and the score counts up, with the gaps and the report button
    build   the 3D scene again while the full report is generated
-   ready   the report is done: download it right here */
+   ready   the report request is received: the team reviews it and shares it within 6-12 business hours */
 
 const FACES = ['f', 'b', 'r', 'l', 't', 'u']
 const R = 70
@@ -74,7 +73,7 @@ export default function ScanOverlay({ stage, result, url = '', progress, confirm
 
   if (!open) return null
   const settled = stage === 'result' || stage === 'ready'
-  const label = { scan: 'Scanning your product page', result: 'Your AI readiness score', build: 'Building your report', ready: 'Your report is ready' }[stage]
+  const label = { scan: 'Scanning your product page', result: 'Your AI readiness score', build: 'Building your report', ready: 'Report request received' }[stage]
 
   return (
     <div className={`so${settled ? ' is-done' : ''}`} role="dialog" aria-modal="true" aria-label={label} onClick={(e) => { if (e.target === e.currentTarget && stage !== 'build') onClose?.() }}>
@@ -116,16 +115,12 @@ export default function ScanOverlay({ stage, result, url = '', progress, confirm
 
           {stage === 'ready' && confirmation && (
             <>
-              <h3>Report ready</h3>
+              <h3>Request received</h3>
               <p>
-                Thanks{confirmation.firstName ? `, ${confirmation.firstName}` : ''}.{' '}
-                {confirmation.emailStatus === 'sent' ? <>We have emailed your AI Readiness Report to <b>{confirmation.email}</b>. </> : 'Your AI Readiness Report is ready to download below. '}
-                Look for the QR code inside the PDF: it opens a deeper AI Discoverability Audit.
+                Thanks{confirmation.firstName ? `, ${confirmation.firstName}` : ''}. Our team will review your request and share the full
+                AI Readiness Report with <b>{confirmation.email}</b> within <b>6–12 business hours</b>.
               </p>
-              {confirmation.pdfBase64 && (
-                <button type="button" className="btn btn-primary so-cta" onClick={() => downloadPdf(confirmation.pdfBase64)}><Download size={16} />Download PDF</button>
-              )}
-              <button type="button" className="so-link" onClick={onClose}>Close</button>
+              <button type="button" className="btn btn-primary so-cta" onClick={onClose}>Done</button>
             </>
           )}
         </div>

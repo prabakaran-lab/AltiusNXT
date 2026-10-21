@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, CircleAlert, ScanLine, Search, Sparkles } from 'lucide-react'
+import { ArrowRight, CircleAlert, ScanLine, Search, Sparkles } from 'lucide-react'
 import { TESYS } from '../sampleProduct.js'
 import { SAMPLES } from '../catalogSamples.js'
 import { CATEGORIES } from '../../pages/attributeLibraryData.js'
 import LiveDemoModal from './LiveDemoModal.jsx'
 import LiveBeforeAfter from './LiveBeforeAfter.jsx'
+import EnrichStory from './EnrichStory.jsx'
+import './EnrichStory.css'
 import { buildSampleResult } from './sampleResult.js'
 import { runLiveEnrichment } from './liveEnrich.js'
 import './EnrichDemo.css'
@@ -42,7 +44,6 @@ const PRODUCTS = CATEGORIES.map((c) => {
 })
 /* A visitor's own page: the server returns the verified result, shown in the same Before / After window as the samples. */
 const liveToProduct = (r) => ({ id: `live-${Date.now()}`, live: true, r })
-const LIVE_STEPS = ['Reading your product page', 'Identifying the product', 'Checking the manufacturer’s published specifications', 'Writing the enriched title, description and attributes']
 
 export default function EnrichDemo({ children }) {
   const demoRef = useRef(null)
@@ -135,22 +136,9 @@ export default function EnrichDemo({ children }) {
                 <span className="url">app.catalogwiz.ai / enrich / <b>your page</b></span>
                 <span className="ai"><b>CatalogWiz <em>AI</em></b></span>
                 <em className="st">{waited}s</em>
-                <i className="pg" style={{ transform: `scaleX(${Math.min(0.94, waited / 75)})` }} />
+                <i className="pg" style={{ transform: `scaleX(${Math.min(0.94, waited / 130)})` }} />
               </header>
-              <div className="rd-loadbody">
-                <h3>Enriching your product page</h3>
-                <p className="rd-loadurl">{askUrl || url}</p>
-                <ol className="rd-steps">
-                  {LIVE_STEPS.map((s, i) => {
-                    const cur = Math.max(0, LIVE_STEPS.indexOf(stage))
-                    const done = stage === 'Looking for more verified attributes' ? true : i < cur
-                    const now = !done && i === cur
-                    return <li key={s} className={done ? 'done' : now ? 'now' : ''}><i>{done ? <Check size={13} strokeWidth={3} /> : now ? <Sparkles size={13} /> : null}</i>{s}</li>
-                  })}
-                </ol>
-                {stage === 'Looking for more verified attributes' && <p className="rd-more"><Sparkles size={13} />Looking for more verified attributes…</p>}
-                <ul className="rd-skel" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <li key={i} style={{ '--i': i }} />)}</ul>
-              </div>
+              <EnrichStory stage={stage} url={askUrl || url} waited={waited} />
             </div>
           ) : phase === 'error' ? (
             <div className="rd-empty rd-err" role="alert"><CircleAlert size={22} /><b>We couldn’t enrich that page</b><span>{liveErr.replace(/^We couldn't enrich that page:\s*/i, '')}</span><button type="button" className="btn btn-outline" onClick={retry}>Try another page</button></div>

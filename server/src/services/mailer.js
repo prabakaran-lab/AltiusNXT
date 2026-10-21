@@ -19,11 +19,11 @@ function getTransporter() {
 
 const FROM = () => `"Govind · AltiusNxt" <${config.mail.user}>`
 
-export async function sendLeadNotification({ lead, url, data, pdfBuffer }) {
+export async function sendLeadNotification({ lead, url, data, pdfBuffer, failure }) {
   const t = getTransporter()
   if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
 
-  const subject = `New AI Readiness Report lead — ${lead.company || lead.email}`
+  const subject = `${failure ? 'ACTION NEEDED: report could not be generated' : 'Review and send'} — AI Readiness Report for ${lead.company || lead.email}`
   const statsLine = data?.stats
     ? `<li>Live result: cited in ${data.stats.citedCount} of ${data.stats.totalQueries} AI answers naming "${data.product?.name || ''}" — price rank ${data.stats.priceRank} of ${data.stats.sellerCount} sellers found</li>`
     : ''
@@ -37,7 +37,11 @@ export async function sendLeadNotification({ lead, url, data, pdfBuffer }) {
       <li>Scanned URL: <a href="${url}">${url}</a></li>
       ${statsLine}
     </ul>
-    <p>Full report is attached as a PDF for your review before follow-up.</p>
+    ${failure
+    ? `<p><strong>The report could not be generated automatically</strong> (${failure}). Please prepare it by hand.</p>`
+    : '<p>The full report is attached as a PDF. It has <strong>not</strong> been sent to the visitor.</p>'}
+    <p>The visitor was told the team will review the request and share the full report within <strong>6–12 business hours</strong>.
+    Please review it and send it to <a href="mailto:${lead.email}">${lead.email}</a> (reply to this email to reach them).</p>
   `
 
   await t.sendMail({
@@ -46,7 +50,7 @@ export async function sendLeadNotification({ lead, url, data, pdfBuffer }) {
     replyTo: lead.email,
     subject,
     html,
-    attachments: [{ filename: 'AltiusNxt-AI-Readiness-Report.pdf', content: pdfBuffer }],
+    attachments: pdfBuffer ? [{ filename: 'AltiusNxt-AI-Readiness-Report.pdf', content: pdfBuffer }] : [],
   })
 }
 
@@ -64,7 +68,7 @@ export async function sendOutreachReport({ to, contactName, company, productName
   await t.sendMail({
     from: FROM(),
     to,
-    bcc: config.mail.leadNotifyEmail,
+    bcc: [config.mail.leadNotifyEmail, ...config.mail.leadCopyEmails],
     replyTo: senderEmail || config.mail.leadNotifyEmail,
     subject: `${company} — how AI search answers for ${productName}`,
     html: `
@@ -163,7 +167,7 @@ export async function sendContactMessage({ name, email, company, designation, me
   if (!t) throw new Error('Email is not configured on the server (GMAIL_USER / GMAIL_APP_PASSWORD)')
   await t.sendMail({
     from: FROM(),
-    to: config.mail.leadNotifyEmail,
+    to: [config.mail.leadNotifyEmail, ...config.mail.leadCopyEmails],
     replyTo: `"${name.replace(/"/g, '')}" <${email}>`,
     subject: `Website contact: ${name}${company ? `, ${company}` : ''}`,
     html: `

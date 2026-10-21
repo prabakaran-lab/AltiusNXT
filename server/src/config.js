@@ -27,8 +27,8 @@ export const config = {
     user: process.env.GMAIL_USER || '',
     appPassword: process.env.GMAIL_APP_PASSWORD || '',
     leadNotifyEmail: process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com',
-    // Extra inboxes that get the same team notification as leadNotifyEmail when a visitor runs the CatalogWiz
-    // enrichment demo or generates an AI Readiness Report (comma or semicolon separated).
+    // Extra inboxes that get every team email leadNotifyEmail gets (demo and report alerts, contact form,
+    // new subscribers, outreach bcc). Comma or semicolon separated.
     leadCopyEmails: [...new Set((process.env.LEAD_COPY_EMAILS || '').split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean))]
       .filter((e) => e !== (process.env.LEAD_NOTIFY_EMAIL || 'govind@altiusnxt.com').trim().toLowerCase()),
   },

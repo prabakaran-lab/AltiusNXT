@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import rateLimit from 'express-rate-limit'
 import { buildOutreachReportData } from '../services/outreachPipeline.js'
 import { generateOutreachReportPdf } from '../services/reportPdf.js'
-import { sendLeadNotification, sendReportToLead } from '../services/mailer.js'
+import { sendLeadNotification } from '../services/mailer.js'
 import { recordUsage } from '../services/usageStats.js'
 import { isVerified } from '../services/otp.js'
 import { isGeminiConfigured, isMailConfigured, config } from '../config.js'
@@ -61,13 +61,13 @@ async function runJob(job, { lead, url }) {
     const pdfBuffer = await generateOutreachReportPdf(data)
     lap('pdf done')
 
+    // Team review first: the report goes to the team only. They check it and send it to the visitor themselves
+    // (the visitor was told to expect it within 6-12 business hours); it is never emailed or shown to the visitor directly.
     let emailStatus = 'skipped'
     if (isMailConfigured()) {
-      setStage('Emailing your report')
-      await Promise.all([
-        sendLeadNotification({ lead, url, data, pdfBuffer }).then(() => lap('email to govind done')),
-        sendReportToLead({ lead, pdfBuffer, data }).then(() => lap('email to lead done')),
-      ])
+      setStage('Sending the report to the team for review')
+      await sendLeadNotification({ lead, url, data, pdfBuffer })
+      lap('email to the team done')
       emailStatus = 'sent'
     } else {
       console.warn('Email not configured — skipping send. Set GMAIL_USER / GMAIL_APP_PASSWORD to enable.')
@@ -76,18 +76,14 @@ async function runJob(job, { lead, url }) {
 
     job.status = 'done'
     job.stage = 'Done'
-    job.result = {
-      ok: true,
-      emailStatus,
-      pdfBase64: pdfBuffer.toString('base64'),
-      product: data.product,
-      stats: data.stats,
-    }
+    job.result = { ok: true, review: true }
     recordUsage({ type: 'report', status: 'done', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: `${lead.firstName} ${lead.lastName}`.trim(), email: lead.email, emailStatus })
   } catch (err) {
     console.error(`lead report generation failed (job ${job.id}, url ${url}, company ${lead.company}):`, err)
     job.status = 'failed'
     job.error = `Could not generate your report: ${err.message}`
+    // the visitor was promised a report, so the team still hears about the request and can prepare it by hand
+    if (isMailConfigured()) sendLeadNotification({ lead, url, failure: err.message }).catch((e) => console.error('team notification for a failed report could not be sent:', e.message))
     recordUsage({ type: 'report', status: 'failed', secs: (Date.now() - t0) / 1000, url, company: lead.company, name: `${lead.firstName} ${lead.lastName}`.trim(), email: lead.email, error: err.message })
   }
   job.updatedAt = Date.now()
@@ -138,7 +134,7 @@ router.post('/leads', limiter, (req, res) => {
   jobs.set(job.id, job)
   runJob(job, { lead, url }) // intentionally not awaited
 
-  res.status(202).json({ ok: true, jobId: job.id, status: job.status })
+  res.status(202).json({ ok: true, jobId: job.id, status: job.status, review: true })
 })
 
 router.get('/leads/:jobId', (req, res) => {

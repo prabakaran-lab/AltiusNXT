@@ -2,6 +2,7 @@ import { config } from '../config.js'
 import { callGemini } from './gemini.js'
 import { scrapeProductPage, fetchProductImage, captureProductImage } from './catalogwizScrape.js'
 import { findProductImage } from './manufacturerImage.js'
+import { snapshotBeforeAfter } from './catalogwizSnapshot.js'
 
 /**
  * CatalogWiz live demo: enriches one product page (title, description, 15+ attributes).
@@ -514,7 +515,10 @@ export async function enrichProductPage(url, onStage = () => {}) {
   const facts = attributes.map((a) => `${a.label}: ${a.value}`).join('\n')
   const allowed = `${facts}\n${rec.title}\n${brandKnown}`
   const allowedHay = padded(allowed)
-  const keepSupported = (text) => clean(text).split(/(?<=[.!?])\s+/).filter((sentence) => sentence && numbersSupported(sentence, allowed) && properNounsSupported(sentence, pageHay, webHay, allowedHay)).join(' ')
+  // the enriched description is new writing: a sentence that copies the page's own description (or one of its lines) is dropped
+  const originalHay = padded(`${rec.description} ${rec.attributes.filter((a) => a.source === 'list').map((a) => a.value.split('; ').join(' . ')).join(' . ')}`)
+  const copiesOriginal = (sentence) => { const n = norm(sentence); return n.split(' ').length >= 5 && originalHay.includes(` ${n} `) }
+  const keepSupported = (text) => clean(text).split(/(?<=[.!?])\s+/).filter((sentence) => sentence && !copiesOriginal(sentence) && numbersSupported(sentence, allowed) && properNounsSupported(sentence, pageHay, webHay, allowedHay)).join(' ')
   const repeatsItself = (t) => { const w = norm(t).split(' '); const seen = new Set(); for (let i = 0; i < w.length - 1; i++) { const pair = `${w[i]} ${w[i + 1]}`; if (seen.has(pair)) return true; seen.add(pair) } return false }
   const titleSeed = tidyCase(rec.title, brandKnown)
   // why a title is refused ('' = accepted): wording or numbers that are not in the verified facts, repeats, no brand, wrong length
@@ -537,9 +541,11 @@ Use ONLY the verified facts below. Every number must be copied from a fact or th
 
 TITLE: at most 100 characters, no ALL CAPS, no trailing punctuation. Order: the brand first when one is given under BRAND, the product's own name and model exactly as the ORIGINAL TITLE gives it (for example "PT-Cut-Master A-80" stays in the title), the product type as the seller's page names it (not a different phrase from another source), then the 2 or 3 specifications a buyer filters on (size, capacity, rating, material, grade), separated by commas. Do not repeat the part number, and never write the same word or specification twice.
 DESCRIPTION: 3 or 4 plain factual sentences, 50 to 100 words (shorter only if there are few facts). Sentence 1: what the product is, reading naturally ("The <brand> <product name> is a <product type> ..."), using the product's own name from the ORIGINAL TITLE. Sentence 2: its key technical specifications with units. Sentence 3: material, standards or compatibility. Sentence 4: what is included, only if a fact says so. Never restate a fact, never write filler such as "designed for safety" unless a fact says it, and do not describe the product's category or where it is sold.
+The description REPLACES the seller's ORIGINAL DESCRIPTION below on the page, so it must be a genuine improvement: keep every fact the original states, add the verified specifications it lacks, and write it in your own words. Never copy a sentence, bullet or phrase of more than four words from the original, and do not just reorder or lightly reword it.
 
 ORIGINAL TITLE: ${titleSeed}
 BRAND: ${brandKnown || '(not stated)'}
+ORIGINAL DESCRIPTION (the seller's; do not copy it): ${rec.description || '(none)'}
 VERIFIED FACTS:
 ${facts}
 
@@ -572,6 +578,19 @@ Return strict JSON: { "title": string, "description": string }`, { timeoutMs: 50
   } catch (err) {
     console.warn(`[catalogwiz] taxonomy step failed: ${err.message}`)
   }
+  // The before / after view as pictures of the real page: before exactly as it is, after with the enrichment placed into it
+  onStage('Preparing the before and after view of your page')
+  const markers = [rec.description, ...existing.flatMap((a) => String(a.before).split('; '))].filter(Boolean)
+  const kindOf = (a) => (!a.before ? 'add' : String(a.before).trim() !== String(a.value).trim() ? 'fix' : 'same')
+  // The specification table on the page: every attribute except what the page already shows in place, unchanged
+  // (its breadcrumb as "Category", and long feature lists the page prints itself).
+  const tableRows = attributes
+    .filter((a) => !(rec.breadcrumbs.length && /^category$/i.test(a.label) && kindOf(a) === 'same'))
+    .filter((a) => !(kindOf(a) === 'same' && String(a.value).length > 160))
+    .map((a) => ({ label: a.label, value: a.value, kind: kindOf(a) }))
+  const snapshots = await snapshotBeforeAfter(rec.pageUrl, { markers, title: enrichedTitle, pageTitle: rec.title, pageDescription: rec.description, description: enrichedDescription, taxonomy: taxonomy || [], pageCrumbs: rec.breadcrumbs, attributes: tableRows })
+  console.log(`[catalogwiz] before/after pictures: ${snapshots ? `${snapshots.beforeHeight}px / ${snapshots.afterHeight}px` : 'not available, drawn view used'}`)
+
   const pathShown = (() => { const u = new URL(rec.pageUrl); return `${u.hostname.replace(/^www\./, '')}${u.pathname === '/' ? '' : u.pathname}` })()
   return {
     url,
@@ -593,5 +612,6 @@ Return strict JSON: { "title": string, "description": string }`, { timeoutMs: 50
       meetsTarget: attributes.length >= MIN_ATTRIBUTES && technicalN >= MIN_TECHNICAL,
     },
     sources: web.sources,
+    ...(snapshots ? { snapshots } : {}),
   }
 }

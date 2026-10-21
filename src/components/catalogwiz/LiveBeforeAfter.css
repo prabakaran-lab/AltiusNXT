@@ -190,3 +190,25 @@
   .lba-pages, .lba-pg, .lba-status .st-bar i, .lba-status .st-l, .lba-status .st-r em, .lba-toggle i, .lba-gal img{ transition:none !important; }
   .is-after .lba-pg.rich .in, .is-after .lba-tax li, .is-after .lba-spec li.in, .is-after .lba-checks .ok .ic{ animation:none !important; }
 }
+
+/* Real-page pictures (ShotCompare.jsx): the visitor's own page and the same page enriched, stacked in ONE scrolling window,
+   so Before, After and Compare always show the same part of the page. Pictures keep their own proportions (never stretched). */
+.shc{ position:relative; background:#fff; }
+.shc-view{ position:relative; }
+.shc-scroll{ height:min(76vh, 900px); overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; background:#fff; scrollbar-width:thin; }
+.shc-stack{ position:relative; display:grid; }
+.shc-stack img{ grid-area:1 / 1; display:block; width:100%; height:auto; align-self:start; image-rendering:auto; -webkit-user-drag:none; }
+.shc-after{ will-change:opacity, clip-path; }
+/* the enrichment sweep: a glowing scan line with a soft orange wake, crossing the window while the enriched page is revealed */
+.shc-beam{ position:absolute; top:0; bottom:0; left:0; width:3px; margin-left:-1.5px; opacity:0; pointer-events:none; z-index:2; background:linear-gradient(180deg, rgba(249,115,22,0), #f97316 12%, #fb923c 50%, #f97316 88%, rgba(249,115,22,0)); box-shadow:0 0 14px 3px rgba(249,115,22,.55), 0 0 40px 8px rgba(249,115,22,.22); will-change:transform, opacity; }
+.shc-beam::before{ content:''; position:absolute; top:0; bottom:0; right:3px; width:140px; background:linear-gradient(90deg, rgba(249,115,22,0), rgba(249,115,22,.10)); }
+.shc-tools{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; min-height:46px; padding:8px 16px; border-top:1px solid #e6ebf2; background:#f8fafc; font:500 12.5px/1.4 var(--font-body); color:var(--steel); }
+.shc-jump{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border-radius:99px; border:1px solid #e1e8f1; background:#fff; color:#0b1f3a; font:600 12.5px/1 var(--font-body); cursor:pointer; }
+.shc-jump:hover{ border-color:var(--orange); color:var(--orange); }
+.shc-jump:focus-visible{ outline:2px solid var(--orange); outline-offset:2px; }
+@media (max-width:760px){
+  /* phones: the page keeps a readable size and pans sideways inside the window, like a real browser */
+  .shc-scroll{ height:68vh; overflow-x:auto; }
+  .shc-stack{ min-width:780px; }
+  .shc-tools{ padding:8px 12px; }
+}

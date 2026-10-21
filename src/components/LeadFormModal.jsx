@@ -14,7 +14,7 @@ const REVENUE_BRACKETS = [
 
 /* Two steps in one modal:
    1. details  Name, Company, Email, Approximate annual revenue (all required) -> "Send verification code"
-   2. code     the visitor types the 6-digit code emailed to them -> verified -> the report starts building
+   2. code     the visitor types the 6-digit code emailed to them -> verified -> the report request is sent (the team reviews it and shares it within 6-12 business hours)
    `verified` ({ email, token }) is kept by the page, so if the build fails and this opens again the visitor is not asked twice. */
 export default function LeadFormModal({ onClose, onSubmit, submitting, error, verified, onVerified }) {
   const [form, setForm] = useState(EMPTY)
@@ -79,8 +79,8 @@ export default function LeadFormModal({ onClose, onSubmit, submitting, error, ve
       {step === 'details' ? (
         <>
           <p className="modal-sub">
-            Enter your details and verify your email. Your report is then built live, with ChatGPT, Claude and Gemini queried the
-            way buyers ask. It takes a few minutes, and we will email it to you too.
+            Enter your details and verify your email. We run ChatGPT, Claude and Gemini the way buyers ask, our team reviews
+            the findings, and we share your full report by email within 6–12 business hours.
           </p>
           <form className="lead-form" onSubmit={handleDetails}>
             <div className="field">
@@ -107,7 +107,7 @@ export default function LeadFormModal({ onClose, onSubmit, submitting, error, ve
             {(msg || error) && <p className="form-error">{msg || error}</p>}
 
             <button className="btn btn-primary" type="submit" disabled={working} style={{ width: '100%', marginTop: 8, gap: 8 }}>
-              {submitting ? 'Starting your report…' : busy ? 'Sending code…' : alreadyVerified ? <><Check size={16} />Email verified: get my report</> : <><Mail size={16} />Send verification code</>}
+              {submitting ? 'Sending your request…' : busy ? 'Sending code…' : alreadyVerified ? <><Check size={16} />Email verified: request my report</> : <><Mail size={16} />Send verification code</>}
             </button>
             <p className="field-hint" style={{ textAlign: 'center', margin: 0 }}>We will email a 6-digit code to confirm it is really you.</p>
           </form>

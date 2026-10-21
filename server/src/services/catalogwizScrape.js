@@ -14,7 +14,11 @@ import { launchBrowserFor } from './browserLaunch.js'
  */
 
 const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
-const stripTags = (s) => clean(String(s || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'"))
+const entities = (s) => String(s || '').replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+  .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+// Some shops publish their structured-data description URL-encoded ("One%20Handed%20Locking"): decoded back to the text the page shows.
+const urlDecoded = (s) => { const t = String(s || ''); if (!/%[0-9a-f]{2}/i.test(t) || (t.match(/%20/g) || []).length < 3) return t; try { return decodeURIComponent(t) } catch { return t.replace(/%20/g, ' ') } }
+const stripTags = (s) => clean(entities(entities(urlDecoded(s)).replace(/<[^>]+>/g, ' ')))
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
 /* ---------------------------------------------------------------------------------------------------------
@@ -34,16 +38,33 @@ function extractInPage() {
     canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
   }
 
+  // ---- collapsed sections ("Key Features", "What's in the box" accordions) hold product content: open them so it is read
+  for (const d of document.querySelectorAll('details')) d.open = true
+
   // ---- the product heading: the h1 that best matches the page title
   const titleHay = norm(`${out.meta.ogTitle} ${out.meta.docTitle}`)
   const h1s = [...document.querySelectorAll('h1')].filter((h) => clean(h.textContent).length > 2 && !h.closest('nav, footer, aside'))
   const score = (h) => norm(h.textContent).split(' ').filter((t) => t && titleHay.includes(t)).length
-  const h1 = h1s.sort((a, b) => score(b) - score(a))[0] || null
+  let h1 = h1s.sort((a, b) => score(b) - score(a))[0] || null
+  // a page without an h1 (some shop platforms put the product name in a styled div): the product-name element instead,
+  // never a link (the names in "related products" carousels are links), the one that best matches the page title
+  if (!h1) {
+    const NAME = '[itemprop="name"], [class*="product" i][class*="title" i], [class*="product" i][class*="name" i], [class*="pdp" i][class*="title" i], [class*="DataTitle" i], [class*="item-title" i], [class*="item-name" i], [class*="product_title" i], h2'
+    const names = [...document.querySelectorAll(NAME)].filter((n) => {
+      const t = clean(n.textContent)
+      return t.length >= 6 && t.length <= 220 && !n.closest('a, nav, footer, aside, header, [class*="related" i], [class*="recommend" i], [class*="carousel" i], [class*="breadcrumb" i]') && !n.querySelector('a, h1, h2, h3, img')
+    })
+    const best = names.map((n, i) => ({ n, s: score(n) * 10 - i * 0.01 })).sort((a, b) => b.s - a.s)[0]
+    if (best && best.s > 0) h1 = best.n
+  }
   out.title = h1 ? clean(h1.textContent) : ''
 
   // ---- breadcrumbs (read before anything is hidden)
   const bc = document.querySelector('[class*="breadcrumb" i], [id*="breadcrumb" i], nav[aria-label*="breadcrumb" i], [itemtype*="BreadcrumbList"]')
-  if (bc) out.breadcrumbs = clean(bc.innerText || bc.textContent).split(/\s*(?:>|›|»|→|\n)\s*|\s+\/\s*|\s*\/\s+/).map(clean).filter(Boolean)
+  // one crumb per list item when the trail is a list (its separators are often drawn by CSS, so the text has none)
+  const crumbItems = bc ? [...bc.querySelectorAll('li')].map((li) => clean(li.textContent)).filter(Boolean) : []
+  if (crumbItems.length >= 2) out.breadcrumbs = crumbItems
+  else if (bc) out.breadcrumbs = clean(bc.innerText || bc.textContent).split(/\s*(?:>|›|»|→|\n)\s*|\s+\/\s*|\s*\/\s+/).map(clean).filter(Boolean)
 
   // ---- images: collect candidates with a score, before hiding the page's non-product regions
   const all = [...document.querySelectorAll('*')]
@@ -123,23 +144,44 @@ function extractInPage() {
     const dts = [...dl.querySelectorAll('dt')]
     dts.forEach((dt) => { const dd = dt.nextElementSibling; if (dd?.tagName === 'DD') push(dt.textContent, dd.textContent, 'list') })
   }
+  // ---- feature bullets under a heading such as "Features" / "Product Overview" / "What is in the box"
+  const HEAD = /^(product )?(key )?(features?|benefits?|highlights?|overview|specifications?|details|includes?|what'?s included|what('?s| is) in the box\??|in the box|package contents|applications?|advantages)\b/i
+  const PAIR_LINE = /^([A-Za-z#][^:：]{1,44}?)\s*[:：]\s+\S/
+  const bulletLines = new Set()
+  for (const ul of document.querySelectorAll('ul, ol')) {
+    if (!visible(ul) || !afterH1(ul)) continue
+    // the heading sits just before the list, or before a wrapper around it (accordion / tab panels)
+    let head = ''
+    for (let box = ul, up = 0; box && box !== document.body && up < 3 && !head; box = box.parentElement, up++) {
+      for (let p = box.previousElementSibling, n = 0; p && n < 2 && !head; p = p.previousElementSibling, n++) { const t = clean(p.textContent); if (t.length <= 40 && HEAD.test(t)) head = t.replace(/[:：]\s*$/, '') }
+    }
+    if (!head) continue
+    const all = [...ul.children].map((li) => clean(li.textContent)).filter((t) => t.length >= 2 && t.length <= 220)
+    // a list of mostly "Label: value" rows is a spec list (read as pairs below); otherwise every item is kept as the page shows it
+    if (all.filter((t) => PAIR_LINE.test(t)).length > all.length / 2) continue
+    if (all.length) { out.bullets.push({ label: head, items: all }); all.forEach((t) => bulletLines.add(t)) }
+  }
+  // features written as bold sub-headings with a paragraph under each (no list): the sub-headings, as the page shows them
+  for (const box of document.querySelectorAll('div, section, article')) {
+    if (!visible(box) || !afterH1(box) || box.querySelector('ul, ol, table')) continue
+    const subs = [...box.children].filter((p) => p.tagName === 'P' && p.querySelector('strong, b') && clean(p.textContent) === clean(p.querySelector('strong, b').textContent)).map((p) => clean(p.textContent)).filter((t) => t.length >= 3 && t.length <= 80)
+    if (subs.length < 2) continue
+    let head = ''
+    for (let b = box, up = 0; b && b !== document.body && up < 3 && !head; b = b.parentElement, up++) {
+      for (let p = b.previousElementSibling, n = 0; p && n < 2 && !head; p = p.previousElementSibling, n++) { const t = clean(p.textContent); if (t.length <= 40 && HEAD.test(t)) head = t.replace(/[:：]\s*$/, '') }
+    }
+    if (head && !out.bullets.some((x) => x.label === head)) out.bullets.push({ label: head, items: subs })
+  }
+
+  // a share / social link right after an empty label ("Current Stock:" then "Facebook") is not that label's value
+  const NOT_A_VALUE = /^(facebook|twitter|x|email|e-mail|print|pinterest|linkedin|whatsapp|share|instagram|youtube|tumblr|reddit)$/i
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]
+    if (bulletLines.has(l)) continue
     const m = l.match(/^([A-Za-z#][^:：]{1,44}?)\s*[:：]\s+(\S.{0,200})$/)
     if (m && m[1].split(' ').length <= 6 && !PRICE.test(l)) { push(m[1], m[2], 'text'); continue }
     const lone = l.match(/^([A-Za-z#][^:：]{1,44}?)\s*[:：]$/)
-    if (lone && lines[i + 1] && lines[i + 1].length <= 200 && !/[:：]\s*$|[:：]\s+\S/.test(lines[i + 1]) && !PRICE.test(lines[i + 1])) push(lone[1], lines[i + 1], 'text')
-  }
-
-  // ---- feature bullets under a heading such as "Features" / "Benefits" / "Includes"
-  const HEAD = /^(product )?(key )?(features?|benefits?|highlights?|specifications?|details|includes?|what'?s included|in the box|applications?|advantages)\b/i
-  for (const ul of document.querySelectorAll('ul, ol')) {
-    if (!visible(ul) || !afterH1(ul)) continue
-    let head = ''
-    for (let p = ul.previousElementSibling, n = 0; p && n < 2 && !head; p = p.previousElementSibling, n++) { const t = clean(p.textContent); if (t.length <= 40 && HEAD.test(t)) head = t.replace(/[:：]\s*$/, '') }
-    if (!head) continue
-    const items = [...ul.children].map((li) => clean(li.textContent)).filter((t) => t.length >= 6 && t.length <= 220 && !/^([A-Za-z#][^:：]{1,44}?)\s*[:：]\s+\S/.test(t))
-    if (items.length) out.bullets.push({ label: head, items })
+    if (lone && lines[i + 1] && lines[i + 1].length <= 200 && !NOT_A_VALUE.test(lines[i + 1]) && !bulletLines.has(lines[i + 1]) && !/[:：]\s*$|[:：]\s+\S/.test(lines[i + 1]) && !PRICE.test(lines[i + 1])) push(lone[1], lines[i + 1], 'text')
   }
 
   // ---- the page's own description: the longest prose block after the heading
@@ -197,8 +239,8 @@ const absUrl = (u, base) => {
 }
 
 // Labels that belong to the shop, not to the product.
-const SHOP_LABEL = /^(product )?stock$|^in stock$|^availability$|^qty$|^quantity$|^price\b|^your .*price|^add to\b|^sort\b|^filter\b|^shipping|^ships?\b|^delivery|^email|^password|^search|^sign in|^log ?in|^phone|^fax|^tel\b|^cart\b|^total\b|^subtotal\b|^save\b|^you save|^discount|^sku\/|^reviews?\b|^rating/i
-const ID_LABEL = /\b(part|sku|mpn|model|item|catalog(?:ue)?|style|upc|ean|gtin|isbn|product code|stock code|article)\b/i
+const SHOP_LABEL = /^(product |current )?stock( level)?$|^in stock$|^availability$|^qty$|^quantity$|^price\b|^your .*price|^add to\b|^sort\b|^filter\b|^shipping|^ships?\b|^delivery|^email|^password|^search|^sign in|^log ?in|^phone|^fax|^tel\b|^cart\b|^total\b|^subtotal\b|^save\b|^you save|^discount|^sku\/|^reviews?\b|^rating/i
+const ID_LABEL = /\b(part|sku|mpn|model|item|catalog(?:ue)?|style|upc|ean|gtin|isbn|product code|stock code|supplier code|code|article)\b/i
 
 /** Structured data's own product facts, as attributes. */
 function markupFacts(product) {
@@ -246,9 +288,11 @@ export async function scrapeProductPage(url, onStage = () => {}) {
   const keyOf = (label) => (label.length <= 4 ? label : norm(label))
   const add = (a) => { const k = keyOf(a.label); if (!k || seen.has(k) || SHOP_LABEL.test(a.label)) return; seen.add(k); attributes.push(a) }
   data.pairs.forEach(add)
-  for (const b of data.bullets) add({ label: b.label, value: b.items.join('; ').slice(0, 400), source: 'list' })
+  for (const b of data.bullets) add({ label: b.label, value: b.items.join('; ').slice(0, 1200), source: 'list' })
   markup.forEach((m) => { if (!attributes.some((a) => norm(a.value) === norm(m.value))) add(m) })
-  const crumbs = data.breadcrumbs.filter((c) => !/^home$/i.test(c) && norm(c) !== norm(data.title))
+  // the trail without "Home", placeholder items ("...") and the product's own name (as the heading or the page title gives it)
+  const docName = norm(String(data.meta.ogTitle || data.meta.docTitle).split('|')[0])
+  const crumbs = data.breadcrumbs.filter((c) => !/^home$/i.test(c) && /[a-z0-9]/i.test(c) && norm(c) !== norm(data.title) && !(docName && norm(c) === docName))
   if (crumbs.length) add({ label: 'Category', value: crumbs.join(' > ').slice(0, 160), source: 'breadcrumb' })
 
   const identifiers = attributes.filter((a) => ID_LABEL.test(a.label) && /[0-9]/.test(a.value) && a.value.length <= 40).map((a) => ({ label: a.label, value: a.value }))
@@ -264,7 +308,11 @@ export async function scrapeProductPage(url, onStage = () => {}) {
   const images = imageCandidates.filter((c) => !seenImg.has(c.url) && seenImg.add(c.url)).sort((a, b) => b.score - a.score).map((c) => c.url).slice(0, 8)
 
   const title = data.title
-  const description = clean(stripTags(product?.description) || (norm(data.meta.description) !== norm(title) ? data.meta.description : '') || data.description).slice(0, 900)
+  // the meta description only when it is about this product (some shops use one site-wide slogan on every page)
+  const titleWords = new Set(norm(title).split(' ').filter((w) => w.length > 2))
+  const aboutProduct = (t) => norm(t).split(' ').filter((w) => w.length > 2 && titleWords.has(w)).length >= 2
+  const metaDesc = norm(data.meta.description) !== norm(title) && aboutProduct(data.meta.description) ? data.meta.description : ''
+  const description = clean(stripTags(product?.description) || metaDesc || data.description).slice(0, 900)
   console.log(`[catalogwiz] scraped ${new URL(url).hostname} via ${via || 'unknown'}: ${attributes.length} attributes, ${identifiers.length} identifiers, ${images.length} image candidates`)
   return {
     url,

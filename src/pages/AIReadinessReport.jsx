@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Bot, Check, CircleAlert, FileText, MessagesSquare, Scale, Search, SearchX, ShoppingCart, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
 import { useSearchParams } from 'react-router-dom'
-import { quickScan, submitLead } from '../services/api.js'
+import { quickScan, requestReport } from '../services/api.js'
 import LeadFormModal from '../components/LeadFormModal.jsx'
 import ScanOverlay from '../components/ScanOverlay.jsx'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
@@ -72,16 +72,10 @@ export default function AIReadinessReport() {
     setSubmitting(true)
     setLeadError('')
     try {
-      const data = await submitLead(
-        { ...form, url, quickScan: result, origin: window.location.origin },
-        {
-          onProgress: (p) => {
-            setShowLeadForm(false)
-            setProgress(p)
-          },
-        },
-      )
-      setConfirmation({ firstName: form.firstName, email: form.email, pdfBase64: data.pdfBase64, emailStatus: data.emailStatus })
+      // the team reviews the report before it is shared, so the visitor gets a confirmation, not the report itself
+      await requestReport({ ...form, url, quickScan: result, origin: window.location.origin })
+      setShowLeadForm(false)
+      setConfirmation({ firstName: form.firstName || String(form.name || '').trim().split(/\s+/)[0], email: form.email })
     } catch (err) {
       if (/verify your email/i.test(err.message)) setVerified(null)
       setLeadError(err.message)
