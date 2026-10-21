@@ -199,6 +199,7 @@
 .shc-stack{ position:relative; display:grid; }
 .shc-stack img{ grid-area:1 / 1; display:block; width:100%; height:auto; align-self:start; image-rendering:auto; -webkit-user-drag:none; }
 .shc-after{ will-change:opacity, clip-path; }
+.shc-stack > .shc-page{ grid-area:1 / 1; align-self:start; min-width:0; background:#fff; }
 /* the enrichment sweep: a glowing scan line with a soft orange wake, crossing the window while the enriched page is revealed */
 .shc-beam{ position:absolute; top:0; bottom:0; left:0; width:3px; margin-left:-1.5px; opacity:0; pointer-events:none; z-index:2; background:linear-gradient(180deg, rgba(249,115,22,0), #f97316 12%, #fb923c 50%, #f97316 88%, rgba(249,115,22,0)); box-shadow:0 0 14px 3px rgba(249,115,22,.55), 0 0 40px 8px rgba(249,115,22,.22); will-change:transform, opacity; }
 .shc-beam::before{ content:''; position:absolute; top:0; bottom:0; right:3px; width:140px; background:linear-gradient(90deg, rgba(249,115,22,0), rgba(249,115,22,.10)); }

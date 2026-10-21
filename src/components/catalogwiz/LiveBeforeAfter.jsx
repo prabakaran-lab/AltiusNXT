@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BadgeCheck, Check, ImageOff, Minus, Search, ShoppingCart } from 'lucide-react'
 import ShotCompare from './ShotCompare.jsx'
+import SampleStore from './SampleStore.jsx'
 import './LiveBeforeAfter.css'
 
 /* The visitor's own product page, before and after CatalogWiz, as two different pages of the same store.
@@ -200,6 +201,9 @@ export default function LiveBeforeAfter({ r }) {
 
           {shots ? (
             <ShotCompare shots={shots} mode={mode} host={r.host} />
+          ) : r.sample ? (
+            /* a sample has no real page to photograph: a store page is drawn for it, shown the same way */
+            <ShotCompare mode={mode} host={r.host} beforeNode={<SampleStore r={r} variant="before" />} afterNode={<SampleStore r={r} variant="after" />} />
           ) : (
           <div className="lba-pages" style={pageH ? { height: pageH } : undefined}>
             {/* BEFORE: the supplier's own page, plain, with only what they provided */}

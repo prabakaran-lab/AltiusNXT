@@ -59,11 +59,11 @@ function Page({ host, ghost = false }) {
   )
 }
 
-export default function EnrichStory({ stage, url, waited }) {
+export default function EnrichStory({ stage, url, waited, label }) {
   const worldRef = useRef(null)
   const scene = sceneOf(stage)
-  let host = ''
-  try { host = new URL(url).hostname.replace(/^www\./, '') } catch { host = 'your page' }
+  let host = label || ''
+  if (!host) { try { host = new URL(url).hostname.replace(/^www\./, '') } catch { host = 'your page' } }
 
   /* the camera glides to the scene's angle; a small idle drift keeps the world alive between stages */
   useEffect(() => {
