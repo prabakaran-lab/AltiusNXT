@@ -208,8 +208,12 @@
 .shc-jump:hover{ border-color:var(--orange); color:var(--orange); }
 .shc-jump:focus-visible{ outline:2px solid var(--orange); outline-offset:2px; }
 @media (max-width:760px){
-  /* phones: the page keeps a readable size and pans sideways inside the window, like a real browser */
+  /* phones: a real page screenshot keeps a readable size and pans sideways inside the window, like a real browser.
+     A sample (.shc-dom: rendered elements, not a picture) reflows to the phone's width instead, same as the rest of
+     the site, since there is no pixel image forcing a fixed width. */
   .shc-scroll{ height:68vh; overflow-x:auto; }
   .shc-stack{ min-width:780px; }
   .shc-tools{ padding:8px 12px; }
+  .shc-dom .shc-scroll{ overflow-x:hidden; }
+  .shc-dom .shc-stack{ min-width:0; }
 }

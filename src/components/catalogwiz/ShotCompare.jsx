@@ -76,8 +76,13 @@ export default function ShotCompare({ shots = {}, mode, host, beforeNode, afterN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
+  // A sample has no real page to photograph, so it comes in as rendered elements (beforeNode/afterNode) instead of
+  // pictures. Those can reflow for a narrow screen like any other page; a screenshot can't, so only the picture case
+  // keeps the fixed-width pan-sideways treatment on phones (see the .shc-dom override in LiveBeforeAfter.css).
+  const dom = Boolean(beforeNode || afterNode)
+
   return (
-    <div className="shc">
+    <div className={`shc${dom ? ' shc-dom' : ''}`}>
       <div className="shc-view">
         <div className="shc-scroll" ref={scrollRef}>
           <div className="shc-stack" ref={stackRef}>

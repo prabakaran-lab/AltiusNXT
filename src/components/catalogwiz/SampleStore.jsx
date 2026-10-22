@@ -39,7 +39,7 @@ export default function SampleStore({ r, variant }) {
       {/* the store's own header */}
       <header className="ss-top">
         <b className="ss-logo"><i />{STORE}</b>
-        <span className="ss-search"><Search size={14} />Search by part number or keyword</span>
+        <span className="ss-search"><Search size={14} /><span>Search by part number or keyword</span></span>
         <span className="ss-acts"><span><User size={15} />Account</span><span><ShoppingCart size={15} />Quote list</span></span>
       </header>
       <nav className="ss-nav">{NAV.map((n) => <span key={n}>{n}</span>)}</nav>
