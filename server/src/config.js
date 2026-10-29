@@ -50,6 +50,12 @@ export const config = {
   hubspot: {
     token: process.env.HUBSPOT_PRIVATE_APP_TOKEN || '',
   },
+  // Cloudflare Turnstile (captcha): the contact form, the AI Readiness scan trigger, and the CatalogWiz
+  // live-demo request are bot-gated with it. Site key is public (ships in the frontend build); only the
+  // secret key lives here, used to verify a widget token against Cloudflare's siteverify API.
+  turnstile: {
+    secretKey: process.env.TURNSTILE_SECRET_KEY || '',
+  },
 }
 
 export const isGeminiConfigured = () => Boolean(config.gemini.apiKey)
@@ -61,3 +67,4 @@ export const isMailConfigured = () => Boolean(config.mail.user && config.mail.ap
 export const isGooglePlacesConfigured = () => Boolean(config.googlePlaces.apiKey)
 export const isMistralConfigured = () => Boolean(config.mistral.apiKey)
 export const isHubspotConfigured = () => Boolean(config.hubspot.token)
+export const isTurnstileConfigured = () => Boolean(config.turnstile.secretKey)

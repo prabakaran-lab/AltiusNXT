@@ -8,6 +8,7 @@ import { enrichProductPage } from '../services/catalogwizEnrich.js'
 import { sendDemoRequestNotification } from '../services/catalogwizMail.js'
 import { recordUsage } from '../services/usageStats.js'
 import { isGeminiConfigured, isMailConfigured } from '../config.js'
+import { requireTurnstile } from '../services/turnstile.js'
 
 const router = Router()
 
@@ -105,7 +106,7 @@ function resumeJobs() {
 }
 resumeJobs()
 
-router.post('/catalogwiz-demo', limiter, (req, res) => {
+router.post('/catalogwiz-demo', limiter, requireTurnstile(), (req, res) => {
   const b = req.body || {}
   const lead = {
     name: String(b.name || '').trim().slice(0, 120),

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Check, Clock, Mail, MapPin, Phone, Send } from 'lucide-react'
 import { sendContact } from '../services/api.js'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile.jsx'
 import './Contact.css'
 
 const OFFICES = [
@@ -21,6 +22,8 @@ export default function Contact() {
   const [state, setState] = useState('idle') // idle | sending | sent | error
   const [err, setErr] = useState('')
   const [seen, setSeen] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaRef = useRef(null)
 
   useEffect(() => {
     document.title = 'Contact | AltiusNxt'
@@ -32,12 +35,15 @@ export default function Contact() {
 
   const submit = async (e) => {
     e.preventDefault()
+    if (TURNSTILE_ENABLED && !captchaToken) { setState('error'); setErr('Please complete the captcha.'); return }
     setState('sending'); setErr('')
     try {
-      await sendContact(f)
+      await sendContact({ ...f, turnstileToken: captchaToken })
       setState('sent'); setF(EMPTY)
     } catch (x) {
       setState('error'); setErr(x.message || 'Something went wrong.')
+    } finally {
+      captchaRef.current?.reset(); setCaptchaToken('')
     }
   }
 
@@ -87,6 +93,7 @@ export default function Contact() {
                 </div>
                 <label><span>How can we help? <i>*</i></span><textarea name="message" rows={6} required minLength={10} value={f.message} onChange={set('message')} placeholder="Tell us about your catalog, channels and what you would like to improve." /></label>
                 <input className="ct-hp" name="hp_field" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.hpField} onChange={set('hpField')} />
+                <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
                 <div className="ct-actions">
                   <button type="submit" className="btn btn-primary" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : <>Send message <Send size={16} /></>}</button>
                   <small>By sending, you agree to our <a href="/privacy-policy">Privacy Policy</a>.</small>

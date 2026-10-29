@@ -19,7 +19,7 @@ const post = (path, body) =>
 // where the lead came from in HubSpot too.
 export const sendContact = (payload) => post('/contact', { ...payload, ...getUtmParams() })
 
-export const quickScan = (url) => post('/quick-scan', { url })
+export const quickScan = (url, turnstileToken) => post('/quick-scan', { url, turnstileToken })
 
 export const sendOtp = (payload) => post('/otp/send', payload)
 export const verifyOtp = (payload) => post('/otp/verify', payload)

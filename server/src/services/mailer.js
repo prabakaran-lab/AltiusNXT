@@ -31,9 +31,7 @@ export async function sendLeadNotification({ lead, url, score }) {
     <h2>New AI Readiness Report request</h2>
     <p><strong>${esc(lead.firstName)} ${esc(lead.lastName)}</strong> — ${esc(lead.company)}</p>
     <ul>
-      <li>Company website: ${esc(lead.companyWebsite) || '—'}</li>
       <li>Work email: ${esc(lead.email)}</li>
-      <li>Job Title: ${esc(lead.jobTitle) || '—'}</li>
       <li>Scanned URL: <a href="${esc(url)}">${esc(url)}</a></li>
       ${statsLine}
     </ul>

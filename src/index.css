@@ -1007,6 +1007,7 @@ body :is(.container,.section-container,.wrap,
 .lead-otp-links{ display:flex; justify-content:space-between; gap:12px; }
 .lead-otp-links button{ border:0; background:none; padding:4px 0; cursor:pointer; font:700 13px/1 var(--font-body); color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
 .lead-otp-links button:disabled{ color:var(--steel-2); text-decoration:none; cursor:default; }
+.turnstile-field{ margin-top:2px; max-width:100%; overflow:hidden; }
 @media (max-width:480px){
   .lead-form-row{ grid-template-columns:1fr; }
 }

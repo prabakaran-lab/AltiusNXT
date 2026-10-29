@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { sendContactMessage } from '../services/mailer.js'
+import { requireTurnstile } from '../services/turnstile.js'
 
 const router = Router()
 
@@ -15,7 +16,7 @@ const limiter = rateLimit({
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const clip = (v, n) => String(v ?? '').trim().slice(0, n)
 
-router.post('/contact', limiter, async (req, res) => {
+router.post('/contact', limiter, requireTurnstile(), async (req, res) => {
   const b = req.body || {}
   // hidden honeypot field: real visitors never fill it, bots usually do
   if (b.website) return res.json({ ok: true })

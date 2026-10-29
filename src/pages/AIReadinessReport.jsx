@@ -6,6 +6,7 @@ import { quickScan, requestReport } from '../services/api.js'
 import { trackMailtoClick } from '../services/hubspotTrack.js'
 import LeadFormModal from '../components/LeadFormModal.jsx'
 import ScanOverlay from '../components/ScanOverlay.jsx'
+import Turnstile, { TURNSTILE_ENABLED } from '../components/Turnstile.jsx'
 import PageSeo, { breadcrumb } from '../components/PageSeo.jsx'
 import { AI_READINESS_FAQ, FaqSection, HowSection, LayersSection, LevelsSection, NextSection, Num, ReceiveSection, useReveal } from './ReportSections.jsx'
 import './AIReadinessReport.css'
@@ -38,6 +39,9 @@ export default function AIReadinessReport() {
   const [leadError, setLeadError] = useState('')
   const [confirmation, setConfirmation] = useState(null)
   const [progress, setProgress] = useState(null)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaErr, setCaptchaErr] = useState('')
+  const captchaRef = useRef(null)
   const root = useRef(null)
   useReveal(root)
 
@@ -48,26 +52,37 @@ export default function AIReadinessReport() {
     setConfirmation(null)
     setPopup(true)
     try {
-      const data = await quickScan(targetUrl)
+      const data = await quickScan(targetUrl, captchaToken)
       setResult(data)
     } catch (err) {
       setScanError(err.message)
       setPopup(false)
     } finally {
       setScanning(false)
+      captchaRef.current?.reset(); setCaptchaToken('')
     }
   }
 
   const handleScan = (e) => {
     e.preventDefault()
+    if (TURNSTILE_ENABLED && !captchaToken) { setCaptchaErr('Please complete the captcha.'); return }
+    setCaptchaErr('')
     runScan(url)
   }
 
+  // A link with ?url= auto-runs the scan, but only once the captcha is solved (Turnstile's managed
+  // widget usually passes itself within a second, no click needed) — otherwise the first request would
+  // go out with no token and get rejected server-side.
+  const autoRanRef = useRef(false)
   useEffect(() => {
+    if (autoRanRef.current) return
     const initial = searchParams.get('url')
-    if (initial) runScan(initial)
+    if (!initial) return
+    if (TURNSTILE_ENABLED && !captchaToken) return
+    autoRanRef.current = true
+    runScan(initial)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [captchaToken])
 
   const handleLeadSubmit = async (form) => {
     setSubmitting(true)
@@ -134,10 +149,11 @@ export default function AIReadinessReport() {
                 {scanning ? 'Scanning…' : 'Get my free report'}
               </button>
             </form>
+            <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
             <p className="field-hint" style={{ marginTop: 8 }}>
               Must be a single product page, not your homepage or a category listing with multiple products on it.
             </p>
-            {scanError && <p className="form-error" style={{ marginTop: 14 }}>{scanError}</p>}
+            {(scanError || captchaErr) && <p className="form-error" style={{ marginTop: 14 }}>{scanError || captchaErr}</p>}
             <p className="arr-more">Want the full scorecard and competitor breakdown? <a href="mailto:manoj@altiusnxt.com?subject=Detailed%20audit%20report%20request&body=Product%20page%20URL%3A" onClick={() => trackMailtoClick('competitor_audit_click')}>Request the AI Visibility &amp; Competitor Audit</a>.</p>
           </div>
 

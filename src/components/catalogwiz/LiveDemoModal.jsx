@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Modal from '../Modal.jsx'
+import Turnstile, { TURNSTILE_ENABLED } from '../Turnstile.jsx'
 
 const EMPTY = { name: '', company: '', email: '', phone: '' }
 /* Same rule as the server: digits with an optional + ( ) . - and spaces, at least 7 digits. */
@@ -9,12 +10,15 @@ const phoneOk = (p) => /^[+()\d][\d\s().+-]{5,24}$/.test(p) && p.replace(/\D/g, 
 export default function LiveDemoModal({ url, onClose, onSubmit }) {
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaRef = useRef(null)
   const update = (field) => (e) => { setError(''); setForm((f) => ({ ...f, [field]: e.target.value })) }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!phoneOk(form.phone.trim())) { setError('Please enter a valid phone number, for example +1 555 123 4567.'); return }
-    onSubmit({ ...form, name: form.name.trim(), company: form.company.trim(), email: form.email.trim(), phone: form.phone.trim() })
+    if (TURNSTILE_ENABLED && !captchaToken) { setError('Please complete the captcha.'); return }
+    onSubmit({ ...form, name: form.name.trim(), company: form.company.trim(), email: form.email.trim(), phone: form.phone.trim(), turnstileToken: captchaToken })
   }
 
   return (
@@ -46,6 +50,7 @@ export default function LiveDemoModal({ url, onClose, onSubmit }) {
             <input id="ld-phone" name="phone" type="tel" autoComplete="tel" inputMode="tel" required value={form.phone} onChange={update('phone')} />
           </div>
         </div>
+        <Turnstile ref={captchaRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} />
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="btn btn-primary" type="submit" style={{ width: '100%', marginTop: 8 }}>Enrich my page</button>
         <p className="field-hint" style={{ marginTop: 10, textAlign: 'center' }}>We only use these details to follow up on your demo.</p>

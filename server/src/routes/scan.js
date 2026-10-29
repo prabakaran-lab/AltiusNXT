@@ -2,6 +2,7 @@ import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { runSiteScan } from '../services/quickScan15.js'
 import { isGeminiConfigured } from '../config.js'
+import { requireTurnstile } from '../services/turnstile.js'
 
 const router = Router()
 
@@ -13,7 +14,7 @@ const limiter = rateLimit({
   message: { error: 'Too many scans from this address in the last hour. Please try again later.' },
 })
 
-router.post('/quick-scan', limiter, async (req, res) => {
+router.post('/quick-scan', limiter, requireTurnstile(), async (req, res) => {
   const { url } = req.body || {}
   if (!url || !/^https?:\/\//i.test(url)) {
     return res.status(400).json({ error: 'Please provide a valid product page URL (starting with http:// or https://).' })
