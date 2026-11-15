@@ -248,7 +248,7 @@
 }
 
 /* trust: event + certification logos */
-.tr{ display:grid; grid-template-columns:.8fr 1.2fr; margin-top:clamp(26px,3vw,44px); border-radius:24px; overflow:hidden; background:#fff; border:1px solid #e3e9f2; box-shadow:0 26px 52px -36px rgba(11,31,58,.5); }
+.tr{ display:grid; grid-template-columns:1fr; margin-top:clamp(26px,3vw,44px); border-radius:24px; overflow:hidden; background:#fff; border:1px solid #e3e9f2; box-shadow:0 26px 52px -36px rgba(11,31,58,.5); }
 .tr-event{ position:relative; isolation:isolate; padding:clamp(26px,3vw,40px); background:var(--navy); color:#fff; }
 .tr-event::before{ content:""; position:absolute; inset:-30%; z-index:-1; background:radial-gradient(closest-side at 25% 30%,rgba(255,106,26,.4),transparent 70%); animation:arr-float 12s ease-in-out infinite alternate; }
 .tr-event .rp-chip{ background:rgb(var(--orange-rgb) / .2); color:#ffb98f; }

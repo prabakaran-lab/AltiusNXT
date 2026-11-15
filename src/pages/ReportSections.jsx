@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { ArrowRight, BarChart3, CalendarDays, Check, FileCheck2, FileText, Fingerprint, Link2, ListTree, Mail, MapPin, ScanSearch, ShieldCheck, X } from 'lucide-react'
+import { ArrowRight, BarChart3, Check, FileCheck2, FileText, Fingerprint, Link2, ListTree, Mail, ScanSearch, ShieldCheck, X } from 'lucide-react'
 import { TESYS } from '../components/sampleProduct.js'
 import QuestionForm from '../components/QuestionForm.jsx'
 import { trackMailtoClick } from '../services/hubspotTrack.js'
@@ -297,15 +297,6 @@ export function NextSection() {
           </article>
         </div>
         <div className="tr rv">
-          <div className="tr-event">
-            <span className="rp-chip">Meet us in person</span>
-            <h3>B2B eCommerce World Americas</h3>
-            <ul>
-              <li><CalendarDays size={17} />Nov 2-3</li>
-              <li><MapPin size={17} />JW Marriott Indianapolis</li>
-            </ul>
-            <p>Find us at the show and bring your report. We’ll walk through it with you.</p>
-          </div>
           <div className="tr-certs">
             <p className="tr-title">Certified and trusted</p>
             <ul>
